@@ -75,6 +75,7 @@ PY_FIXTURES=(
 )
 TS_FIXTURES=(
   "keyless|no|triage,classify,route,fetchTicket"
+  "commonjs|yes|llm_call"
   "openai|yes|llm_call"
   "langchain|yes|RunnableSequence,llm_call"
 )

@@ -20,8 +20,10 @@ machine: `npm install @progress/observability --cache ./npm-cache`; ship
 ./npm-cache`.
 
 **First decision: module system.** `package.json` has `"type": "module"` →
-ESM, loader hooks must register *before the app loads*. Otherwise CommonJS, a
-plain synchronous init. Getting this wrong is the #1 "no spans" cause in Node.
+ESM, and loader hooks must register *before the app loads*. Otherwise
+CommonJS, where init is synchronous and the hooks import is not used. **Both
+get a bootstrap file** — the difference is what goes in it, not whether you
+need one. Getting this wrong is the #1 "no spans" cause in Node.
 
 ## ESM (`"type": "module"`) — bootstrap file (preferred)
 
@@ -93,10 +95,18 @@ particular:
 const { AzureChatOpenAI } = await import('@langchain/openai');
 ```
 
-## CommonJS — synchronous init at the top of the entry point
+## CommonJS — a bootstrap file too, not init at the top of the app
+
+**The bootstrap is not an ESM-only device.** Putting `instrument()` at the top
+of the app file does not work in CommonJS either: TypeScript hoists every
+`import` into a `require` above the first statement, so an instrumented library
+is loaded and its methods resolved *before* `instrument()` runs, and nothing is
+patched. Measured, same file both ways — hoisted import: not patched; via a
+bootstrap: patched.
 
 ```typescript
-import { Observability } from '@progress/observability';
+// bootstrap.ts — `npm start` runs this, not the app
+import { Observability, ObservabilityInstruments } from '@progress/observability';
 
 const apiKey = process.env.OBSERVABILITY_API_KEY;
 if (!apiKey) throw new Error('OBSERVABILITY_API_KEY is not set');
@@ -104,9 +114,25 @@ if (!apiKey) throw new Error('OBSERVABILITY_API_KEY is not set');
 Observability.instrument({
   appName: process.env.OBSERVABILITY_APP_NAME ?? 'my-app',
   apiKey,
+  instruments: new Set([ObservabilityInstruments.OPENAI]),   // see above
 });
-// app code follows — dependencies are instrumented from here on
+
+try {
+  require('./src/app');          // AFTER init — a hoisted import is too early
+} finally {
+  void Observability.shutdown();
+}
 ```
+
+Two differences from the ESM bootstrap, and only two: **no `register/hooks`
+import** (those exist to intercept ESM module resolution), and `require()`
+instead of `await import()`, since there is no top-level await. The app file
+itself is untouched — keep its normal `import` statements.
+
+Init at the top of the entry point *is* safe when the app `require`s its
+instrumented libraries lazily, inside functions rather than at module scope.
+That is rare, and rewriting an app's imports to achieve it is restructuring —
+use the bootstrap.
 
 ## Three rules that decide whether anything is captured
 
