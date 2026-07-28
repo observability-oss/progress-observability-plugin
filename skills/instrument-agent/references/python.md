@@ -133,12 +133,19 @@ counts scale with how much the app does.
 | mcp | `initialize.mcp`, `tools/list.mcp`, `<tool>.tool` | tool, llm_call |
 | openai-agents | `Agent Workflow`, `<agent>.agent`, `openai.response` | agent, llm_call |
 | agno | `<agent>.agent` | agent, llm_call |
+| google-genai | none — bare provider SDK | llm_call |
 
 - **Tier 1 (full topology):** llamaindex, langchain, langgraph, crewai,
   haystack on 2.x. Tier-1 showing only `llm_call` is **broken** — almost always
   the gate above; diagnose, never report flat traces as the framework's depth.
 - **Tier 2 (agent + LLM):** openai-agents, agno. Agent + llm_call is correct
   and complete; offer decorators only if the user wants step detail.
+- **Bare provider SDKs** (`google-genai`, `openai`, `anthropic` called
+  directly): a single `llm_call` per request is **correct and complete** —
+  there is no framework to have structure. Don't apply the Tier-1 rule above
+  and report it as broken. Google's span is named from OTel semconv, so it
+  reads `generate_content <model>` (measured) rather than anything traceloop
+  chose.
 - **mcp** is orthogonal: it instruments the MCP protocol itself and composes
   with whichever framework calls it. **Requires `mcp` 1.x** (measured): 2.0
   removed `mcp.shared.session`, which the instrumentor patches, but its gate is
