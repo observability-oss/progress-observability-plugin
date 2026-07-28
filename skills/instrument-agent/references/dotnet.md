@@ -105,11 +105,11 @@ host.Services.GetRequiredService<IHostApplicationLifetime>()
   builder.** It is an extension on `IChatClient`, *not* on `ChatClientBuilder`,
   so chaining it after `.UseFunctionInvocation()` is a compile error:
   `CS1929: 'ChatClientBuilder' does not contain a definition for
-  'AddObservability'`. Applying it in the factory also gives the right
-  topology — it wraps the raw client, every builder middleware wraps that —
-  which is what `.AsIChatClient().AddObservability().AsAIAgent(tools:)` does in
-  the agent case, and that pairing is CI-verified to yield `llm_call` **and**
-  `tool` spans.
+  'AddObservability'`. The factory is also the right place on the merits: it
+  wraps the raw client and every builder middleware wraps that, which is
+  **verified end-to-end** to yield `llm_call` *and* `tool` spans — observability
+  sitting inside `UseFunctionInvocation` still captures the tool calls that
+  middleware makes. Don't try to hoist it outward.
 - **`Shutdown()` on `ApplicationStopping`** — a hosted app has no console
   `try`/`finally` to flush from.
 
@@ -150,6 +150,10 @@ for sensitive systems; metadata keeps flowing either way.
 - `.AddObservability()` captures calls through **any** `IChatClient`
   implementation — including custom/test ones — so a stub client is a valid
   way to prove the pipeline before real model credentials exist (CI-verified).
+- In a DI/hosted app, `.AddObservability()` inside the `AddChatClient` factory
+  yields `llm_call` **and** `tool` spans even though `UseFunctionInvocation`
+  wraps it — verified end-to-end against the platform, not inferred from the
+  agent-framework case.
 - Spans arrive with kind `llm_call`, and `AIFunction` invocations through the
   agent pipeline (`AsAIAgent`) arrive with kind `tool` — a single
   `.AddObservability()` between `AsIChatClient()` and `AsAIAgent()` captures
