@@ -95,14 +95,15 @@ particular:
 const { AzureChatOpenAI } = await import('@langchain/openai');
 ```
 
-## CommonJS — a bootstrap file too, not init at the top of the app
+## CommonJS — bootstrap file (no hooks import)
 
-**The bootstrap is not an ESM-only device.** Putting `instrument()` at the top
-of the app file does not work in CommonJS either: TypeScript hoists every
-`import` into a `require` above the first statement, so an instrumented library
-is loaded and its methods resolved *before* `instrument()` runs, and nothing is
-patched. Measured, same file both ways — hoisted import: not patched; via a
-bootstrap: patched.
+Create `bootstrap.ts` in the same directory as the `package.json` you are
+editing and point the `start` script at it — same location rule as ESM. Do
+**not** put `instrument()` at the top of the app file instead: TypeScript
+hoists every `import` into a `require` above the first statement, so an
+instrumented library is loaded and its methods resolved *before* `instrument()`
+runs, and nothing is patched. Measured, same file both ways — hoisted import:
+not patched; bootstrap: patched.
 
 ```typescript
 // bootstrap.ts — `npm start` runs this, not the app
@@ -114,7 +115,7 @@ if (!apiKey) throw new Error('OBSERVABILITY_API_KEY is not set');
 Observability.instrument({
   appName: process.env.OBSERVABILITY_APP_NAME ?? 'my-app',
   apiKey,
-  instruments: new Set([ObservabilityInstruments.OPENAI]),   // see above
+  instruments: new Set([ObservabilityInstruments.OPENAI]),   // required — see "Then add instruments"
 });
 
 try {
@@ -124,15 +125,11 @@ try {
 }
 ```
 
-Two differences from the ESM bootstrap, and only two: **no `register/hooks`
-import** (those exist to intercept ESM module resolution), and `require()`
-instead of `await import()`, since there is no top-level await. The app file
-itself is untouched — keep its normal `import` statements.
-
-Init at the top of the entry point *is* safe when the app `require`s its
-instrumented libraries lazily, inside functions rather than at module scope.
-That is rare, and rewriting an app's imports to achieve it is restructuring —
-use the bootstrap.
+Two differences from the ESM bootstrap: no `register/hooks` import (those
+intercept ESM module resolution), and `require()` instead of `await import()`
+(no top-level await). Leave the app file's own `import` statements alone — do
+not rewrite them into lazy in-function `require`s to make init-at-top work;
+that is restructuring.
 
 ## Three rules that decide whether anything is captured
 
