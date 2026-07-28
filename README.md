@@ -18,21 +18,25 @@ contract (tools, limits, and the untrusted-content rules) lives in
 
 | Skill | Command | What it does |
 |---|---|---|
+| **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then verifies over MCP that traces arrive. |
+| **scaffold-agent** | `/scaffold-agent` | Creates a new .NET agent project, already instrumented, from the [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter) template. |
+| **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
 | **trace-triage** | `/trace-triage` | Root-cause a failed or slow run by walking its span tree; returns a diagnosis + a fix. |
 | **cost-report** | `/cost-report` | Spend by model/app/day, quota burn, spike explanation, cheaper-model hypotheses. |
 | **coverage-gaps** | `/coverage-gaps` | Finds production behaviors with no evaluation and prioritizes which judges to build. |
 | **generate-eval** | `/eval-from-trace`, `/eval-from-scratch` | Research-grounded LLM-as-a-Judge evaluator prompts, optionally grounded in real traces. See [`skills/generate-eval`](./skills/generate-eval/). |
-| **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
-| **scaffold-agent** | `/scaffold-agent` | Creates a new .NET agent project, already instrumented, from the [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter) template. |
-| **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then verifies over MCP that traces arrive. |
 
-The four workflow skills chain into one loop: **trace-triage** finds a failure →
-**coverage-gaps** confirms nothing measures it → **generate-eval** builds the judge →
-**cost-report** keeps the bill honest while you iterate. **health-check** sits outside
-the loop - a diagnostic you run first to confirm everything's wired up. And two
-skills come before all of it: **scaffold-agent** creates a new already-instrumented
-agent, and **instrument-agent** retrofits instrumentation onto an agent you already
-have. Those two write project files; everything else is strictly read-only.
+**Start with instrument-agent.** Nothing else here has anything to read until
+your agent is sending traces, and it takes an existing Python, TypeScript, or
+.NET app to that point in one pass — then verifies over MCP that the spans
+actually arrived. **scaffold-agent** is its mirror image for a project that
+doesn't exist yet. Those two write project files; everything else is strictly
+read-only.
+
+Once traces are flowing, **health-check** confirms the wiring, and the four
+workflow skills chain into one loop: **trace-triage** finds a failure →
+**coverage-gaps** confirms nothing measures it → **generate-eval** builds the
+judge → **cost-report** keeps the bill honest while you iterate.
 
 ## Setup
 
@@ -119,8 +123,8 @@ Verify the connection with the `curl` snippet in [`references/mcp.md`](./referen
 The commands and natural-language triggers are the same across tools (Claude Code
 slash commands and Copilot prompt files share names):
 
-- `/scaffold-agent triage support tickets against our KB` - new instrumented agent from the template
 - `/instrument-agent` - add observability to the agent repo you're in, and prove traces arrive
+- `/scaffold-agent triage support tickets against our KB` - new instrumented agent from the template
 - `/health-check` - verify your setup before anything else (no arguments)
 - `/trace-triage <trace-id>` or `/trace-triage checkout-agent, timeouts, last hour`
 - `/cost-report last 30 days, by model`

@@ -1,7 +1,7 @@
 {
   "name": "progress-observability",
   "version": "1.0.0",
-  "description": "Observe, debug, cost-manage, and evaluate AI systems from the Progress Observability Platform, read over MCP: trace triage, cost/usage reports, eval coverage gaps, research-grounded LLM-as-a-Judge eval generation, a setup health check, a scaffolder for new instrumented .NET agents, and an instrumenter that retrofits observability onto existing Python, TypeScript, or .NET agents.",
+  "description": "Observe, debug, cost-manage, and evaluate AI systems from the Progress Observability Platform: an instrumenter that retrofits observability onto an existing Python, TypeScript, or .NET agent and verifies traces arrive, a scaffolder for new instrumented .NET agents, a setup health check, then trace triage, cost/usage reports, eval coverage gaps, and research-grounded LLM-as-a-Judge eval generation - read over MCP.",
   "author": {
     "name": "observability-oss"
   },

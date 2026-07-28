@@ -1,7 +1,7 @@
 # progress-observability for VS Code / GitHub Copilot
 
 All seven skills from the Claude Code plugin, packaged for GitHub Copilot in
-VS Code - scaffold-agent, instrument-agent, health-check, trace-triage,
+VS Code - instrument-agent, scaffold-agent, health-check, trace-triage,
 cost-report, coverage-gaps, and generate-eval. Nothing here is Claude-specific.
 
 > **Check the plugin install first - it is usually the better path.** Copilot
@@ -21,8 +21,8 @@ are already where Copilot expects them):
 | File | Role | Claude-plugin equivalent |
 |---|---|---|
 | `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all seven skill workflows | the `skills/` + `references/mcp.md` |
-| `.github/prompts/scaffold-agent.prompt.md` | `/scaffold-agent` | `commands/scaffold-agent.md` |
 | `.github/prompts/instrument-agent.prompt.md` | `/instrument-agent` | `commands/instrument-agent.md` |
+| `.github/prompts/scaffold-agent.prompt.md` | `/scaffold-agent` | `commands/scaffold-agent.md` |
 | `.github/prompts/health-check.prompt.md` | `/health-check` | `commands/health-check.md` |
 | `.github/prompts/trace-triage.prompt.md` | `/trace-triage` | `commands/trace-triage.md` |
 | `.github/prompts/cost-report.prompt.md` | `/cost-report` | `commands/cost-report.md` |
