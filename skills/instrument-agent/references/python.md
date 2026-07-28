@@ -140,7 +140,12 @@ counts scale with how much the app does.
 - **Tier 2 (agent + LLM):** openai-agents, agno. Agent + llm_call is correct
   and complete; offer decorators only if the user wants step detail.
 - **mcp** is orthogonal: it instruments the MCP protocol itself and composes
-  with whichever framework calls it.
+  with whichever framework calls it. **Requires `mcp` 1.x** (measured): 2.0
+  removed `mcp.shared.session`, which the instrumentor patches, but its gate is
+  `mcp >= 1.6.0` with no upper bound — so on 2.x it enables, raises
+  `AttributeError`, and traceloop logs the error and carries on. The app starts
+  clean and emits no MCP spans. If an app on `mcp` 2.x reports missing MCP
+  spans, pin `mcp<2` rather than hunting the init order.
 
 Names are patterns, not literals — they vary with the app's classes, nodes, and
 index/pipeline types. (The rows are measured against the live platform and
