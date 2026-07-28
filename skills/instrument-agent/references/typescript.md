@@ -142,10 +142,13 @@ Get any of these wrong and the wiring silently does nothing:
 
 1. **The hooks import executes first** — not "near the top", first. Anything
    imported ahead of it is already resolved and cannot be patched.
-2. **ESM: LangChain must not resolve before `instrument()`.** A bootstrap file
-   satisfies this — leave the app's own imports alone. Without one, the app
-   needs `const { ChatOpenAI } = await import('@langchain/openai')`: a static
-   top-of-file import resolves first and yields flat or missing spans.
+2. **ESM: import LangChain dynamically in the app, after `instrument()`.**
+   Convert `import { ChatOpenAI } from '@langchain/openai'` to
+   `const { ChatOpenAI } = await import('@langchain/openai')`. This is **in
+   addition to** the bootstrap, not instead of it — it is the configuration
+   verified end-to-end. A static top-of-file import can resolve before init and
+   yield flat or missing spans. LangChain is the one framework for which
+   touching the app's imports is expected.
 3. **`await Observability.shutdown()` before the process exits**, in the
    `finally` under *Flush on exit* — never a handler assembled by hand.
 
