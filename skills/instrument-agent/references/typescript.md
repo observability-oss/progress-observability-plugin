@@ -118,18 +118,39 @@ Observability.instrument({
   instruments: new Set([ObservabilityInstruments.OPENAI]),   // required — see "Then add instruments"
 });
 
+// Flush on beforeExit, not after require() - see below
+let flushed = false;
+const flush = () => (flushed ? undefined : ((flushed = true), Observability.shutdown()));
+process.on('beforeExit', flush);
+
 try {
   require('./src/app');          // AFTER init — a hoisted import is too early
-} finally {
-  void Observability.shutdown();
+} catch (err) {
+  console.error(err);
+  void Promise.resolve(flush()).finally(() => process.exit(1));
 }
 ```
 
-Two differences from the ESM bootstrap: no `register/hooks` import (those
-intercept ESM module resolution), and `require()` instead of `await import()`
-(no top-level await). Leave the app file's own `import` statements alone — do
-not rewrite them into lazy in-function `require`s to make init-at-top work;
-that is restructuring.
+Three differences from the ESM bootstrap: no `register/hooks` import (those
+intercept ESM module resolution), `require()` instead of `await import()` (no
+top-level await), and **the flush hangs off `beforeExit` rather than a
+`finally`**. That last one is not stylistic:
+
+> `require()` returns as soon as the module body has run. A CommonJS entry
+> point cannot `await`, so it typically calls an async `main()` without
+> awaiting it — meaning the app is **still in flight** when `require()`
+> returns. Flushing there drops every span the app has not produced yet.
+> `beforeExit` fires once the event loop drains, after that work finishes, and
+> unlike `exit` it *can* await. Measured both ways.
+
+`beforeExit` does not fire when the process dies on a throw, hence the `catch`:
+report, flush, and defer the non-zero exit until the flush settles — throwing
+immediately would kill the process mid-flush.
+
+Leave the app file's own `import` statements alone — do not rewrite them into
+lazy in-function `require`s to make init-at-top work, and do not restructure
+its entry point to make it awaitable. The bootstrap above handles a floating
+`main()` without touching the app.
 
 **Ignore the `register/hooks was not loaded` warning.** The SDK prints it on
 every CommonJS run — it fires whenever the hooks are absent, but its advice
@@ -260,6 +281,11 @@ particular:
 > not flush.** Node's `exit` event is synchronous-only: the handler is entered,
 > the first `await` yields, and the process is already gone. Nothing after that
 > line ever runs and the exit code is still 0 — so it looks like it worked.
+
+**`beforeExit` is a different event and is fine** — it fires while the loop can
+still do work, so it can await. That is exactly what the CommonJS bootstrap
+above uses, because `require()` returns before a floating `main()` finishes.
+`exit` is the broken one; don't generalise the warning to both.
 
 `SIGINT`/`SIGTERM` handlers *may* be added on top for a long-running server —
 those callbacks can await before calling `process.exit()` themselves. They are
