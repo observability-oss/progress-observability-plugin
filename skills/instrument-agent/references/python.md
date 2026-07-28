@@ -259,11 +259,10 @@ span looks exactly like "instrumentation doesn't work".
 
 1. **Init after the LLM client import/construction** — move init to the top of
    the entry point. Whether a late init actually loses spans depends on the
-   instrumentor: ones that patch a *class* still cover clients built earlier
-   (`google-genai`, measured — an existing `Client` picks the patch up), ones
-   that capture a bound reference do not. Init first either way, but don't
-   write in a comment that a pre-init client goes untraced unless you have
-   checked that SDK — it is often false.
+   instrumentor: ones that patch a class still cover clients built earlier
+   (`google-genai`, measured), ones that hold a bound reference do not. Init
+   first regardless — but don't state in a comment that a pre-init client is
+   untraced unless you have checked that SDK.
 2. **Flat traces from a tier-1 framework** — the gate (meta package missing) or
    init ordering. Diagnose; never report LLM-only as the framework's depth.
 3. **Wrong key type** — `acm_…` (MCP, read) in place of `ac_p_…` (Integration,
@@ -273,10 +272,8 @@ span looks exactly like "instrumentation doesn't work".
    appear; co-presence can confuse auto-detection.
 5. **Silent misconfig** — re-run with `debug=True` (or
    `OBSERVABILITY_DEBUG=true`) to see exporter errors on stdout.
-6. **`ModelFixProcessor._apply_attribute_fixes failed` on a Gemini span** —
-   an SDK issue, not the app's wiring: it fires on every `google-genai` span
-   (reproduced against the reference solution in CI), and the exception
-   message logs empty because the handler prints `{e}` with no type and gates
-   `exc_info` on debug. The span still exports and is queryable; what is
-   skipped is that processor's attribute normalisation. Report it as known and
-   move on — `OBSERVABILITY_DEBUG=1` gets the traceback if needed.
+6. **`ModelFixProcessor._apply_attribute_fixes failed` on a Gemini span** — an
+   SDK issue, not the app's wiring. It fires on every `google-genai` span and
+   logs an empty message. The span still exports and is queryable; only that
+   processor's attribute normalization is skipped. Say it's known and move on;
+   `OBSERVABILITY_DEBUG=1` gets the traceback.
