@@ -59,9 +59,9 @@ import is `ERR_MODULE_NOT_FOUND` at startup under ESM.
 **The 2.1.2 default init instruments LangChain and nothing else.** (SDK
 defect: its consumer-LangChain probe resolves the `@langchain/core` shipped
 inside the SDK itself, so it fires in every project and suppresses the other
-instrumentors.) An app calling `openai`, `@anthropic-ai/sdk`, Bedrock or
-Cohere directly emits **zero spans** — no error, clean shutdown. Name what the
-app uses:
+instrumentors.) An app calling `openai`, `@anthropic-ai/sdk`, `@google/genai`,
+Bedrock or Cohere directly emits **zero spans** — no error, clean shutdown.
+Name what the app uses:
 
 ```typescript
 import { Observability, ObservabilityInstruments } from '@progress/observability';
@@ -187,6 +187,13 @@ GROQ, MISTRAL, TOGETHER, REPLICATE, ALEPHALPHA, GOOGLE_GENERATIVEAI,
 TRANSFORMERS, WATSONX, LANGCHAIN, LLAMA_INDEX, CREW, HAYSTACK, OPENAI_AGENTS,
 MCP, PINECONE, CHROMA, WEAVIATE, QDRANT, MILVUS, LANCEDB, MARQO, REDIS, MYSQL,
 REQUESTS, URLLIB.
+
+**For Google, check which SDK the app imports.** `GOOGLE_GENERATIVEAI` hooks
+**`@google/genai`** (≥1.0 <2.0), the unified SDK. `VERTEXAI` covers
+`@google-cloud/vertexai` (≥1.1) and `@google-cloud/aiplatform` (≥3.10). The
+enum member is named after a package it does not instrument, so read
+`package.json`, not the enum. Name whichever applies in `instruments`, like any
+other provider.
 
 **Any OpenAI-compatible endpoint counts as OPENAI** (CI-verified): OpenRouter,
 LiteLLM, vLLM, Together, Fireworks, most gateways — via `baseURL` in the

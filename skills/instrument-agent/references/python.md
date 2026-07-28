@@ -78,24 +78,41 @@ use `OpenAILike` from `llama-index-llms-openai-like` instead of its `OpenAI`.
 (`gen_ai.workflow.nodes`/`edges`), no extra package, no decorators.
 
 **Not auto-instrumented:** DSPy, AutoGen, Pydantic AI, Semantic Kernel,
-Google ADK, smolagents, Instructor. Say so, then offer decorators (below).
+smolagents, Instructor. Say so, then offer decorators (below).
 
-## The gate: sub-packages don't switch instrumentors on
+**Google ADK is partial, not absent.** No instrumentor covers ADK itself, but
+`google-adk` depends on `google-genai`, so its model calls ride the GenAI
+instrumentor: `llm_call` spans, no agent/session structure. Report it that way
+and offer decorators for the structure. ADK also ships a *different* upstream
+instrumentor, `opentelemetry-instrumentation-google-genai`, under its
+`otel-gcp` extra — if that extra is installed, don't enable both, or every
+model call is recorded twice.
 
-traceloop enables a framework instrumentor only if a **distribution of a
-specific name** is installed:
+## The gate: the installed distribution name decides
 
-| Framework | Gate accepts | Does **not** satisfy it |
+traceloop enables an instrumentor only if a **distribution of a specific name**
+is installed. Check the dependency file, not the imports:
+
+| Instrumentor | Gate accepts | Does **not** satisfy it |
 |---|---|---|
 | LangChain | `langchain` or `langgraph` | `langchain-core`, `langchain-openai` |
 | LlamaIndex | `llama-index` or `llama_index` | `llama-index-core`, `llama-index-llms-*` |
 | Haystack | `haystack` | `haystack-ai` — the real name, so this gate never passes |
+| Google GenAI | `google-genai` ≥ 1.0 | `google-generativeai`, the legacy SDK — nothing instruments it |
 
 An app on `-core` packages alone instruments cleanly, runs fine, emits LLM
 spans, and produces **no structure** — no error, no warning. This is the most
 common cause of "instrumentation works but the traces are flat", and adding
 the meta package is a **required edit** (see SKILL.md Wire rules: add it
 alongside the `-core` package, never in place of it).
+
+**For Google, check the package name, not the enum.** The instrumentor ships as
+`opentelemetry-instrumentation-google-generativeai` and the enum member is
+`GOOGLE_GENERATIVEAI`, but it wraps `google.genai.models` and gates on the
+`google-genai` distribution. An app on the legacy `google-generativeai` package
+emits nothing and raises nothing. Vertex AI is a separate instrumentor again:
+gated on `google-cloud-aiplatform` ≥ 1.38.1, wrapping
+`vertexai.generative_models` and `vertexai.language_models`.
 
 To check whether an instrumentor is actually on, use
 `LangchainInstrumentor().is_instrumented_by_opentelemetry` — not `__wrapped__`

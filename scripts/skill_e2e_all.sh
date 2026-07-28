@@ -72,6 +72,9 @@ PY_FIXTURES=(
   "agno|yes|.agent,llm_call"
   "haystack|yes|haystack.pipeline.run,haystack.component.run,llm_call"
   "mcp|yes|initialize.mcp,.tool,llm_call"
+  # Google takes a different key entirely, and the instrumentor names its span
+  # from OTel semconv: "generate_content <model>".
+  "googlegenai|GEMINI_API_KEY,GOOGLE_API_KEY|generate_content"
 )
 TS_FIXTURES=(
   "keyless|no|triage,classify,route,fetchTicket"
@@ -128,8 +131,20 @@ run_lang() {
     [ -n "$f" ] || continue
     if [ ${#want[@]} -gt 0 ] && [[ ! " ${want[*]} " =~ " $f " ]]; then continue; fi
     [ -d "$repo/agents/$f" ] || { record "$lang" "$f" "SKIP  no such fixture"; ((SKIP++)); continue; }
-    if [ "$needs_llm" = yes ] && [ -z "${OPENROUTER_API_KEY:-}${OPENAI_API_KEY:-}" ]; then
-      record "$lang" "$f" "SKIP  needs OPENROUTER_API_KEY or OPENAI_API_KEY"; ((SKIP++)); continue
+    # Credential gate. The middle field is "no", "yes" (the OpenAI-compatible
+    # default every fixture shared until Google arrived), or an explicit
+    # comma-separated list of env vars, any one of which is enough.
+    if [ "$needs_llm" != no ]; then
+      case "$needs_llm" in
+        yes) need_vars="OPENROUTER_API_KEY OPENAI_API_KEY" ;;
+        *)   need_vars=$(echo "$needs_llm" | tr ',' ' ') ;;
+      esac
+      have=""
+      for v in $need_vars; do [ -n "${!v:-}" ] && have=1; done
+      if [ -z "$have" ]; then
+        record "$lang" "$f" "SKIP  needs $(echo "$need_vars" | sed 's/ / or /g')"
+        ((SKIP++)); continue
+      fi
     fi
 
     local svc="${prefix}-${f}-skill"
