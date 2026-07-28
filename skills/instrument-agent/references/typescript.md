@@ -131,10 +131,10 @@ intercept ESM module resolution), and `require()` instead of `await import()`
 not rewrite them into lazy in-function `require`s to make init-at-top work;
 that is restructuring.
 
-The SDK prints `@progress/observability/register/hooks was not loaded` on every
-CommonJS run. **It is a false alarm** — the warning fires whenever the hooks are
-absent, but its advice applies only to ESM. Spans arrive normally (verified).
-Do not add the hooks import to silence it.
+**Ignore the `register/hooks was not loaded` warning.** The SDK prints it on
+every CommonJS run — it fires whenever the hooks are absent, but its advice
+applies only to ESM, and spans arrive normally (verified). Adding the hooks
+import to silence it achieves nothing.
 
 ## Three rules that decide whether anything is captured
 
@@ -142,12 +142,10 @@ Get any of these wrong and the wiring silently does nothing:
 
 1. **The hooks import executes first** — not "near the top", first. Anything
    imported ahead of it is already resolved and cannot be patched.
-2. **ESM: LangChain must not resolve before `instrument()`.** A static
-   `import { ChatOpenAI } from '@langchain/openai'` at the top of the entry
-   point resolves first and yields flat or missing spans. **A bootstrap file
-   already satisfies this** — the app and everything it imports load after init,
-   so leave the app's own imports alone. Only an app with no bootstrap needs
-   `const { ChatOpenAI } = await import('@langchain/openai')` in its own code.
+2. **ESM: LangChain must not resolve before `instrument()`.** A bootstrap file
+   satisfies this — leave the app's own imports alone. Without one, the app
+   needs `const { ChatOpenAI } = await import('@langchain/openai')`: a static
+   top-of-file import resolves first and yields flat or missing spans.
 3. **`await Observability.shutdown()` before the process exits**, in the
    `finally` under *Flush on exit* — never a handler assembled by hand.
 
