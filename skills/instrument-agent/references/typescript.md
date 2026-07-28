@@ -118,7 +118,7 @@ Observability.instrument({
   instruments: new Set([ObservabilityInstruments.OPENAI]),   // required — see "Then add instruments"
 });
 
-// Flush on beforeExit, not after require() - see below
+// flush on beforeExit — require() returns before a floating main() finishes
 let flushed = false;
 const flush = () => (flushed ? undefined : ((flushed = true), Observability.shutdown()));
 process.on('beforeExit', flush);
@@ -133,24 +133,20 @@ try {
 
 Three differences from the ESM bootstrap: no `register/hooks` import (those
 intercept ESM module resolution), `require()` instead of `await import()` (no
-top-level await), and **the flush hangs off `beforeExit` rather than a
-`finally`**. That last one is not stylistic:
+top-level await), and the flush on `beforeExit` rather than in a `finally`.
 
-> `require()` returns as soon as the module body has run. A CommonJS entry
-> point cannot `await`, so it typically calls an async `main()` without
-> awaiting it — meaning the app is **still in flight** when `require()`
-> returns. Flushing there drops every span the app has not produced yet.
-> `beforeExit` fires once the event loop drains, after that work finishes, and
-> unlike `exit` it *can* await. Measured both ways.
+**Flush on `beforeExit`, never straight after `require()`.** `require()`
+returns as soon as the module body has run, and a CommonJS entry cannot
+`await` — so it calls an async `main()` bare and is still in flight at that
+point. Flushing there drops every span not yet produced. `beforeExit` fires
+once the loop drains, and unlike `exit` it can await. Measured both ways.
 
-`beforeExit` does not fire when the process dies on a throw, hence the `catch`:
-report, flush, and defer the non-zero exit until the flush settles — throwing
-immediately would kill the process mid-flush.
+**Keep the `catch`.** `beforeExit` does not fire when the process dies on a
+throw, and `shutdown()` is async — rethrowing immediately kills the process
+mid-flush, so report, flush, then exit non-zero.
 
-Leave the app file's own `import` statements alone — do not rewrite them into
-lazy in-function `require`s to make init-at-top work, and do not restructure
-its entry point to make it awaitable. The bootstrap above handles a floating
-`main()` without touching the app.
+Leave the app's own `import` statements alone, and do not restructure its entry
+point to make it awaitable: the bootstrap handles a floating `main()` as it is.
 
 **Ignore the `register/hooks was not loaded` warning.** The SDK prints it on
 every CommonJS run — it fires whenever the hooks are absent, but its advice
