@@ -1,0 +1,23 @@
+name: check-copilot-instructions
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "references/mcp.md"
+      - "skills/**"
+      - "scripts/build_copilot.py"
+      - "scripts/copilot-instructions.template.md"
+      - "copilot/.github/copilot-instructions.md"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Verify copilot-instructions.md is in sync
+        run: python scripts/build_copilot.py --check

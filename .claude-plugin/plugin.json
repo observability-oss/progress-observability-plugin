@@ -1,0 +1,19 @@
+{
+  "name": "progress-observability",
+  "version": "1.0.0",
+  "description": "Observe, debug, cost-manage, and evaluate AI systems from the Progress Observability Platform, read over MCP: trace triage, cost/usage reports, eval coverage gaps, research-grounded LLM-as-a-Judge eval generation, a setup health check, a scaffolder for new instrumented .NET agents, and an instrumenter that retrofits observability onto existing Python, TypeScript, or .NET agents.",
+  "author": {
+    "name": "observability-oss"
+  },
+  "homepage": "https://www.telerik.com/ai-observability-platform",
+  "license": "MIT",
+  "keywords": [
+    "observability",
+    "traces",
+    "llm-as-judge",
+    "evals",
+    "cost",
+    "debugging",
+    "mcp"
+  ]
+}

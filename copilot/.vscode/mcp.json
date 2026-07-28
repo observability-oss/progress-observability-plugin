@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "progress-observability": {
+      "type": "http",
+      "url": "https://mcp.observability.progress.com/mcp",
+      "headers": {
+        "X-Api-Key": "${input:observability-api-key}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "observability-api-key",
+      "description": "Progress Observability MCP API key",
+      "password": true
+    }
+  ]
+}

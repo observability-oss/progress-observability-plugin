@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "progress-observability": {
+      "type": "http",
+      "url": "https://mcp.observability.progress.com/mcp",
+      "headers": {
+        "X-Api-Key": "${OBSERVABILITY_MCP_API_KEY}"
+      }
+    }
+  }
+}

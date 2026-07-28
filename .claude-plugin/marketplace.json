@@ -1,0 +1,17 @@
+{
+  "name": "progress-observability",
+  "owner": {
+    "name": "observability-oss"
+  },
+  "metadata": {
+    "description": "Marketplace for the progress-observability plugin — observe, debug, cost-manage, and evaluate AI systems over the Progress Observability MCP server.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "progress-observability",
+      "source": "./",
+      "description": "Trace triage, cost/usage reports, eval coverage gaps, LLM-as-a-Judge eval generation, a setup health check, a scaffolder for new instrumented .NET agents, and an instrumenter for existing Python/TypeScript/.NET agents — over the Progress Observability MCP server."
+    }
+  ]
+}
