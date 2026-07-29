@@ -160,8 +160,7 @@ to confirm the traces:
 
 > Wiring is complete. Run your agent so it produces some traffic, then open
 > **observability.progress.com** and confirm the traces are flowing in for
-> service `<app_name>` — they should appear within a minute of the run. To
-> confirm from your coding agent instead, run `/health-check`.
+> service `<app_name>` — they should appear within a minute of the run.
 
 An unverified wiring is a normal, healthy outcome — especially for a new user on
 the free tier, who has no MCP key to read traces with. Treating it as a failure
