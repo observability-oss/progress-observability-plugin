@@ -119,6 +119,26 @@ generation, say — needs `.AddObservability()` on each. Miss one and that model
 calls are simply absent from the traces, with everything else looking healthy,
 which reads as a platform problem rather than a wiring gap.
 
+**Tools outside function-invocation middleware need `AddToolObservability()`.**
+Tool spans come free when `UseFunctionInvocation` (or an agent framework that
+uses it) drives the calls. An app that dispatches tools itself gets none — the
+package exposes `AddToolObservability()` for that case, as an extension on
+`ChatOptions` and on `IList<AITool>`, which wraps each `AIFunction` so its
+invocations are recorded. It is idempotent: already-instrumented functions are
+left alone, so it is safe on a list you do not fully control. Reach for it only
+when tool spans are genuinely missing — with function-invocation middleware in
+the chain it is redundant.
+
+**Errors are recorded for you.** A failing call marks both the chat span and
+its parent agent span as errored, attaches the exception, and rethrows. Don't
+wrap calls in `try`/`catch` just to report failures to the platform — that is
+already done, and swallowing the exception to "help" loses it from the app.
+
+**Provider and model are detected, not configured.** The wrapper reads them
+from the client's own metadata (with an Azure-versus-OpenAI correction), so
+there is nothing to set and no reason to look for an option. If the model
+cannot be determined the span still records, labelled as unknown.
+
 ## Configuration
 
 Pass the key explicitly to `Initialize()`. The app reads it however its own
@@ -153,10 +173,17 @@ the app-side convention used above for the app to read and pass in; the SDK
 does not recognise that name.
 
 Each value resolves the same way: **the explicit `ObservabilityOptions`
-property, then the env var above.** `Endpoint` also falls back to a built-in
-default, so only `ApiKey` and `AppName` must come from somewhere. If either is
-still empty, `Initialize()` throws
+property, then the env var above.** `ApiKey` is the only one with nothing
+behind it — `Endpoint` and `AppName` both carry defaults — so a missing key is
+the one thing that throws
 `ArgumentException("Missing required observability options.")`.
+
+**`AppName` defaults to `Agent`, and that is a trap.** Omit it and nothing
+fails: the app initializes, exports, and lands on the platform under the
+service name `Agent`. Two services that both forget it are indistinguishable
+there, and every dashboard, alert and query built on service name silently
+points at the wrong thing. Always set it explicitly, even though the SDK does
+not make you.
 
 ## `Initialize()` — order and repeat calls
 
@@ -167,10 +194,10 @@ still empty, `Initialize()` throws
 - **A failed call is recoverable.** The `ArgumentException` is thrown *before*
   the provider is assigned, so nothing is cached; fixing the options and
   calling again works.
-- **`.AddObservability()` initializes too.** It calls `Initialize()` with
-  options built only from its own arguments — so the no-arg form supplies
-  neither key nor app name and depends entirely on the env vars above. With
-  them set it self-initializes; without them it throws.
+- **`.AddObservability()` initializes too**, from options built only out of
+  what it was handed. The no-arg form therefore has no key, and falls back to
+  `PROGRESS__OBSERVABILITY__APIKEY`: with that set it self-initializes and the
+  service is named `Agent`; without it, it throws.
 
 For the documented pattern — explicit options, no env vars — that makes the
 order load-bearing: `ObservabilityTracer.Initialize(…)` first,
@@ -180,6 +207,14 @@ runs first with empty options and throws before your call is ever reached.
 Content capture (prompts/completions) is on by default —
 `RecordInputs`/`RecordOutputs` on `ObservabilityOptions` are the off-switches
 for sensitive systems; metadata keeps flowing either way.
+
+The rest of `ObservabilityOptions` worth knowing: `Debug` turns on the SDK's
+own logging through the default logger, which is the first thing to try when
+init appears to succeed but nothing arrives. `AdditionalAttributes` and
+`AdditionalTags` are stamped on every span — tags are the ones the portal can
+filter on, so `customer.id:12345` and similar belong there rather than in
+attributes. Both are captured at `Initialize()`, so changing them later means
+`Shutdown()` and initialize again.
 
 ## Verified against the platform
 
