@@ -151,24 +151,32 @@ PROGRESS__OBSERVABILITY__ENDPOINT
 
 These are the ASP.NET config-hierarchy spellings, **not** `OBSERVABILITY_API_KEY`
 — that name is the app's own convention here and the SDK does not recognise it.
-Wire one route or the other and say which in your report; don't set both and
-rely on the precedence between them.
 
-## `Initialize()` is one-shot
+Each value resolves in the same order: **the explicit `ObservabilityOptions`
+property, then the env var above.** `Endpoint` additionally falls back to a
+built-in default, so in practice only `ApiKey` and `AppName` must come from
+somewhere. If either is still empty, `Initialize()` throws
+`ArgumentException("Missing required observability options.")` — loudly, which
+is the behaviour you want.
 
-Two properties that decide the shape of correct wiring:
+## `Initialize()` semantics
 
-- **The first call wins.** `Initialize()` is not idempotent and has no
-  reconfigure path — a later call with better options is a silent no-op. A
-  first call made with a missing key cannot be repaired by calling again.
-- **`.AddObservability()` cannot configure the SDK.** It calls `Initialize()`
-  itself, but builds `ObservabilityOptions` only from the arguments it was
-  given — so in the no-arg form the key and app name are empty and
-  initialization fails with `Missing required observability options.`
+- **The first successful call wins.** `Initialize()` takes a lock and returns
+  immediately if a provider already exists, so a later call with different
+  options is a no-op. To reconfigure, call `Shutdown()` first — that disposes
+  the provider and clears it, and a subsequent `Initialize()` then applies.
+- **A failed call is recoverable.** The `ArgumentException` is thrown *before*
+  the provider is assigned, so nothing is cached; fixing the options and
+  calling again works.
+- **`.AddObservability()` initializes too.** It calls `Initialize()` with
+  options built only from its own arguments — so the no-arg form supplies
+  neither key nor app name and depends entirely on the env vars above. With
+  them set it self-initializes; without them it throws.
 
-So the order is not stylistic: `ObservabilityTracer.Initialize(…)` with real
-options first, `.AddObservability()` on the chat client second. Getting it
-backwards produces an app that builds, runs, and traces nothing.
+For the documented pattern — explicit options, no env vars — that makes the
+order load-bearing: `ObservabilityTracer.Initialize(…)` first,
+`.AddObservability()` second. Backwards, the chat client's own `Initialize()`
+runs first with empty options and throws before your call is ever reached.
 
 Content capture (prompts/completions) is on by default —
 `RecordInputs`/`RecordOutputs` on `ObservabilityOptions` are the off-switches
@@ -206,8 +214,8 @@ for sensitive systems; metadata keeps flowing either way.
    client** — both covered in the wiring section above; they are the two that
    produce partial or empty traces from an otherwise healthy app.
 2. **Wrong key type** — `acm_…` (MCP, read) instead of `ac_p_…` (Integration).
-   Note this one is unrecoverable at runtime: `Initialize()` is one-shot, so a
-   bad first call cannot be fixed by initializing again later.
+   A structurally valid but wrong key initializes fine and fails at export, so
+   this one is invisible until you look for the spans.
 3. **Framework-level alternatives** — only the `IChatClient` path above is
    verified end-to-end; if the user wants instrumentation at a different layer,
    test against the platform before declaring success.
