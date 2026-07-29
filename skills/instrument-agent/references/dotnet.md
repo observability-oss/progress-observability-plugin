@@ -140,8 +140,7 @@ dotnet user-secrets set "Progress:Observability:ApiKey" "ac_p_001_..."
 export PROGRESS__OBSERVABILITY__APIKEY="ac_p_001_..."
 ```
 
-**The package also reads three env vars of its own** (string literals in the
-assembly, read via `Environment.GetEnvironmentVariable`):
+**The package also reads three env vars of its own:**
 
 ```
 PROGRESS__OBSERVABILITY__APIKEY
@@ -149,17 +148,17 @@ PROGRESS__OBSERVABILITY__APPNAME
 PROGRESS__OBSERVABILITY__ENDPOINT
 ```
 
-These are the ASP.NET config-hierarchy spellings, **not** `OBSERVABILITY_API_KEY`
-— that name is the app's own convention here and the SDK does not recognise it.
+These are the ASP.NET config-hierarchy spellings. `OBSERVABILITY_API_KEY` is
+the app-side convention used above for the app to read and pass in; the SDK
+does not recognise that name.
 
-Each value resolves in the same order: **the explicit `ObservabilityOptions`
-property, then the env var above.** `Endpoint` additionally falls back to a
-built-in default, so in practice only `ApiKey` and `AppName` must come from
-somewhere. If either is still empty, `Initialize()` throws
-`ArgumentException("Missing required observability options.")` — loudly, which
-is the behaviour you want.
+Each value resolves the same way: **the explicit `ObservabilityOptions`
+property, then the env var above.** `Endpoint` also falls back to a built-in
+default, so only `ApiKey` and `AppName` must come from somewhere. If either is
+still empty, `Initialize()` throws
+`ArgumentException("Missing required observability options.")`.
 
-## `Initialize()` semantics
+## `Initialize()` — order and repeat calls
 
 - **The first successful call wins.** `Initialize()` takes a lock and returns
   immediately if a provider already exists, so a later call with different
