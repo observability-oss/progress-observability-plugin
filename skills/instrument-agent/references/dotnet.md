@@ -228,8 +228,11 @@ attributes. Both are captured at `Initialize()`, so changing them later means
 - Spans arrive with kind `llm_call`, and `AIFunction` invocations through the
   agent pipeline (`AsAIAgent`) arrive with kind `tool` — a single
   `.AddObservability()` between `AsIChatClient()` and `AsAIAgent()` captures
-  both (CI-verified). Verify by **kind**, not by span name — exact .NET span
-  names are SDK-version-dependent and unpinned.
+  both (CI-verified). Verify by **kind**, not by span name. .NET names its
+  spans after the operation alone, so unlike Python and TypeScript — where the
+  model is part of the name (`generate_content <model>`, `chat <model>`) — a
+  .NET span name carries no model. Don't expect one, and don't treat its
+  absence as a wiring fault; the model is on the span's attributes.
 - The OpenAI client with a custom `Endpoint` traces identically to Azure
   OpenAI (CI-verified with OpenRouter). **Any OpenAI-compatible endpoint** —
   OpenRouter, LiteLLM, vLLM, Together, most gateways — works the same way:
