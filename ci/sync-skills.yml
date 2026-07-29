@@ -1,0 +1,114 @@
+# Keep this repo's copy of the shared skills in step with their canonical home.
+#
+# NOTE: this file lives in ci/ because workflow files can't be pushed by the
+# tooling that maintains this repo. To enable it:
+#   git mv ci/sync-skills.yml .github/workflows/sync-skills.yml
+#
+# No secrets required while the canonical repo is public. If it moves somewhere
+# private, give the checkout/clone a token with read access and set
+# CANONICAL_URL accordingly.
+#
+# Two jobs, deliberately separate:
+#
+#   drift  - runs on every PR and push that touches the synced paths, and fails
+#            if this repo's copy differs from canonical. That is what stops a
+#            skill being edited here by mistake, which is exactly how the two
+#            repos silently diverged before this existed.
+#
+#   sync   - scheduled and manual. Pulls canonical, regenerates the derived
+#            artifacts, and opens (or updates) a PR when anything changed. The
+#            PR then runs `drift` and `check-copilot-instructions` itself, so
+#            nothing merges without those passing.
+
+name: sync-skills
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "references/mcp.md"
+      - "references/mcp-schema.json"
+  push:
+    branches: [main]
+    paths:
+      - "skills/**"
+      - "references/mcp.md"
+      - "references/mcp-schema.json"
+  schedule:
+    - cron: "23 7 * * 1" # Mondays 07:23 UTC, after the fixture repos' probes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Compare against the canonical skills
+        run: scripts/sync_canonical_skills.sh --check
+
+  sync:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Pull canonical skills and regenerate
+        id: sync
+        run: |
+          scripts/sync_canonical_skills.sh
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A fixed branch name means a second run updates the open PR instead of
+      # stacking a new one. force-with-lease is safe here: the branch is only
+      # ever written by this job.
+      - name: Push the sync branch
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B sync/canonical-skills
+          git add -A
+          git commit -m "Sync shared skills from the canonical repo
+
+          Opened automatically. Review the diff rather than merging on green:
+          a span assertion cannot see a wrong-but-working change, and neither
+          can this job."
+          git push --force-with-lease -u origin sync/canonical-skills
+
+      - name: Open or update the PR
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view sync/canonical-skills --json number >/dev/null 2>&1; then
+            echo "PR already open; the push above updated it."
+          else
+            gh pr create \
+              --base main \
+              --head sync/canonical-skills \
+              --title "Sync shared skills from canonical" \
+              --body "Automated sync of \`skills/\` and \`references/mcp*\` from the canonical skills repo, with the derived artifacts regenerated.
+
+          \`scaffold-agent\` is not part of the canonical set and is untouched.
+
+          Merging is not automatic on purpose: read the diff."
+          fi
+
+      - name: Report when nothing changed
+        if: steps.sync.outputs.changed == 'false'
+        run: echo "Already in sync - no PR needed."
