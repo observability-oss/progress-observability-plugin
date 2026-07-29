@@ -137,10 +137,9 @@ exception — that loses it from the app and records nothing extra.
 **Provider and model are detected, not configured.** The wrapper reads them
 from the client's own metadata, correcting Azure clients that report
 themselves as OpenAI. There is no option to set, and a client whose model
-cannot be determined still produces spans. The provider names it recognises
-are `openai`, `azure`, `anthropic`, `google`, `ollama` and `unknown` — so an
-`IChatClient` over something outside that set still traces, it just won't be
-attributed to a named provider. Don't treat that as a wiring problem.
+cannot be determined still produces spans. It recognises `openai`, `azure`,
+`anthropic`, `google` and `ollama`; a client outside that set still traces but
+may carry no provider name. Don't read that as a wiring problem.
 
 ## Configuration
 
@@ -208,13 +207,11 @@ runs first with empty options and throws before your call is ever reached.
 
 Content capture (prompts/completions) is on by default —
 `RecordInputs`/`RecordOutputs` on `ObservabilityOptions` are the off-switches
-for sensitive systems; metadata keeps flowing either way. Concretely, those two
-gate the `gen_ai.prompt` and `gen_ai.completion` attributes, and the tool-level
-`gen_ai.tool.input` / `gen_ai.tool.output`. Everything else — model, provider,
-token counts, temperature, the available-tools list — is metadata and is
-recorded regardless. Worth naming when a user asks what leaves the process:
-turning content off does not make the span anonymous, it removes the message
-bodies.
+for sensitive systems. They gate `gen_ai.prompt`, `gen_ai.completion` and the
+tool-level `gen_ai.tool.input` / `gen_ai.tool.output`. Everything else — model,
+provider, token counts, temperature, the available-tools list — is recorded
+regardless. Say so when a user asks what leaves the process: turning content
+off removes the message bodies, it does not make the span anonymous.
 
 Three more `ObservabilityOptions` settings. `Debug` turns on the SDK's own
 logging through the default logger — try it first when init appears to succeed
@@ -236,14 +233,11 @@ once at `Initialize()`, so changing them later needs `Shutdown()` first.
   agent pipeline (`AsAIAgent`) arrive with kind `tool` — a single
   `.AddObservability()` between `AsIChatClient()` and `AsAIAgent()` captures
   both (CI-verified). **Verify by kind, not by span name.** .NET names spans
-  after the operation and nothing else — the SDK emits `gen_ai.chat`,
-  `gen_ai.invoke_agent` and `gen_ai.execute_tool` — so unlike Python and
-  TypeScript, where the model is part of the name (`generate_content <model>`,
-  `chat <model>`), a .NET span name carries no model. Don't expect one and
-  don't read its absence as a wiring fault; model, provider and token counts
-  are all attributes. (Those three names are what the SDK sets; whether the
-  platform displays them unchanged has not been measured, which is the other
-  reason to assert on kind.)
+  after the operation alone — `gen_ai.chat`, `gen_ai.invoke_agent`,
+  `gen_ai.execute_tool` — so unlike Python and TypeScript, where the model is
+  part of the name (`generate_content <model>`, `chat <model>`), a .NET span
+  name carries no model. Don't read its absence as a wiring fault: model,
+  provider and token counts are attributes.
 - The OpenAI client with a custom `Endpoint` traces identically to Azure
   OpenAI (CI-verified with OpenRouter). **Any OpenAI-compatible endpoint** —
   OpenRouter, LiteLLM, vLLM, Together, most gateways — works the same way:
