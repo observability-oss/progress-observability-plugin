@@ -136,8 +136,8 @@ exception — that loses it from the app and records nothing extra.
 
 **Provider and model are detected, not configured.** The wrapper reads them
 from the client's own metadata, correcting Azure clients that report
-themselves as OpenAI. There is no option to set. If the model cannot be
-determined the span still records, labelled as unknown.
+themselves as OpenAI. There is no option to set, and a client whose model
+cannot be determined still produces spans.
 
 ## Configuration
 
