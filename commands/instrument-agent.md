@@ -15,8 +15,7 @@ start before any LLM client exists, Integration key (`ac_p_…`) via config, agr
 `app_name`, flush on exit. Have the app run once (the decorator/manual-span path
 works with no LLM credentials). This skill does not read the platform back — tell
 the user wiring is done, then have them run their agent and confirm the traces
-are flowing in at observability.progress.com for their `app_name` (or run
-`/health-check` to confirm over MCP).
+are flowing in at observability.progress.com for their `app_name`.
 
 If no target was given and the working directory isn't obviously the agent to
 instrument, ask which project to instrument before touching anything.
