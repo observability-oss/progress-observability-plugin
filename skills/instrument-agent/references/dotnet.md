@@ -121,9 +121,8 @@ which reads as a platform problem rather than a wiring gap.
 
 ## Configuration
 
-Unlike the Python/TS SDKs, this package does **not** read env vars itself — the
-key reaches `ObservabilityOptions.ApiKey` however the app's config does. Two
-CI-verified patterns:
+Pass the key explicitly to `Initialize()`. The app reads it however its own
+config does; two CI-verified patterns:
 
 **Plain env (matches the other languages — simplest for new wiring):**
 
@@ -140,6 +139,36 @@ dotnet user-secrets set "Progress:Observability:ApiKey" "ac_p_001_..."
 # prod (double underscore = nested key)
 export PROGRESS__OBSERVABILITY__APIKEY="ac_p_001_..."
 ```
+
+**The package also reads three env vars of its own** (string literals in the
+assembly, read via `Environment.GetEnvironmentVariable`):
+
+```
+PROGRESS__OBSERVABILITY__APIKEY
+PROGRESS__OBSERVABILITY__APPNAME
+PROGRESS__OBSERVABILITY__ENDPOINT
+```
+
+These are the ASP.NET config-hierarchy spellings, **not** `OBSERVABILITY_API_KEY`
+— that name is the app's own convention here and the SDK does not recognise it.
+Wire one route or the other and say which in your report; don't set both and
+rely on the precedence between them.
+
+## `Initialize()` is one-shot
+
+Two properties that decide the shape of correct wiring:
+
+- **The first call wins.** `Initialize()` is not idempotent and has no
+  reconfigure path — a later call with better options is a silent no-op. A
+  first call made with a missing key cannot be repaired by calling again.
+- **`.AddObservability()` cannot configure the SDK.** It calls `Initialize()`
+  itself, but builds `ObservabilityOptions` only from the arguments it was
+  given — so in the no-arg form the key and app name are empty and
+  initialization fails with `Missing required observability options.`
+
+So the order is not stylistic: `ObservabilityTracer.Initialize(…)` with real
+options first, `.AddObservability()` on the chat client second. Getting it
+backwards produces an app that builds, runs, and traces nothing.
 
 Content capture (prompts/completions) is on by default —
 `RecordInputs`/`RecordOutputs` on `ObservabilityOptions` are the off-switches
@@ -177,6 +206,8 @@ for sensitive systems; metadata keeps flowing either way.
    client** — both covered in the wiring section above; they are the two that
    produce partial or empty traces from an otherwise healthy app.
 2. **Wrong key type** — `acm_…` (MCP, read) instead of `ac_p_…` (Integration).
+   Note this one is unrecoverable at runtime: `Initialize()` is one-shot, so a
+   bad first call cannot be fixed by initializing again later.
 3. **Framework-level alternatives** — only the `IChatClient` path above is
    verified end-to-end; if the user wants instrumentation at a different layer,
    test against the platform before declaring success.
