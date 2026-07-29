@@ -38,6 +38,11 @@ Observability.instrument(
 )
 ```
 
+**Always pass `app_name`.** Omitting it is not an error: it defaults to
+`sys.argv[0]`, so the service is named after the path that launched the
+process and changes whenever that command does. The same app then reports
+under several identities, and nothing about the run looks wrong.
+
 Every option can instead come from the environment (`Observability.instrument()`
 with no arguments):
 
