@@ -121,18 +121,38 @@ SKILL_PROMPT_PREFIX="Use the instrument-agent skill on"
 #
 # So expected/ is moved out of the tree for the duration of the agent's turn
 # and restored before anything needs to diff against it.
+#
+# README.md goes with it, for the same reason and with better evidence. These
+# READMEs document the solutions: the wiring per fixture, the expected span
+# names, the service-name convention, and - since the .NET one gained a "The
+# trap in hosted" section - working code for the one placement the fixtures
+# exist to test. A Copilot run on agents/hosted read exactly that range and
+# then cited it, so hosted proved nothing about the skill that day. Corroborated
+# in the same run: the two fixtures that did not open the README invented their
+# own app_name slugs, the two that did used the README's convention.
+#
+# A real project's README does not explain how to instrument that project. Ours
+# does, which makes it an answer key under a different filename.
 hide_answer_key() {
   local repo="$1"
-  [ -d "$repo/expected" ] || return 0
-  mv "$repo/expected" "$WORKDIR/.answer-key-$(basename "$repo")"
+  local stash="$WORKDIR/.answer-key-$(basename "$repo")"
+  mkdir -p "$stash"
+  [ -d "$repo/expected" ] && mv "$repo/expected" "$stash/expected"
+  [ -f "$repo/README.md" ] && mv "$repo/README.md" "$stash/README.md"
+  return 0
 }
 
 restore_answer_key() {
   local repo="$1"
   local stash="$WORKDIR/.answer-key-$(basename "$repo")"
   [ -d "$stash" ] || return 0
-  rm -rf "$repo/expected"
-  mv "$stash" "$repo/expected"
+  if [ -d "$stash/expected" ]; then
+    rm -rf "$repo/expected"
+    mv "$stash/expected" "$repo/expected"
+  fi
+  [ -f "$stash/README.md" ] && mv "$stash/README.md" "$repo/README.md"
+  rmdir "$stash" 2>/dev/null
+  return 0
 }
 
 # ---------------------------------------------------------------------------

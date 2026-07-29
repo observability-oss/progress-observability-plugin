@@ -133,6 +133,13 @@ Rules that hold across all three:
   The literal still documents the intent, but the same build can then report as
   a different service per environment — dev, staging, prod, CI — with no code
   change. Hardcoding it means every environment lands in one bucket.
+
+  **Add a variable; don't repurpose an existing one.** Where the app already
+  names itself for its own reasons — an agent's `name:`, a service
+  registration, a CLI banner — leave that alone and introduce a separate
+  `app_name`. Pointing an existing field at your new env var makes the app's
+  behaviour change with a telemetry setting, which is app logic edited for an
+  instrumentation task.
 - **Content capture default is ON.** Prompts/completions are sent unless
   content tracing is disabled. For apps handling sensitive data, offer the
   content off-switch (each reference shows it) — metadata keeps flowing.
