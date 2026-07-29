@@ -743,13 +743,13 @@ it — never something this skill does automatically. Do **not** call
 
 Report what you already know from the edits themselves — the language, the
 framework, and whether auto-instrumentation or manual spans are carrying the
-trace — then tell the user plainly that wiring is done, where the traces will
-show up, and how to verify when they choose to:
+trace — then tell the user plainly that wiring is done, and hand off with where
+to confirm the traces:
 
-> Wiring is complete. Check the platform's trace explorer for service
-> `<app_name>` — spans should appear within a minute of the run. To confirm from
-> your coding agent, run `/health-check` (it needs the Progress Observability MCP
-> server connected and an MCP API key on a paid plan).
+> Wiring is complete. Run your agent so it produces some traffic, then open
+> **observability.progress.com** and confirm the traces are flowing in for
+> service `<app_name>` — they should appear within a minute of the run. To
+> confirm from your coding agent instead, run `/health-check`.
 
 An unverified wiring is a normal, healthy outcome — especially for a new user on
 the free tier, who has no MCP key to read traces with. Treating it as a failure
