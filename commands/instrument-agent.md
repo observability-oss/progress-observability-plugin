@@ -14,8 +14,9 @@ per the matching language reference (`references/python.md`, `typescript.md`, or
 start before any LLM client exists, Integration key (`ac_p_…`) via config, agreed
 `app_name`, flush on exit. Have the app run once (the decorator/manual-span path
 works with no LLM credentials). This skill does not read the platform back — tell
-the user wiring is done, point them at the trace explorer for their `app_name`,
-and note that `/health-check` confirms arrival over MCP when they want it.
+the user wiring is done, then have them run their agent and confirm the traces
+are flowing in at observability.progress.com for their `app_name` (or run
+`/health-check` to confirm over MCP).
 
 If no target was given and the working directory isn't obviously the agent to
 instrument, ask which project to instrument before touching anything.
