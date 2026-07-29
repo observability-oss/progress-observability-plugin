@@ -129,15 +129,15 @@ left alone, so it is safe on a list you do not fully control. Reach for it only
 when tool spans are genuinely missing — with function-invocation middleware in
 the chain it is redundant.
 
-**Errors are recorded for you.** A failing call marks both the chat span and
+**Errors are recorded already.** A failing call marks both the chat span and
 its parent agent span as errored, attaches the exception, and rethrows. Don't
-wrap calls in `try`/`catch` just to report failures to the platform — that is
-already done, and swallowing the exception to "help" loses it from the app.
+add `try`/`catch` to report failures to the platform, and don't swallow the
+exception — that loses it from the app and records nothing extra.
 
 **Provider and model are detected, not configured.** The wrapper reads them
-from the client's own metadata (with an Azure-versus-OpenAI correction), so
-there is nothing to set and no reason to look for an option. If the model
-cannot be determined the span still records, labelled as unknown.
+from the client's own metadata, correcting Azure clients that report
+themselves as OpenAI. There is no option to set. If the model cannot be
+determined the span still records, labelled as unknown.
 
 ## Configuration
 
@@ -178,12 +178,11 @@ behind it — `Endpoint` and `AppName` both carry defaults — so a missing key 
 the one thing that throws
 `ArgumentException("Missing required observability options.")`.
 
-**`AppName` defaults to `Agent`, and that is a trap.** Omit it and nothing
-fails: the app initializes, exports, and lands on the platform under the
-service name `Agent`. Two services that both forget it are indistinguishable
-there, and every dashboard, alert and query built on service name silently
-points at the wrong thing. Always set it explicitly, even though the SDK does
-not make you.
+**Always set `AppName` explicitly, even though the SDK does not require it.**
+It defaults to `Agent`, so omitting it fails nothing: the app initializes,
+exports, and lands on the platform under that name. Two services that both
+omit it are indistinguishable there, and anything keyed on service name points
+at the wrong thing.
 
 ## `Initialize()` — order and repeat calls
 
@@ -208,13 +207,12 @@ Content capture (prompts/completions) is on by default —
 `RecordInputs`/`RecordOutputs` on `ObservabilityOptions` are the off-switches
 for sensitive systems; metadata keeps flowing either way.
 
-The rest of `ObservabilityOptions` worth knowing: `Debug` turns on the SDK's
-own logging through the default logger, which is the first thing to try when
-init appears to succeed but nothing arrives. `AdditionalAttributes` and
-`AdditionalTags` are stamped on every span — tags are the ones the portal can
-filter on, so `customer.id:12345` and similar belong there rather than in
-attributes. Both are captured at `Initialize()`, so changing them later means
-`Shutdown()` and initialize again.
+Three more `ObservabilityOptions` settings. `Debug` turns on the SDK's own
+logging through the default logger — try it first when init appears to succeed
+but nothing arrives. `AdditionalAttributes` and `AdditionalTags` are stamped on
+every span; the portal filters on **tags**, so put `customer.id:12345` and
+anything else you will search by there rather than in attributes. Both are read
+once at `Initialize()`, so changing them later needs `Shutdown()` first.
 
 ## Verified against the platform
 
