@@ -35,7 +35,9 @@ on:
       - "references/mcp.md"
       - "references/mcp-schema.json"
   schedule:
-    - cron: "23 7 * * 1" # Mondays 07:23 UTC, after the fixture repos' probes
+    - cron: "23 7 * * *" # daily 07:23 UTC, after the fixture repos run.
+                         # A no-op on the days nothing changed: it opens
+                         # a PR only when canonical and this repo differ.
   workflow_dispatch:
 
 permissions:
