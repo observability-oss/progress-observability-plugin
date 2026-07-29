@@ -74,5 +74,3 @@ steps in order and interpret them together, each one narrowing the fault.
 
 Never write back to the platform — the server is read-only.
 <!-- copilot:end -->
-
-<!-- canonical sync test, reverted next commit -->
