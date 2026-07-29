@@ -18,7 +18,7 @@ contract (tools, limits, and the untrusted-content rules) lives in
 
 | Skill | Command | What it does |
 |---|---|---|
-| **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then verifies over MCP that traces arrive. |
+| **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then hands off to `/health-check` to confirm traces arrive. |
 | **scaffold-agent** | `/scaffold-agent` | Creates a new .NET agent project, already instrumented, from the [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter) template. |
 | **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
 | **trace-triage** | `/trace-triage` | Root-cause a failed or slow run by walking its span tree; returns a diagnosis + a fix. |
@@ -28,8 +28,8 @@ contract (tools, limits, and the untrusted-content rules) lives in
 
 **Start with instrument-agent.** Nothing else here has anything to read until
 your agent is sending traces, and it takes an existing Python, TypeScript, or
-.NET app to that point in one pass — then verifies over MCP that the spans
-actually arrived. **scaffold-agent** is its mirror image for a project that
+.NET app to that point in one pass — then hands off to **health-check** to
+confirm the spans arrived. **scaffold-agent** is its mirror image for a project that
 doesn't exist yet. Those two write project files; everything else is strictly
 read-only.
 

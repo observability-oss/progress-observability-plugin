@@ -13,7 +13,7 @@ This project works with the Progress Observability Platform over the
 `progress-observability` MCP server. Seven skills are available — pick the one
 that matches the request (each also has a matching `/prompt`):
 
-- **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then verify traces arrive. Start here: nothing else has anything to read until traces are flowing.
+- **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive. Start here: nothing else has anything to read until traces are flowing.
 - **scaffold-agent** — create a new .NET agent project, already instrumented, from the starter template.
 - **health-check** — verify the setup is wired up: connection, key scope, data flow, instrumentation depth. Run first when something looks wrong.
 - **trace-triage** — root-cause a failed or slow run by walking its span tree.
