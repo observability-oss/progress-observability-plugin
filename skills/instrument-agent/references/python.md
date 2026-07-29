@@ -8,8 +8,12 @@ this file where they disagree.
 pip install progress-observability httpx  # requires Python >= 3.10
 ```
 
-`httpx` is not a typo: `traceloop-sdk` imports it without declaring it. Declare
-it even when another dependency provides it transitively.
+`httpx` is not a typo: `traceloop-sdk` imports it at module scope without
+declaring it, so in a project with no other source of httpx,
+`from progress.observability import Observability` raises
+`ModuleNotFoundError: No module named 'httpx'` (verified on a clean install).
+Declare it every time — most LLM SDKs pull httpx in transitively, which is the
+only reason this isn't universally fatal.
 
 Match the project's manager: `uv add` · `poetry add` · `pipenv install`.
 Current published version:

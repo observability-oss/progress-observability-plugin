@@ -87,8 +87,9 @@ Rules that hold across all three:
   `llama_index.core` by name, so those stay declared. Say in your report that
   you added it and why; gate table in `references/python.md`.
 - **Python: declare `httpx` alongside the SDK.** `traceloop-sdk` imports it
-  without declaring it. Add it every time — most LLM SDKs provide it
-  transitively, so the omission only bites the app with no other source.
+  without declaring it, so importing `progress.observability` dies with
+  `ModuleNotFoundError: No module named 'httpx'` in a project with no other
+  source. Most LLM SDKs provide it transitively; add it every time regardless.
 - **Never ask the user to paste a key into the chat.** Reference the env var
   or config entry by name and let them set it themselves, in their own shell,
   `.env`, or secret store. Read config to detect what exists; never echo a
