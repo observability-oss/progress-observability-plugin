@@ -81,6 +81,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # checkout@v4 fetches only the default branch, so the remote-tracking
+          # ref for this branch is absent and --force-with-lease rejects with
+          # "stale info". Fetch it explicitly first; on the very first run it
+          # does not exist yet, hence the || true.
+          git fetch origin +refs/heads/sync/canonical-skills:refs/remotes/origin/sync/canonical-skills || true
           git checkout -B sync/canonical-skills
           git add -A
           git commit -m "Sync shared skills from the canonical repo
