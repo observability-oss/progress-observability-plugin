@@ -6,9 +6,9 @@ description: Add Progress Observability instrumentation to an existing AI agent 
 # Instrument an existing agent
 
 Retrofit Progress Observability onto an existing codebase with the smallest
-possible diff, then prove spans actually reach the platform. The mirror image of
-`scaffold-agent`: that one creates a new instrumented project; this one edits a
-project that already exists.
+possible diff, then prove spans actually reach the platform. For a project that
+does not exist yet, this is the wrong skill — it only edits what is already
+there.
 
 **This skill writes code** — the instrumentation edits and nothing else. It never
 restructures the app, and its verify step only reads the platform.
