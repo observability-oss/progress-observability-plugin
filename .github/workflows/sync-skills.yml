@@ -102,7 +102,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh pr view sync/canonical-skills --json number >/dev/null 2>&1; then
+          # gh pr view matches merged and closed PRs too, so a previously
+          # merged sync PR makes the branch look like it still has one open
+          # and no new PR gets created. Ask for open ones specifically.
+          if [ -n "$(gh pr list --head sync/canonical-skills --state open --json number --jq '.[0].number')" ]; then
             echo "PR already open; the push above updated it."
           else
             gh pr create \
