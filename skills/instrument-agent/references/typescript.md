@@ -54,6 +54,14 @@ app that runs and exports nothing. Add `import 'dotenv/config';` after the
 hooks import **only if `dotenv` is already in `package.json`** — a speculative
 import is `ERR_MODULE_NOT_FOUND` at startup under ESM.
 
+**Always set `appName`.** Omitting it is not an error: it falls back to
+`process.argv[1]`, then to the literal string `app name`. Either way the
+service arrives under a name nobody chose.
+
+`OBSERVABILITY_APP_NAME` overrides whatever the code passes, so the `??` above
+is documentation rather than mechanism. It also means a value in the
+environment silently beats an explicit `appName`.
+
 ### Then add `instruments` — required for direct provider SDKs
 
 **The 2.1.2 default init instruments LangChain and nothing else.** (SDK
