@@ -1,6 +1,18 @@
 ---
 name: instrument-agent
-description: Add Progress Observability instrumentation to an existing AI agent or LLM app — Python, TypeScript/JavaScript, or .NET — with the smallest possible diff, then hand off with where to confirm the traces. Use when the user asks to "instrument my agent", "add observability", "add tracing/telemetry to this repo", "connect this to Progress Observability", or has an existing uninstrumented project they want on the platform.
+description: Add Progress Observability instrumentation to an existing AI agent or LLM app — Python, TypeScript/JavaScript, or .NET, including LangChain, LangGraph, LlamaIndex, CrewAI, OpenAI Agents, Haystack, MCP servers and Microsoft.Extensions.AI — with the smallest possible diff, then hand off with where to confirm the traces. Use when the user asks to "instrument my agent", "add observability", "add tracing/telemetry to this repo", "connect this to Progress Observability", or has an existing uninstrumented project they want on the platform. Not for creating a project from scratch — this only edits code that already exists.
+license: MIT
+compatibility: >-
+  Edits files only — needs no MCP server and no MCP key. The instrumented app
+  needs a Progress Observability Integration key (ac_p_…) at runtime, and the
+  project's own package manager (pip/uv/poetry, npm/yarn/pnpm, or dotnet) to
+  install the SDK.
+languages: python, typescript, dotnet
+source: observability-oss/observability-skills
+verified-against:
+  pypi: progress-observability@1.4.3
+  npm: "@progress/observability@2.1.2"
+  nuget: Progress.Observability.Instrumentation@1.2.2
 ---
 
 # Instrument an existing agent
