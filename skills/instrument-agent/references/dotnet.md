@@ -50,6 +50,22 @@ finally
 Make tracing optional like this (warn loudly when the key is absent) so the app
 still runs before observability is configured — but never silently.
 
+**Optional tracing has to guard both touch points, not just this one.** A bare
+`.AddObservability()` builds its own options and initializes from them, falling
+back to `PROGRESS__OBSERVABILITY__APIKEY`; with no key anywhere it throws. So an
+app that guards `Initialize()` and leaves the client chain unguarded still dies
+on a missing key — later, and somewhere less obvious. Gate the attach too:
+
+```csharp
+IChatClient client = azureClient.GetChatClient(deployment).AsIChatClient();
+if (tracing) client = client.AddObservability();
+```
+
+In a hosted app the same gate goes inside the `AddChatClient` factory
+(`return tracing ? client.AddObservability() : client;`), where an unguarded
+call would throw on first resolve rather than at startup — and register the
+`Shutdown` hook only when `tracing` as well.
+
 **Do not add a `Console.CancelKeyPress` handler.** The `finally` above is the
 whole pattern; a Ctrl+C handler is not needed for it and is very easy to get
 wrong. Two shapes seen in practice, both worse than no handler at all:
@@ -73,11 +89,17 @@ var agent = azureClient
     .GetChatClient(deployment)
     .AsIChatClient()
     .AddObservability()               // ← the instrumentation
-    .AsAIAgent(instructions: instructions, name: appName, tools: tools);
+    .AsAIAgent(instructions: instructions, name: agentName, tools: tools);
 ```
 
 For apps using `IChatClient` directly (no agent framework), `.AddObservability()`
 goes in the same place — on the chat-client builder chain, before use.
+
+`name:` here is the agent's own, whatever the app already called it — not
+`appName`. The two are separate identities: `AppName` on `ObservabilityOptions`
+is what the platform files spans under, while `name:` is the agent's, and
+pointing it at the telemetry variable makes the app's behaviour change with an
+observability setting. Leave it as it is.
 
 ### Hosted apps (DI, `AddChatClient`, ASP.NET or a worker)
 
