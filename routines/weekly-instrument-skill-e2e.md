@@ -112,8 +112,10 @@ with **no** register/hooks import (those intercept ESM resolution only),
 `process.on('beforeExit')` and **not** called straight after `require()`, and a
 catch that reports, flushes, then exits non-zero via a deferred exit. Flushing
 after `require()` drops every span from a floating `main()` and still passes a
-bare `llm_call` assertion. This fixture has **no CI job**, so the diff is the
-only thing checking it.
+bare `llm_call` assertion. `commonjs-pipeline` exists as of 30 Jul but asserts
+`llm_call` only, which by the above cannot catch this — it proves the CommonJS
+bootstrap path, nothing about flush timing. The diff is still the only thing
+checking the trap.
 
 ### hosted tests DI placement
 
@@ -124,9 +126,11 @@ on `IHostApplicationLifetime.ApplicationStopping`. On the builder it is a compil
 error (CS1929); anywhere else that compiles it still yields `llm_call` and
 silently loses every tool span.
 
-`agents/hosted` has **no CI job** — `dotnet/e2e.yml` covers only keyless,
-openrouter and agent — so nothing asserts this fixture and your diff is the only
-check on it.
+`hosted-pipeline` was added on 30 Jul and asserts `llm_call,tool` — the `tool`
+half is what makes it catch a misplaced `.AddObservability()`, since the wrong
+placement still yields `llm_call`. It passed first run. If that job is ever
+reduced to `--expect llm_call`, the fixture stops testing anything and the diff
+becomes the only check again.
 
 ### Seven diff-level criteria
 
@@ -163,6 +167,10 @@ throws when that is unset, so `if (tracing)` guards the attach and the `Shutdown
 registration as well as `Initialize()`. A .NET diff that gates only
 `Initialize()` is a FAIL — it still dies on a missing key, inside the DI factory
 for hosted. Model credentials (`OPENROUTER_API_KEY`) still throw and should.
+
+All four rewritten fixtures built and traced green on 30 Jul — `hosted` on
+`llm_call,tool`, `agent` on `llm_call,tool`, `openrouter` and `keyless` on
+`llm_call`. The gating is CI-verified, not inferred from the assembly.
 
 **(d) `@tool` versus `@task`.** Functions that fetch something or cause an
 external effect are `@tool`; functions that transform data in-process are
@@ -221,10 +229,14 @@ failure means depth was lost.
 Also read the plugin's `sync-skills` workflow (daily 07:23 UTC): a failed `drift`
 job means someone edited a skill in the plugin instead of canonical.
 
-**Known coverage gap — do not report as new.** Three of the nineteen fixtures
-have no CI job at all: `dotnet/hosted`, `ts/commonjs`, `ts/openai`. Confirm it
-still stands and move on; if jobs have since been added, say so — that is the fix
-landing.
+**Coverage — closed 30 Jul.** All nineteen fixtures now have a CI job.
+`hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
+`commonjs-pipeline` (ts, `llm_call`) were added that day and all passed first
+run. `dotnet/e2e.yml` should show four jobs and `ts/e2e.yml` four; fewer means
+something was reverted, and that is worth reporting. Note the TS pair gates on
+`ENABLE_LANGCHAIN_E2E`, which now controls three jobs despite the name — if it
+is ever renamed, the new variable has to be set *before* the rename lands or
+all three skip silently.
 
 **Known process gap — confirm, don't rediscover.** The sync PRs are opened by
 `github-actions[bot]` on `sync/canonical-skills` and have been merging within a
