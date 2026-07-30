@@ -146,7 +146,7 @@ may carry no provider name. Don't read that as a wiring problem.
 Pass the key explicitly to `Initialize()`. The app reads it however its own
 config does; two CI-verified patterns:
 
-**Plain env (matches the other languages — simplest for new wiring):**
+**Plain env (simplest for new wiring):**
 
 ```csharp
 var key = Environment.GetEnvironmentVariable("OBSERVABILITY_API_KEY");
@@ -232,12 +232,10 @@ once at `Initialize()`, so changing them later needs `Shutdown()` first.
 - Spans arrive with kind `llm_call`, and `AIFunction` invocations through the
   agent pipeline (`AsAIAgent`) arrive with kind `tool` — a single
   `.AddObservability()` between `AsIChatClient()` and `AsAIAgent()` captures
-  both (CI-verified). **Verify by kind, not by span name.** .NET names spans
+  both (CI-verified). **Verify by kind, not by span name.** Spans are named
   after the operation alone — `gen_ai.chat`, `gen_ai.invoke_agent`,
-  `gen_ai.execute_tool` — so unlike Python and TypeScript, where the model is
-  part of the name (`generate_content <model>`, `chat <model>`), a .NET span
-  name carries no model. Don't read its absence as a wiring fault: model,
-  provider and token counts are attributes.
+  `gen_ai.execute_tool` — so the name never carries a model. Don't read its
+  absence as a wiring fault: model, provider and token counts are attributes.
 - The OpenAI client with a custom `Endpoint` traces identically to Azure
   OpenAI (CI-verified with OpenRouter). **Any OpenAI-compatible endpoint** —
   OpenRouter, LiteLLM, vLLM, Together, most gateways — works the same way:
