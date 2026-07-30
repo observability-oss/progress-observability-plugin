@@ -185,7 +185,7 @@ Get any of these wrong and the wiring silently does nothing:
 3. **`await Observability.shutdown()` before the process exits**, in the
    `finally` under *Flush on exit* — never a handler assembled by hand.
 
-## Env vars (same contract as Python)
+## Env vars
 
 `OBSERVABILITY_APP_NAME`, `OBSERVABILITY_API_KEY`, `OBSERVABILITY_ENDPOINT`
 (has a default — usually omit), `OBSERVABILITY_TRACE_CONTENT=false` (stop
@@ -217,10 +217,10 @@ OpenAI SDK, `configuration: { baseURL }` in LangChain. The platform records
 the real provider. So "my provider isn't on the list" is usually wrong — check
 whether it speaks the OpenAI API.
 
-**Not auto-instrumented: LangGraph.js, Mastra, the Vercel AI SDK.** The JS SDK
-ships fewer instrumentors than Python's (where LangGraph rides the LangChain
-instrumentor — not here). Say so plainly, then offer `wrapFunctionWithSpan` or
-the decorators below for structure.
+**Not auto-instrumented: LangGraph.js, Mastra, the Vercel AI SDK.**
+LangGraph.js does **not** ride the LangChain instrumentor — a LangGraph app
+gets no graph structure from it. Say so plainly, then offer
+`wrapFunctionWithSpan` or the decorators below for structure.
 
 ## Structure without a framework — spans with no LLM call
 
@@ -312,9 +312,9 @@ not a substitute for the `finally`.
 
 ## What arrives on the platform (verified)
 
-JS span names are prefixed with their kind — `workflow <name>`, `chat <model>`
-— unlike Python's `<name>` / `openai.chat`. When verifying, match on the kind
-(`llm_call`, `workflow`) or a kind-safe substring, never on a model name.
+Span names are prefixed with their kind — `workflow <name>`, `chat <model>`.
+When verifying, match on the kind (`llm_call`, `workflow`) or a kind-safe
+substring, never on a model name.
 LangChain under this SDK reports **full chain hierarchy** in a single trace
 (`workflow RunnableSequence` → prompt/parser workflows + `chat <model>` with
 provider, tokens, and cost) — report that depth; flat LLM-only spans instead
