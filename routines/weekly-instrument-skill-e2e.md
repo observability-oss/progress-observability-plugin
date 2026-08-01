@@ -23,7 +23,7 @@ means an unmerged sync PR or an edit made in the wrong repo).
 
 Refresh each clone (`git -C $REPO_X pull`). Read the current
 `skills/instrument-agent/SKILL.md` + references **from the plugin repo**, then
-produce, for all nineteen fixtures, the diff the skill implies, and score each
+produce, for all twenty fixtures, the diff the skill implies, and score each
 against `expected/<fixture>`. PASS/FAIL with a one-line reason each.
 
 ### Delegate the applying — not optional
@@ -53,10 +53,10 @@ that would otherwise have scored a clean pass — the app ran, spans arrived, th
 assertion matched, and the produced code was still wrong. A verdict cannot catch
 these; only the diff can.
 
-### The nineteen
+### The twenty
 
-- **Python (11)** — keyless, openai, langchain, langgraph, crewai,
-  openai-agents, llamaindex, agno, haystack, mcp, googlegenai
+- **Python (12)** — keyless, openai, langchain, langgraph, crewai,
+  openai-agents, llamaindex, agno, haystack, mcp, googlegenai, existing-otel
 - **TypeScript (4)** — keyless, commonjs, openai, langchain
 - **.NET (4)** — keyless, openrouter, agent, hosted
 
@@ -131,6 +131,31 @@ half is what makes it catch a misplaced `.AddObservability()`, since the wrong
 placement still yields `llm_call`. It passed first run. If that job is ever
 reduced to `--expect llm_call`, the fixture stops testing anything and the diff
 becomes the only check again.
+
+### existing-otel is the second exception to init-first
+
+`agents/existing-otel` installs its own `TracerProvider` with a console exporter
+before doing any work. Pass requires `Observability.instrument()` **after** the
+app's `trace.set_tracer_provider(...)`, never before it.
+
+Measured 1 Aug against 1.4.3 / traceloop-sdk 0.59.2. App provider first, then
+init: Progress attaches to the app's provider, the global provider object is
+unchanged, and both exporters receive every span. Init first: traceloop already
+owns a provider, so the app's `set_tracer_provider()` is a no-op — one
+`Overriding of current TracerProvider is not allowed` warning, and the app's
+exporter receives nothing for the rest of the process.
+
+**The wrong order is invisible platform-side.** Progress spans arrive either
+way; it is the app's own telemetry that dies. Score this fixture on the init's
+position relative to `set_tracer_provider`, not on whether spans reached the
+platform.
+
+Two things that are **not** failures here. `app_name` is inert once attached —
+spans carry the app's resource and land under its `service.name` — so do not
+fail a solution for the platform identity coming from `OTEL_SERVICE_NAME`.
+And the app's own `provider.shutdown()` already flushes Progress, so adding
+`Observability.shutdown()` is unnecessary but harmless and idempotent; do not
+score it a failure either way.
 
 ### Seven diff-level criteria
 
@@ -229,11 +254,19 @@ failure means depth was lost.
 Also read the plugin's `sync-skills` workflow (daily 07:23 UTC): a failed `drift`
 job means someone edited a skill in the plugin instead of canonical.
 
-**Coverage — closed 30 Jul.** All nineteen fixtures now have a CI job.
-`hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
-`commonjs-pipeline` (ts, `llm_call`) were added that day and all passed first
-run. `dotnet/e2e.yml` should show four jobs and `ts/e2e.yml` four; fewer means
-something was reverted, and that is worth reporting. Note the TS pair gates on
+**Coverage.** Nineteen of twenty fixtures have a CI job. `hosted-pipeline`
+(dotnet, `llm_call,tool`), `openai-pipeline` and `commonjs-pipeline` (ts,
+`llm_call`) were added 30 Jul and all passed first run. `dotnet/e2e.yml` should
+show four jobs and `ts/e2e.yml` four; fewer means something was reverted, and
+that is worth reporting.
+
+**`existing-otel` is the one without a job** — the YAML was written 1 Aug but
+workflow files cannot be pushed from the session that builds these, so it needs
+a human commit. Check whether `python/e2e.yml` has an `existing-otel-pipeline`
+yet; if it does, confirm it kept **both** halves. The console-output check is
+the one that matters: the MCP half passes even when the wiring is wrong,
+because Progress stays healthy and only the app's exporter dies. A job reduced
+to the MCP half alone tests nothing this fixture is for. Note the TS pair gates on
 `ENABLE_LANGCHAIN_E2E`, which now controls three jobs despite the name — if it
 is ever renamed, the new variable has to be set *before* the rename lands or
 all three skip silently.
@@ -312,7 +345,7 @@ noise, not a skill regression.
 
 ## 4 · Report + notify
 
-Open with step 0's OK/DENIED table, then the compact summary: nineteen
+Open with step 0's OK/DENIED table, then the compact summary: twenty
 structural verdicts (grouped — Python 11, TypeScript 4, .NET 4), the seven
 diff-level criteria called out separately with any fixture that failed each, CI
 results (three e2e + the frameworks matrix per-job, nine jobs, + the sync drift
