@@ -39,14 +39,24 @@ Scan the repo and report what you found, then the diff you intend to make,
   A client pointed at an **OpenAI-compatible endpoint** (OpenRouter, LiteLLM,
   vLLM, Together, most gateways) counts as OpenAI — see the reference.
 - **Existing telemetry** — OpenTelemetry setup, Traceloop, or a previous
-  Progress Observability init. Grep for `set_tracer_provider` /
-  `TracerProvider(` before writing anything. Never stack a second tracer: the
-  SDK attaches to a provider the app already installed, so Progress ends up
-  alongside the app's exporter rather than replacing it — **but only if init
-  runs after the app's own setup**. Init first and the app's
-  `set_tracer_provider()` becomes a no-op with one warning line, killing its
-  existing telemetry while Progress spans keep arriving. This is the one case
-  where "init at process start" is wrong; see the language reference.
+  Progress Observability init. Look for it before writing anything, and treat
+  ordering as load-bearing rather than assuming init belongs first.
+
+  **Python (measured).** The SDK attaches to a provider the app already
+  installed, so Progress ends up alongside the app's exporter rather than
+  replacing it — **but only if init runs after the app's own setup**. Init
+  first and the app's `set_tracer_provider()` becomes a no-op with one warning
+  line, killing its existing telemetry while Progress spans keep arriving.
+  Grep for `set_tracer_provider` / `TracerProvider(`. Details in
+  `references/python.md`.
+
+  **TypeScript and .NET: not measured.** Don't carry the Python behaviour
+  across. Node's global provider registration looks similar but is unverified;
+  .NET has no global provider to overwrite at all — it builds one via
+  `Sdk.CreateTracerProviderBuilder()` and subscribes `ActivitySource`s — so
+  the Python mechanism cannot apply there as written. If you hit an app with
+  existing OTel in either language, say the interaction is unverified rather
+  than guessing, and check the traces on both sides before declaring success.
 - **Scope** — a monorepo, several services, or more than one agent needs a
   "which one?" question before you touch anything. Don't pick for the user.
 - **Config style** — dotenv, user secrets, plain env — instrumentation config
