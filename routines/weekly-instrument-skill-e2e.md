@@ -254,19 +254,19 @@ failure means depth was lost.
 Also read the plugin's `sync-skills` workflow (daily 07:23 UTC): a failed `drift`
 job means someone edited a skill in the plugin instead of canonical.
 
-**Coverage.** Nineteen of twenty fixtures have a CI job. `hosted-pipeline`
-(dotnet, `llm_call,tool`), `openai-pipeline` and `commonjs-pipeline` (ts,
-`llm_call`) were added 30 Jul and all passed first run. `dotnet/e2e.yml` should
-show four jobs and `ts/e2e.yml` four; fewer means something was reverted, and
-that is worth reporting.
+**Coverage — complete.** All twenty fixtures have a CI job as of 1 Aug.
+`hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
+`commonjs-pipeline` (ts, `llm_call`) landed 30 Jul; `existing-otel-pipeline`
+(python) landed 1 Aug. Every one passed first run. Expect four jobs in
+`dotnet/e2e.yml`, four in `ts/e2e.yml` and three in `python/e2e.yml`; fewer
+means something was reverted, and that is worth reporting.
 
-**`existing-otel` is the one without a job** — the YAML was written 1 Aug but
-workflow files cannot be pushed from the session that builds these, so it needs
-a human commit. Check whether `python/e2e.yml` has an `existing-otel-pipeline`
-yet; if it does, confirm it kept **both** halves. The console-output check is
-the one that matters: the MCP half passes even when the wiring is wrong,
-because Progress stays healthy and only the app's exporter dies. A job reduced
-to the MCP half alone tests nothing this fixture is for. Note the TS pair gates on
+**`existing-otel-pipeline` must keep both halves.** Confirm the job still has
+the `The app's own exporter must still work` step alongside the MCP check. The
+console-output check is the one that matters: the MCP half passes even when the
+wiring is wrong, because Progress stays healthy and only the app's exporter
+dies. A job reduced to the MCP half alone tests nothing this fixture is for.
+Note the TS pair gates on
 `ENABLE_LANGCHAIN_E2E`, which now controls three jobs despite the name — if it
 is ever renamed, the new variable has to be set *before* the rename lands or
 all three skip silently.
