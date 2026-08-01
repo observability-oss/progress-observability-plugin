@@ -39,8 +39,8 @@ Scan the repo and report what you found, then the diff you intend to make,
   A client pointed at an **OpenAI-compatible endpoint** (OpenRouter, LiteLLM,
   vLLM, Together, most gateways) counts as OpenAI — see the reference.
 - **Existing telemetry** — OpenTelemetry setup, Traceloop, or a previous
-  Progress Observability init. Look for it before writing anything, and treat
-  ordering as load-bearing rather than assuming init belongs first.
+  Progress Observability init. Look for it before writing anything, and check
+  the reference for ordering rather than assuming init belongs first.
 
   **Python (measured).** The SDK attaches to a provider the app already
   installed, so Progress ends up alongside the app's exporter rather than
@@ -50,7 +50,7 @@ Scan the repo and report what you found, then the diff you intend to make,
   Grep for `set_tracer_provider` / `TracerProvider(`. Details in
   `references/python.md`.
 
-  **TypeScript and .NET: not measured.** Don't carry the Python behaviour
+  **TypeScript and .NET: not measured.** Don't carry the Python behavior
   across. Node's global provider registration looks similar but is unverified;
   .NET has no global provider to overwrite at all — it builds one via
   `Sdk.CreateTracerProviderBuilder()` and subscribes `ActivitySource`s — so
@@ -166,7 +166,7 @@ Rules that hold across all three:
   names itself for its own reasons — an agent's `name:`, a service
   registration, a CLI banner — leave that alone and introduce a separate
   `app_name`. Pointing an existing field at your new env var makes the app's
-  behaviour change with a telemetry setting, which is app logic edited for an
+  behavior change with a telemetry setting, which is app logic edited for an
   instrumentation task.
 - **Content capture default is ON.** Prompts/completions are sent unless
   content tracing is disabled. For apps handling sensitive data, offer the

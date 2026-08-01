@@ -98,7 +98,7 @@ goes in the same place — on the chat-client builder chain, before use.
 `name:` here is the agent's own, whatever the app already called it — not
 `appName`. The two are separate identities: `AppName` on `ObservabilityOptions`
 is what the platform files spans under, while `name:` is the agent's, and
-pointing it at the telemetry variable makes the app's behaviour change with an
+pointing it at the telemetry variable makes the app's behavior change with an
 observability setting. Leave it as it is.
 
 ### Hosted apps (DI, `AddChatClient`, ASP.NET or a worker)
@@ -159,7 +159,7 @@ exception — that loses it from the app and records nothing extra.
 **Provider and model are detected, not configured.** The wrapper reads them
 from the client's own metadata, correcting Azure clients that report
 themselves as OpenAI. There is no option to set, and a client whose model
-cannot be determined still produces spans. It recognises `openai`, `azure`,
+cannot be determined still produces spans. It recognizes `openai`, `azure`,
 `anthropic`, `google` and `ollama`; a client outside that set still traces but
 may carry no provider name. Don't read that as a wiring problem.
 
@@ -194,7 +194,7 @@ PROGRESS__OBSERVABILITY__ENDPOINT
 
 These are the ASP.NET config-hierarchy spellings. `OBSERVABILITY_API_KEY` is
 the app-side convention used above for the app to read and pass in; the SDK
-does not recognise that name.
+does not recognize that name.
 
 Each value resolves the same way: **the explicit `ObservabilityOptions`
 property, then the env var above.** `ApiKey` is the only one with nothing

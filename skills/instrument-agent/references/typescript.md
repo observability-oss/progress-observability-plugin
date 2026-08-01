@@ -250,7 +250,7 @@ with the same meanings:
 | Kind | For |
 |---|---|
 | `WORKFLOW` | The entry point. One per user request, wrapping everything below. |
-| `TASK` | An internal step that transforms data in-process — classify, summarise, route, parse. |
+| `TASK` | An internal step that transforms data in-process — classify, summarize, route, parse. |
 | `AGENT` | A unit that *decides* what to do next, usually an LLM loop. |
 | `TOOL` | Anything the code **calls out to**: lookup, fetch, DB query, API or file read, retrieval. |
 
@@ -304,7 +304,7 @@ particular:
 **`beforeExit` is a different event and is fine** — it fires while the loop can
 still do work, so it can await. That is exactly what the CommonJS bootstrap
 above uses, because `require()` returns before a floating `main()` finishes.
-`exit` is the broken one; don't generalise the warning to both.
+`exit` is the broken one; don't generalize the warning to both.
 
 `SIGINT`/`SIGTERM` handlers *may* be added on top for a long-running server —
 those callbacks can await before calling `process.exit()` themselves. They are
