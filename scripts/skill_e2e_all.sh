@@ -75,6 +75,13 @@ PY_FIXTURES=(
   # Google takes a different key entirely, and the instrumentor names its span
   # from OTel semconv: "generate_content <model>".
   "googlegenai|GEMINI_API_KEY,GOOGLE_API_KEY|generate_content"
+  # The app owns its own TracerProvider, so Progress attaches to it and spans
+  # carry the APP's resource - OBSERVABILITY_APP_NAME never reaches the
+  # platform. The run block exports OTEL_SERVICE_NAME for this fixture so the
+  # verify has a service to look under, and asserts the app's own console
+  # exporter separately: the platform half passes even when the wiring is
+  # wrong, because only the app's exporter dies.
+  "existing-otel|yes|openai.chat,triage_ticket"
 )
 TS_FIXTURES=(
   "keyless|no|triage,classify,route,fetchTicket"
@@ -183,7 +190,13 @@ run_lang() {
               VENV="$WORKDIR/venv-$f"
               python3 -m venv "$VENV" >"$RUNLOG" 2>&1 || ok=0
               "$VENV/bin/pip" install -q -r "$repo/agents/$f/requirements.txt" certifi >>"$RUNLOG" 2>&1 || ok=0
-              (cd "$repo" && OBSERVABILITY_APP_NAME="$svc" "$VENV/bin/python" "agents/$f/app.py" >>"$RUNLOG" 2>&1) || ok=0 ;;
+              (cd "$repo"
+               export OBSERVABILITY_APP_NAME="$svc"
+               # A fixture that installs its own provider makes app_name inert:
+               # spans inherit that provider's resource. Name the service where
+               # the platform will actually see it.
+               if [ "$f" = existing-otel ]; then export OTEL_SERVICE_NAME="$svc"; fi
+               "$VENV/bin/python" "agents/$f/app.py") >>"$RUNLOG" 2>&1 || ok=0 ;;
       ts)     (cd "$repo/agents/$f" && npm install --silent >"$RUNLOG" 2>&1) || ok=0
               (cd "$repo/agents/$f" && OBSERVABILITY_APP_NAME="$svc" npm start >>"$RUNLOG" 2>&1) || ok=0 ;;
       dotnet) (cd "$repo" && OBSERVABILITY_APP_NAME="$svc" dotnet run --project "agents/$f" >"$RUNLOG" 2>&1) || ok=0 ;;
@@ -201,6 +214,21 @@ run_lang() {
     if grep -qE "Traceback \(most recent call last\)|Exception ignored" "$RUNLOG" 2>/dev/null; then
       record "$lang" "$f" "FAIL  app raised (exit 0): $(grep -m1 -E "^[A-Za-z_.]+(Error|Exception):" "$RUNLOG" | cut -c1-80)"
       ((FAIL++)); (cd "$repo" && git reset -q --hard "$base_sha"); continue
+    fi
+
+    # 2b. The half the platform cannot see. For a fixture that already owned an
+    # exporter, the MCP assert below passes whether or not the wiring is right:
+    # Progress stays healthy either way and it is the app's own pipeline that
+    # dies. Its console exporter is the only witness to that.
+    if [ "$f" = existing-otel ]; then
+      miss=""
+      for s in triage_ticket openai.chat; do
+        grep -q "\"name\": \"$s\"" "$RUNLOG" 2>/dev/null || miss="$miss $s"
+      done
+      if [ -n "$miss" ]; then
+        record "$lang" "$f" "FAIL  app's own exporter lost:$miss (init before set_tracer_provider?)"
+        ((FAIL++)); (cd "$repo" && git reset -q --hard "$base_sha"); continue
+      fi
     fi
 
     # 3. assert over MCP with the repo's own harness
