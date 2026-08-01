@@ -62,6 +62,58 @@ Useful kwargs: `trace_content=False` (sensitive data),
 `block_instruments=` (a `set` of `ObservabilityInstruments`), `debug=True`
 (verbose logging when nothing arrives).
 
+## The app already sets up OpenTelemetry — init goes AFTER its provider
+
+This is the one case where init at process start is wrong. If the app calls
+`trace.set_tracer_provider(...)` itself, `instrument()` must run **after** that
+line, not before it.
+
+```python
+provider = TracerProvider(resource=Resource.create({"service.name": "ticket-triage"}))
+provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+trace.set_tracer_provider(provider)          # the app's own setup, untouched
+
+Observability.instrument(                    # ← after, never before
+    app_name=os.environ.get("OBSERVABILITY_APP_NAME", "my-app"),
+    api_key=os.environ["OBSERVABILITY_API_KEY"],
+)
+```
+
+**Why the order is load-bearing.** Measured against 1.4.3 / traceloop-sdk
+0.59.2:
+
+- *App provider first, then `instrument()`* — Progress **attaches to the app's
+  existing provider**. The global provider is unchanged (same object), its
+  processor list grows, and both exporters receive every span. Nothing special
+  is needed to "add alongside"; this is simply what happens.
+- *`instrument()` first, then the app's provider* — traceloop has already
+  installed a provider, so the app's `set_tracer_provider()` is a **no-op**.
+  OTel logs one line — `Overriding of current TracerProvider is not allowed` —
+  and carries on. The app's exporter receives nothing for the rest of the
+  process.
+
+The second case is the dangerous one because everything else still works.
+Progress spans arrive, the run looks healthy, and the app's own telemetry —
+whatever it had before you touched it — is silently dead. Nobody notices until
+someone goes looking for a dashboard that stopped updating.
+
+**Two consequences once attached, both measured:**
+
+- **`app_name` is inert.** Spans carry the *app's* resource, so they land under
+  the app's `service.name`, not the name passed to `instrument()`. To control
+  the platform identity here, change the app's `Resource` / `OTEL_SERVICE_NAME`
+  — and that is the app's own identity field, so agree it with the user rather
+  than editing it unasked. Pass `app_name` anyway; it costs nothing and is
+  correct if the app ever stops owning a provider.
+- **The app's `provider.shutdown()` already flushes Progress.** Its exporter
+  hangs off that provider. Adding `Observability.shutdown()` is harmless and
+  idempotent — it logs `Exporter already shutdown, ignoring call` — but it is
+  not needed when the app already shuts its provider down.
+
+Detect this by grepping for `set_tracer_provider`, `TracerProvider(`, or an
+existing `Traceloop.init` / `opentelemetry-sdk` dependency before you write
+anything.
+
 ## What auto-instruments
 
 Anything in `ObservabilityInstruments` (1:1 with Traceloop instruments):
