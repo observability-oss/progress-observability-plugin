@@ -23,7 +23,7 @@ means an unmerged sync PR or an edit made in the wrong repo).
 
 Refresh each clone (`git -C $REPO_X pull`). Read the current
 `skills/instrument-agent/SKILL.md` + references **from the plugin repo**, then
-produce, for all twenty fixtures, the diff the skill implies, and score each
+produce, for all twenty-one fixtures, the diff the skill implies, and score each
 against `expected/<fixture>`. PASS/FAIL with a one-line reason each.
 
 ### Delegate the applying — not optional
@@ -53,12 +53,12 @@ that would otherwise have scored a clean pass — the app ran, spans arrived, th
 assertion matched, and the produced code was still wrong. A verdict cannot catch
 these; only the diff can.
 
-### The twenty
+### The twenty-one
 
 - **Python (12)** — keyless, openai, langchain, langgraph, crewai,
   openai-agents, llamaindex, agno, haystack, mcp, googlegenai, existing-otel
 - **TypeScript (4)** — keyless, commonjs, openai, langchain
-- **.NET (4)** — keyless, openrouter, agent, hosted
+- **.NET (5)** — keyless, openrouter, agent, hosted, existing-otel
 
 Baseline criteria: init/bootstrap ordering, env-based keys,
 decorators/wrappers/`AddObservability` placement, `httpx` for Python, dynamic
@@ -156,6 +156,27 @@ fail a solution for the platform identity coming from `OTEL_SERVICE_NAME`.
 And the app's own `provider.shutdown()` already flushes Progress, so adding
 `Observability.shutdown()` is unnecessary but harmless and idempotent; do not
 score it a failure either way.
+
+### dotnet existing-otel tests the no-stacking rule, not ordering
+
+`agents/existing-otel` (dotnet) owns a `TracerProvider` with a console exporter
+AND has `UseOpenTelemetry()` on its chat client. Unlike the Python fixture of
+the same name there is no ordering criterion: .NET providers coexist, measured
+1 Aug, and `Initialize()` placement is unconstrained.
+
+Pass requires: `Initialize()`/`AddObservability()`/`Shutdown()` added with the
+optional-tracing gates, **`UseOpenTelemetry()` kept**, the app's provider and
+spans untouched. A diff that removes `UseOpenTelemetry()` is a FAIL even though
+it makes span counts look cleaner - removing the app's own telemetry is the
+user's call, and the skill's report must declare the two-layer overlap instead.
+Do not fail the fixture for doubled chat spans (`chat` + `gen_ai.chat`) - that
+doubling is the declared consequence, not a defect. Do not fail it for Progress
+spans being in a separate trace - that is by design in .NET.
+
+`AppName` works normally here (Progress owns its provider), unlike the Python
+fixture where `app_name` is inert. Coverage: no CI job yet - the YAML needs a
+human commit; check whether `dotnet/e2e.yml` gained an `existing-otel` job and
+report accordingly.
 
 ### Seven diff-level criteria
 
@@ -257,8 +278,9 @@ job means someone edited a skill in the plugin instead of canonical.
 **Coverage — complete.** All twenty fixtures have a CI job as of 1 Aug.
 `hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
 `commonjs-pipeline` (ts, `llm_call`) landed 30 Jul; `existing-otel-pipeline`
-(python) landed 1 Aug. Every one passed first run. Expect four jobs in
-`dotnet/e2e.yml`, four in `ts/e2e.yml` and three in `python/e2e.yml`; fewer
+(python) landed 1 Aug. Every one passed first run. Expect four jobs in `dotnet/e2e.yml`
+(five once existing-otel lands), four in `ts/e2e.yml` and three in
+`python/e2e.yml`; fewer
 means something was reverted, and that is worth reporting.
 
 **`existing-otel-pipeline` must keep both halves.** Confirm the job still has
@@ -345,7 +367,7 @@ noise, not a skill regression.
 
 ## 4 · Report + notify
 
-Open with step 0's OK/DENIED table, then the compact summary: twenty
+Open with step 0's OK/DENIED table, then the compact summary: twenty-one
 structural verdicts (grouped — Python 11, TypeScript 4, .NET 4), the seven
 diff-level criteria called out separately with any fixture that failed each, CI
 results (three e2e + the frameworks matrix per-job, nine jobs, + the sync drift

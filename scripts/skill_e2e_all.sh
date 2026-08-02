@@ -96,6 +96,10 @@ NET_FIXTURES=(
   # tool is the load-bearing half here: .AddObservability() placed before
   # UseFunctionInvocation() still yields llm_call, and loses every tool span.
   "hosted|yes|llm_call,tool"
+  # Stub client, so no model key needed. The platform half is the easy part;
+  # the run-log check below asserts the app's own console exporter survived,
+  # and the diff review must confirm UseOpenTelemetry() was kept.
+  "existing-otel|no|llm_call"
 )
 
 record() { RESULTS+=("$(printf '%-8s %-16s %s' "$1" "$2" "$3")"); }
@@ -221,9 +225,16 @@ run_lang() {
     # Progress stays healthy either way and it is the app's own pipeline that
     # dies. Its console exporter is the only witness to that.
     if [ "$f" = existing-otel ]; then
+      case "$lang" in
+        python) app_spans="triage_ticket openai.chat" ;;
+        dotnet) app_spans="triage_ticket chat" ;;
+        *)      app_spans="" ;;
+      esac
       miss=""
-      for s in triage_ticket openai.chat; do
-        grep -q "\"name\": \"$s\"" "$RUNLOG" 2>/dev/null || miss="$miss $s"
+      for s in $app_spans; do
+        # python's console exporter prints JSON; dotnet's prints
+        # "Activity.DisplayName: <name>". Accept either shape.
+        grep -qE "\"name\": \"$s\"|DisplayName:? +$s" "$RUNLOG" 2>/dev/null || miss="$miss $s"
       done
       if [ -n "$miss" ]; then
         record "$lang" "$f" "FAIL  app's own exporter lost:$miss (init before set_tracer_provider?)"
