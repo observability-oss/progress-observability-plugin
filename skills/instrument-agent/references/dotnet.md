@@ -242,6 +242,48 @@ every span; the portal filters on **tags**, so put `customer.id:12345` and
 anything else you will search by there rather than in attributes. Both are read
 once at `Initialize()`, so changing them later needs `Shutdown()` first.
 
+## The app already exports OpenTelemetry
+
+Init ordering does not matter here. `Initialize()` builds its own
+`TracerProvider`; a provider the app built with
+`Sdk.CreateTracerProviderBuilder()` keeps working either way, before or
+after, and its spans keep flowing (measured). There is no shared global
+provider to lose a race over, so this is unlike Python — do not carry that
+reference's ordering rule across.
+
+**Do not stack `.AddObservability()` on a chain that already has
+`.UseOpenTelemetry()`.** `Microsoft.Extensions.AI` ships its own
+OpenTelemetry support, and an app that already exports OTel plausibly uses
+it. Both on one client record every call twice — a `chat` span from
+`Experimental.Microsoft.Extensions.AI` and a `gen_ai.chat` span from
+Progress — so token counts, call counts and cost all double, and nothing
+looks wrong. Grep for `UseOpenTelemetry` before wiring; if it is present,
+add `.AddObservability()` and say plainly in your report that the app now
+has two instrumentation layers and which one the user should keep. Removing
+the app's own telemetry is their call, never yours.
+
+**Progress spans land in their own trace, by design.** They do not nest
+under the app's activities: `gen_ai.invoke_agent` starts a new trace even
+when an app activity is current. The app's own tracing is unaffected — its
+spans keep their trace and `Activity.Current` is restored after the call
+(measured). Do not report the separate trace as broken wiring, and do not
+try to re-parent it.
+
+**The app's own backend does not see Progress spans by default.** They are
+emitted on the `Progress.Observability.AgentMonitoring` source; a provider
+only receives sources it subscribed to. If the user wants them in their own
+backend too, that is one line on their existing builder:
+
+```csharp
+.AddSource("Progress.Observability.AgentMonitoring")
+```
+
+**The package floors OpenTelemetry at 1.15.3.** An app pinned lower fails
+`dotnet add package` with
+`NU1605: Detected package downgrade: OpenTelemetry`. The fix is raising the
+app's `OpenTelemetry` reference to `>= 1.15.3` — say so rather than leaving
+the restore error to explain itself.
+
 ## Verified against the platform
 
 - `.AddObservability()` captures calls through **any** `IChatClient`

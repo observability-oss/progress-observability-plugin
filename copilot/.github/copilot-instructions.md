@@ -628,13 +628,18 @@ Scan the repo and report what you found, then the diff you intend to make,
   Grep for `set_tracer_provider` / `TracerProvider(`. Details in
   `references/python.md`.
 
-  **TypeScript and .NET: not measured.** Don't carry the Python behavior
-  across. Node's global provider registration looks similar but is unverified;
-  .NET has no global provider to overwrite at all — it builds one via
-  `Sdk.CreateTracerProviderBuilder()` and subscribes `ActivitySource`s — so
-  the Python mechanism cannot apply there as written. If you hit an app with
-  existing OTel in either language, say the interaction is unverified rather
-  than guessing, and check the traces on both sides before declaring success.
+  **.NET (measured).** No ordering constraint: providers coexist and the
+  app's own tracing is unaffected. The hazard is different — a chat client
+  that already has `.UseOpenTelemetry()` records every call twice once
+  `.AddObservability()` is added, doubling token and cost figures. Grep for
+  `UseOpenTelemetry` before wiring and report the overlap rather than
+  removing either layer yourself. Progress spans land in their own trace by
+  design; see `references/dotnet.md`.
+
+  **TypeScript: not measured here.** Don't carry the Python behavior across;
+  if you hit an app with existing OTel, say the interaction is unverified
+  rather than guessing, and check the traces on both sides before declaring
+  success.
 - **Scope** — a monorepo, several services, or more than one agent needs a
   "which one?" question before you touch anything. Don't pick for the user.
 - **Config style** — dotenv, user secrets, plain env — instrumentation config
