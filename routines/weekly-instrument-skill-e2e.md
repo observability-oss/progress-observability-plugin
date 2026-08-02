@@ -174,7 +174,13 @@ doubling is the declared consequence, not a defect. Do not fail it for Progress
 spans being in a separate trace - that is by design in .NET.
 
 `AppName` works normally here (Progress owns its provider), unlike the Python
-fixture where `app_name` is inert. Coverage: no CI job yet - the YAML needs a
+fixture where `app_name` is inert.
+
+Two things not to fail. The app's `chat` span appearing in its own trace in
+the run log is the declared consequence of stacking, not a wiring fault. And
+a report that says the app's spans are "unaffected" without the chat-span
+caveat matched the guidance as it stood before 2 Aug — score reports against
+the guidance the run was given, not against later corrections. Coverage: no CI job yet - the YAML needs a
 human commit; check whether `dotnet/e2e.yml` gained an `existing-otel` job and
 report accordingly.
 
