@@ -257,17 +257,22 @@ OpenTelemetry support, and an app that already exports OTel plausibly uses
 it. Both on one client record every call twice — a `chat` span from
 `Experimental.Microsoft.Extensions.AI` and a `gen_ai.chat` span from
 Progress — so token counts, call counts and cost all double, and nothing
-looks wrong. Grep for `UseOpenTelemetry` before wiring; if it is present,
-add `.AddObservability()` and say plainly in your report that the app now
-has two instrumentation layers and which one the user should keep. Removing
-the app's own telemetry is their call, never yours.
+looks wrong. Stacking also detaches the app's `chat` span: it is created
+inside the Progress wrapper, where the ambient activity is cleared, so it
+lands in its own trace instead of nesting under the app's span (measured).
+Grep for `UseOpenTelemetry` before wiring; if it is present, add
+`.AddObservability()` and say in your report that the app now has two
+instrumentation layers, that its `chat` span no longer nests under its own
+activities, and which layer the user should keep. Removing the app's own
+telemetry is their call, never yours.
 
 **Progress spans land in their own trace, by design.** They do not nest
 under the app's activities: `gen_ai.invoke_agent` starts a new trace even
-when an app activity is current. The app's own tracing is unaffected — its
-spans keep their trace and `Activity.Current` is restored after the call
-(measured). Do not report the separate trace as broken wiring, and do not
-try to re-parent it.
+when an app activity is current. Activities the app starts itself keep
+their trace, and `Activity.Current` is restored after the call (measured).
+The exception is spans produced by instrumentation inside the Progress
+wrapper — the stacking rule above. Do not report the separate trace as
+broken wiring, and do not try to re-parent it.
 
 **The app's own backend does not see Progress spans by default.** They are
 emitted on the `Progress.Observability.AgentMonitoring` source; a provider
