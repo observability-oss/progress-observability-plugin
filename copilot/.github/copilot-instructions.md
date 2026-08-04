@@ -616,6 +616,9 @@ Scan the repo and report what you found, then the diff you intend to make,
   Check each against the supported-instruments list in the language reference.
   A client pointed at an **OpenAI-compatible endpoint** (OpenRouter, LiteLLM,
   vLLM, Together, most gateways) counts as OpenAI — see the reference.
+  A .NET agent built from `AIProjectClient` (Azure AI Foundry) has no
+  wrappable chat client — different wiring; see the Foundry section in
+  `references/dotnet.md`.
 - **Existing telemetry** — OpenTelemetry setup, Traceloop, or a previous
   Progress Observability init. Look for it before writing anything, and check
   the reference for ordering rather than assuming init belongs first.
@@ -633,8 +636,10 @@ Scan the repo and report what you found, then the diff you intend to make,
   that already has `.UseOpenTelemetry()` records every call twice once
   `.AddObservability()` is added, doubling token and cost figures. Grep for
   `UseOpenTelemetry` before wiring and report the overlap rather than
-  removing either layer yourself. Progress spans land in their own trace by
-  design; see `references/dotnet.md`.
+  removing either layer yourself. One hit is not overlap:
+  `UseOpenTelemetry(sourceName: ObservabilityTracer.SourceName)` on an
+  *agent* builder is Progress wiring itself — leave it. Progress spans land
+  in their own trace by design; see `references/dotnet.md`.
 
   **TypeScript: not measured here.** Don't carry the Python behavior across;
   if you hit an app with existing OTel, say the interaction is unverified
