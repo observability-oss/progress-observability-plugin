@@ -122,6 +122,15 @@ pipeline emits. Add the emitter on the agent builder:
     .Build();
 ```
 
+**Add `using Microsoft.Agents.AI;` to the file you edit.** `AsBuilder()` and
+`UseOpenTelemetry()` are extension methods from that namespace, and a file
+that only consumes a ready-made agent usually does not import it. Without
+the directive the build fails with `CS1061: 'AIAgent' does not contain a
+definition for 'AsBuilder'`. On an agent the app already holds, the wrapper
+is a reassignment, not a mutation:
+`agent = agent.AsBuilder().UseOpenTelemetry(...).Build();` — calls on the
+old reference stay uninstrumented.
+
 **`sourceName:` is required.** Without it the wrapper emits on
 `Experimental.Microsoft.Agents.AI`, which Progress does not listen to, and
 still nothing exports. Wired this way each run produces one `invoke_agent`
