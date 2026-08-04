@@ -100,6 +100,10 @@ NET_FIXTURES=(
   # the run-log check below asserts the app's own console exporter survived,
   # and the diff review must confirm UseOpenTelemetry() was kept.
   "existing-otel|no|llm_call"
+  # The chat client hides inside vendored catalog code, so the wiring is the
+  # agent-builder wrapper with sourceName; invoke_agent is the only span it
+  # produces — no llm_call to expect.
+  "agent-level|yes|invoke_agent"
 )
 
 record() { RESULTS+=("$(printf '%-8s %-16s %s' "$1" "$2" "$3")"); }
