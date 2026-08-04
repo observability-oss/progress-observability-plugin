@@ -23,7 +23,7 @@ means an unmerged sync PR or an edit made in the wrong repo).
 
 Refresh each clone (`git -C $REPO_X pull`). Read the current
 `skills/instrument-agent/SKILL.md` + references **from the plugin repo**, then
-produce, for all twenty-one fixtures, the diff the skill implies, and score each
+produce, for all twenty-two fixtures, the diff the skill implies, and score each
 against `expected/<fixture>`. PASS/FAIL with a one-line reason each.
 
 ### Delegate the applying — not optional
@@ -53,12 +53,13 @@ that would otherwise have scored a clean pass — the app ran, spans arrived, th
 assertion matched, and the produced code was still wrong. A verdict cannot catch
 these; only the diff can.
 
-### The twenty-one
+### The twenty-two
 
 - **Python (12)** — keyless, openai, langchain, langgraph, crewai,
   openai-agents, llamaindex, agno, haystack, mcp, googlegenai, existing-otel
 - **TypeScript (4)** — keyless, commonjs, openai, langchain
-- **.NET (5)** — keyless, openrouter, agent, hosted, existing-otel
+- **.NET (6)** — keyless, openrouter, agent, hosted, existing-otel,
+  agent-level
 
 Baseline criteria: init/bootstrap ordering, env-based keys,
 decorators/wrappers/`AddObservability` placement, `httpx` for Python, dynamic
@@ -176,6 +177,23 @@ spans being in a separate trace - that is by design in .NET.
 `AppName` works normally here (Progress owns its provider), unlike the Python
 fixture where `app_name` is inert.
 
+### dotnet agent-level tests the agent-builder wrapper
+
+`agents/agent-level` consumes a ready `AIAgent` from `AgentCatalog.cs`, which
+is marked vendored and off-limits — the chat client is not reachable from app
+code, the same constraint `AIProjectClient` (Azure AI Foundry) imposes.
+
+Pass requires: gated `Initialize()`/`Shutdown()` plus the agent wrapped via
+`.AsBuilder().UseOpenTelemetry(sourceName: ObservabilityTracer.SourceName)
+.Build()` (the string literal `"Progress.Observability.AgentMonitoring"` also
+passes). FAIL any diff that edits `AgentCatalog.cs` — including moving
+`.AddObservability()` into it; the file being off-limits is the scenario, not
+an obstacle to route around. FAIL a wrapper without `sourceName:` — the
+default source is `Experimental.Microsoft.Agents.AI`, which Progress does not
+listen to, so it exports nothing while reading as instrumented. Expect
+`invoke_agent` as the only span; do not fail the fixture for missing
+`llm_call`/`tool` spans — the agent-level wrapper does not produce them.
+
 Two things not to fail. The app's `chat` span appearing in its own trace in
 the run log is the declared consequence of stacking, not a wiring fault. And
 a report that says the app's spans are "unaffected" without the chat-span
@@ -284,9 +302,11 @@ job means someone edited a skill in the plugin instead of canonical.
 **Coverage — complete.** All twenty fixtures have a CI job as of 1 Aug.
 `hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
 `commonjs-pipeline` (ts, `llm_call`) landed 30 Jul; `existing-otel-pipeline`
-(python) landed 1 Aug. Every one passed first run. Expect four jobs in `dotnet/e2e.yml`
-(five once existing-otel lands), four in `ts/e2e.yml` and three in
-`python/e2e.yml`; fewer
+(python) landed 1 Aug. Every one passed first run. Expect five jobs in `dotnet/e2e.yml`
+(six once agent-level lands — its YAML sits in `ci/e2e.yml` awaiting a human
+commit; check whether `dotnet/e2e.yml` gained an `agent-level-pipeline` job,
+`--expect invoke_agent`, and report accordingly), four in `ts/e2e.yml` and
+three in `python/e2e.yml`; fewer
 means something was reverted, and that is worth reporting.
 
 **`existing-otel-pipeline` must keep both halves.** Confirm the job still has
@@ -373,7 +393,7 @@ noise, not a skill regression.
 
 ## 4 · Report + notify
 
-Open with step 0's OK/DENIED table, then the compact summary: twenty-one
+Open with step 0's OK/DENIED table, then the compact summary: twenty-two
 structural verdicts (grouped — Python 11, TypeScript 4, .NET 4), the seven
 diff-level criteria called out separately with any fixture that failed each, CI
 results (three e2e + the frameworks matrix per-job, nine jobs, + the sync drift
