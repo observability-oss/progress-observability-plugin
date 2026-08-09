@@ -26,6 +26,15 @@ Refresh each clone (`git -C $REPO_X pull`). Read the current
 produce, for all twenty-two fixtures, the diff the skill implies, and score each
 against `expected/<fixture>`. PASS/FAIL with a one-line reason each.
 
+**This step is the run.** It costs roughly 30-45 minutes and one subagent per
+fixture; that expense is the point, not an overrun to trim. Steps 2-4 are
+cheap, and none of them substitutes for this one — a report carrying CI
+results, a drift check, canonical-vs-plugin alignment, or a coverage audit
+that maps fixtures to jobs, but *not* twenty-two scored diffs, is a failed
+run reported as a successful one. If step 1 cannot be completed, say so in
+the headline with the reason and mark it NOT RUN. Never close the run on the
+cheap checks alone.
+
 ### Delegate the applying — not optional
 
 **Do not produce the diffs yourself.** This routine fires into a persistent
@@ -394,7 +403,7 @@ noise, not a skill regression.
 ## 4 · Report + notify
 
 Open with step 0's OK/DENIED table, then the compact summary: twenty-two
-structural verdicts (grouped — Python 11, TypeScript 4, .NET 4), the seven
+structural verdicts (grouped — Python 12, TypeScript 4, .NET 6), the seven
 diff-level criteria called out separately with any fixture that failed each, CI
 results (three e2e + the frameworks matrix per-job, nine jobs, + the sync drift
 job), canonical-vs-plugin alignment, drift list or none. **Lead with failures** —
@@ -415,7 +424,15 @@ for service `ins-test-py-haystack-ci`, look for any observation named
 return means the fixture's import ordering regressed. If no platform MCP server
 is available this turn, mark it NOT CHECKED rather than skipping it silently.
 
-Then send a one-line PushNotification: all-green
-(`weekly skill e2e: all green`) or the failure headline.
+**Post the report as a GitHub issue** on
+`observability-oss/progress-observability-plugin`, titled
+`weekly e2e — <YYYY-MM-DD>`, whether the run passed, failed, or was blocked.
+This session is not read directly: a report that stays in it is a report
+nobody sees, and a run whose findings are never read is indistinguishable
+from a run that never happened. Send the one-line PushNotification as well —
+all-green (`weekly skill e2e: all green`) or the failure headline — but treat
+it as a nudge, not the delivery: it reaches nobody when no client is attached.
 
-**Do not create issues, PRs, or push anything anywhere.**
+**That issue is the only thing this run may create.** No PRs, no pushes, no
+commits, no branches, no edits to other issues. The check stays read-only
+everywhere else.
