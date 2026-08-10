@@ -82,7 +82,9 @@ await Observability.instrument({
 Rules for the set, all measured:
 
 - It is an **allow-list** — anything omitted is off. Include every provider
-  *and* framework the app uses.
+  *and* framework the app uses, and no others: a plain-OpenAI app gets
+  `OPENAI` alone, not `AZURE_OPENAI` "just in case" — the list documents
+  what the app is, and padding it misstates that.
 - App uses LangChain → `LANGCHAIN` must be in the set. `{OPENAI}` alone
   silently drops the Progress hierarchy patch; `{OPENAI, LANGCHAIN}` keeps
   both.
