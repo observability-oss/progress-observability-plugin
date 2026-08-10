@@ -75,6 +75,14 @@ decorators/wrappers/`AddObservability` placement, `httpx` for Python, dynamic
 langchain imports for TS ESM, `.AddObservability()` between `AsIChatClient()`
 and `AsAIAgent()` for dotnet-agent, app logic untouched.
 
+Ruled 10 Aug: Python init goes **before the framework imports even for
+LangChain** — "before clients are constructed" is not sufficient. A
+python/langchain diff with init after the `langchain_core` imports is a
+FAIL, not an open question; the skill text now says so. The two exceptions
+(own-provider, Haystack) are unchanged. Score `instruments` padding the same
+way: a ts/openai diff naming `AZURE_OPENAI` alongside `OPENAI` on a
+plain-OpenAI app is a FAIL against the allow-list rule as now written.
+
 ### Module-scope frameworks
 
 langgraph, crewai, openai-agents, llamaindex, agno, mcp each build their objects
@@ -297,9 +305,14 @@ harness locally.
 
 ## 2 · CI results
 
-Via the GitHub MCP tools, read the most recent run conclusion for: `e2e` in all
-three fixture repos (crons Monday 06:17 python / 06:23 ts / 06:29 dotnet UTC),
-and the frameworks matrix in `instrument-test-python` (cron 06:41 UTC). The
+**Dispatch first — the crons will not have landed.** GitHub's scheduler runs
+these workflows 3.5-4 hours late, every week (measured 3 and 10 Aug), which
+is past this routine. Dispatch `e2e` in all three fixture repos and the
+frameworks matrix in `instrument-test-python` at the start of this step, then
+read those dispatched runs' conclusions. The crons (Monday 06:17 python /
+06:23 ts / 06:29 dotnet / 06:41 frameworks UTC) stay as an off-schedule
+backstop; a cron run that did land counts, and dispatching anyway is
+harmless. The
 matrix has nine jobs — langchain, langgraph, crewai, openai-agents, llamaindex,
 agno, haystack, mcp, googlegenai — and fail-fast is off, so report per-job
 status. Each asserts its **measured** span shape, not a bare `llm_call`, so a
@@ -311,11 +324,10 @@ job means someone edited a skill in the plugin instead of canonical.
 **Coverage — complete.** All twenty fixtures have a CI job as of 1 Aug.
 `hosted-pipeline` (dotnet, `llm_call,tool`), `openai-pipeline` and
 `commonjs-pipeline` (ts, `llm_call`) landed 30 Jul; `existing-otel-pipeline`
-(python) landed 1 Aug. Every one passed first run. Expect five jobs in `dotnet/e2e.yml`
-(six once agent-level lands — its YAML sits in `ci/e2e.yml` awaiting a human
-commit; check whether `dotnet/e2e.yml` gained an `agent-level-pipeline` job,
-`--expect invoke_agent`, and report accordingly), four in `ts/e2e.yml` and
-three in `python/e2e.yml`; fewer
+(python) landed 1 Aug. Every one passed first run. `agent-level-pipeline` landed 4 Aug
+(`--expect invoke_agent`) and passed its first scheduled week. Expect six
+jobs in `dotnet/e2e.yml`, four in `ts/e2e.yml` and three in
+`python/e2e.yml`; fewer
 means something was reverted, and that is worth reporting.
 
 **`existing-otel-pipeline` must keep both halves.** Confirm the job still has
