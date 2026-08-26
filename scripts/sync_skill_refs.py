@@ -18,8 +18,17 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "references" / "mcp.md"
 
 # scaffold-agent makes no MCP calls and is intentionally excluded.
-# instrument-agent writes code but verifies over MCP, so it carries the contract.
-MCP_SKILLS = ["trace-triage", "cost-report", "coverage-gaps", "generate-eval", "health-check", "instrument-agent"]
+# The two code-writing verification workflows carry the contract because both
+# instrument-agent and build-template-agent read traces after emitting them.
+MCP_SKILLS = [
+    "trace-triage",
+    "cost-report",
+    "coverage-gaps",
+    "generate-eval",
+    "health-check",
+    "instrument-agent",
+    "build-template-agent",
+]
 
 BANNER = (
     "<!-- GENERATED COPY — do not edit. Source of truth: references/mcp.md at the\n"

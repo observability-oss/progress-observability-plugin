@@ -3,7 +3,9 @@
 
 # Progress Observability MCP — shared contract
 
-> The live server contract is captured verbatim in [`mcp-schema.json`](./mcp-schema.json) (from a production `tools/list`, both scopes) — the empirical source of truth this file summarizes.
+> This summary was derived from a verbatim production `tools/list` capture for
+> both key scopes. In the full plugin checkout, that empirical source is the
+> repo-level `references/mcp-schema.json` file.
 
 Every skill in this plugin reads data through the `progress-observability` MCP
 server. This file is the single source of truth for the tools, their limits, and

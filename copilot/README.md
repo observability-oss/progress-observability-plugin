@@ -1,7 +1,7 @@
 # progress-observability for VS Code / GitHub Copilot
 
-All seven skills from the Claude Code plugin, packaged for GitHub Copilot in
-VS Code - instrument-agent, scaffold-agent, health-check, trace-triage,
+All eight skills from the Claude Code plugin, packaged for GitHub Copilot in
+VS Code - instrument-agent, build-template-agent, scaffold-agent, health-check, trace-triage,
 cost-report, coverage-gaps, and generate-eval. Nothing here is Claude-specific.
 
 > **Check the plugin install first - it is usually the better path.** Copilot
@@ -20,8 +20,9 @@ are already where Copilot expects them):
 
 | File | Role | Claude-plugin equivalent |
 |---|---|---|
-| `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all seven skill workflows | the `skills/` + `references/mcp.md` |
+| `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all eight skill workflows | the `skills/` + `references/mcp.md` |
 | `.github/prompts/instrument-agent.prompt.md` | `/instrument-agent` | `commands/instrument-agent.md` |
+| `.github/prompts/build-template-agent.prompt.md` | `/build-template-agent` | `commands/build-template-agent.md` |
 | `.github/prompts/scaffold-agent.prompt.md` | `/scaffold-agent` | `commands/scaffold-agent.md` |
 | `.github/prompts/health-check.prompt.md` | `/health-check` | `commands/health-check.md` |
 | `.github/prompts/trace-triage.prompt.md` | `/trace-triage` | `commands/trace-triage.md` |
@@ -29,6 +30,7 @@ are already where Copilot expects them):
 | `.github/prompts/coverage-gaps.prompt.md` | `/coverage-gaps` | `commands/coverage-gaps.md` |
 | `.github/prompts/eval-from-trace.prompt.md` | `/eval-from-trace` | `commands/eval-from-trace.md` |
 | `.github/prompts/eval-from-scratch.prompt.md` | `/eval-from-scratch` | `commands/eval-from-scratch.md` |
+| `skills/build-template-agent/` | Complete skill, copy helper, and pinned Release Evidence Reviewer source | `skills/build-template-agent/` |
 | `.vscode/mcp.json` | Connects to the Progress Observability MCP server | `.mcp.json` |
 
 ## Requirements
@@ -39,6 +41,8 @@ are already where Copilot expects them):
   (API Keys → MCP API Keys). Use a *With content* key only if you want Copilot to
   read raw prompt/completion text (trace-triage on a culprit span, or few-shot
   examples in generate-eval).
+- For `/build-template-agent` only: the .NET 10 SDK plus the model and separate
+  Progress Integration-key settings documented in the copied project.
 
 ## Setup
 
@@ -46,10 +50,14 @@ are already where Copilot expects them):
 
    ```
    your-repo/
+   ├── skills/
+   │   └── build-template-agent/    # fixed template source + copy helper
    ├── .vscode/mcp.json
    └── .github/
        ├── copilot-instructions.md
        └── prompts/
+           ├── instrument-agent.prompt.md
+           ├── build-template-agent.prompt.md
            ├── scaffold-agent.prompt.md
            ├── health-check.prompt.md
            ├── trace-triage.prompt.md
@@ -72,6 +80,8 @@ are already where Copilot expects them):
 
 ## Usage
 
+- `/instrument-agent` - instrument an existing Python, TypeScript, or .NET agent and verify its traces.
+- `/build-template-agent` - copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer.
 - `/scaffold-agent` - create a new .NET agent project, already instrumented, from the starter template.
 - `/health-check` - verify the setup: connection, key scope, data flow, instrumentation depth. No arguments.
 - `/trace-triage` - give it a trace id, or a service + symptom + window.
@@ -97,10 +107,11 @@ Expected: 7 tools on a Metadata-only key, 9 on a With-content key - presence of 
 
 ## Keeping in sync (generated file)
 
-`.github/copilot-instructions.md` is **generated** - don't edit it by hand.
-Copilot can't include external files, so the build inlines the plugin's sources
-into one file. The single sources of truth are `../references/mcp.md`,
-`../skills/*/SKILL.md`, and the eval frame in
+`.github/copilot-instructions.md` and `skills/build-template-agent/` are
+**generated** - don't edit them by hand. Copilot can't include external files,
+so the build inlines the plugin's instruction sources into one file and mirrors
+the complete asset-bearing template skill byte-for-byte. The single sources of
+truth are `../references/mcp.md`, `../skills/*/SKILL.md`, and the eval frame in
 `../skills/generate-eval/references/frame.md` (each exposes the shared region
 between `<!-- copilot:start -->` / `<!-- copilot:end -->` markers).
 

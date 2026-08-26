@@ -12,5 +12,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - name: copilot-instructions.md is generated from current sources
         run: python scripts/build_copilot.py --check
+      - name: Skill MCP references are generated from the shared contract
+        run: python scripts/sync_skill_refs.py --check
+      - name: Test Copilot payload mirroring
+        run: python -m unittest discover -s scripts/tests -p 'test_*.py'
+      - name: Test the template copier
+        run: python -m unittest discover -s skills/build-template-agent/tests -p 'test_*.py'
+      - name: Build the Release Evidence Reviewer template
+        run: dotnet build skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj --configuration Release

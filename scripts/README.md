@@ -199,7 +199,7 @@ Derived files, each with a single source of truth.
 | Script | Generates | From |
 |---|---|---|
 | `sync_skill_refs.py` | `skills/*/references/mcp.md` | root `references/mcp.md` |
-| `build_copilot.py` | `copilot/.github/copilot-instructions.md` | the skills + `copilot-instructions.template.md` |
+| `build_copilot.py` | `copilot/.github/copilot-instructions.md` and asset-bearing skill payloads | the skills + `copilot-instructions.template.md` |
 | `build_web_frame.py` | the eval-builder page's data file | `skills/generate-eval/references/{frame,citations}.md` |
 
 `sync_skill_refs.py` and `build_copilot.py` take `--check`, which exits non-zero
@@ -213,5 +213,7 @@ python scripts/build_copilot.py --check
 
 Each skill carries its own copy of the MCP contract so it stays self-contained
 and installable on its own via `npx skills add`. Run the sync after editing the
-root copy, and `build_copilot.py` after editing any `SKILL.md` - the Copilot
-bundle is generated, never hand-edited.
+root copy, and `build_copilot.py` after editing any `SKILL.md` or a mirrored
+skill asset - the Copilot bundle is generated, never hand-edited.
+The skill mirror omits build/cache folders and local `.env` variants; a safe
+`.env.example` remains distributable.

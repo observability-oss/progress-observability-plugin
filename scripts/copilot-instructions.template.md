@@ -10,10 +10,11 @@
 > with what the user asks for, the user's request wins.
 
 This project works with the Progress Observability Platform over the
-`progress-observability` MCP server. Seven skills are available — pick the one
+`progress-observability` MCP server. Eight skills are available — pick the one
 that matches the request (each also has a matching `/prompt`):
 
-- **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive. Start here: nothing else has anything to read until traces are flowing.
+- **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
+- **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
 - **scaffold-agent** — create a new .NET agent project, already instrumented, from the starter template.
 - **health-check** — verify the setup is wired up: connection, key scope, data flow, instrumentation depth. Run first when something looks wrong.
 - **trace-triage** — root-cause a failed or slow run by walking its span tree.
@@ -21,9 +22,10 @@ that matches the request (each also has a matching `/prompt`):
 - **coverage-gaps** — find production behaviors with no eval; rank what to build.
 - **generate-eval** — build a research-grounded LLM-as-a-Judge evaluator prompt.
 
-Five of the seven only read from the MCP server and write nothing. The two that
-write code: `scaffold-agent` creates a new project and makes no MCP calls;
-`instrument-agent` edits an existing one and reads MCP only to verify.
+Five of the eight only read from the MCP server and write nothing. The three that
+write code: `build-template-agent` copies a finished project, `scaffold-agent`
+creates a custom project, and `instrument-agent` edits an existing one. Only
+their verification steps read MCP.
 
 ---
 
@@ -68,6 +70,12 @@ Always return, in order: the evaluator prompt (leave `{{input}}` / `{{output}}` 
 sentence "why this config" rationale, and the mapped citations.
 
 <!-- include:EVAL_FRAME -->
+
+---
+
+## build-template-agent
+
+<!-- include:BUILD_TEMPLATE_AGENT -->
 
 ---
 
