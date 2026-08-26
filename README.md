@@ -18,6 +18,7 @@ contract (tools, limits, and the untrusted-content rules) lives in
 
 | Skill | Command | What it does |
 |---|---|---|
+| **observability-mcp-setup** | `/observability-mcp-setup` | Wires an AI client (VS Code Copilot, Copilot CLI, Claude Code, Cursor) up to the MCP server. Skip it if you installed the Claude Code or Copilot CLI plugin — that already wires the connection. |
 | **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then hands off to `/health-check` to confirm traces arrive. |
 | **scaffold-agent** | `/scaffold-agent` | Creates a new .NET agent project, already instrumented, from the [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter) template. |
 | **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
@@ -61,11 +62,11 @@ export OBSERVABILITY_MCP_API_KEY="acm_..."
 
 | Option | What you get |
 |---|---|
-| **Claude Code plugin** | All seven skills, their commands, and the MCP connection in one install. |
+| **Claude Code plugin** | All eight skills, their commands, and the MCP connection in one install. |
 | **VS Code / GitHub Copilot** | Auto-discovers the CLI-installed plugin; or installs it via Agent Plugins (preview); classic `copilot/` bundle as fallback. |
-| **GitHub Copilot CLI** | Installs this repo as a plugin from the same marketplace - all seven skills **and the MCP connection** in two commands. |
-| **Any agent via skills.sh** | `npx skills add` installs the skills for ~20 coding agents (Claude Code, Codex, Cursor, Cline, Amp, …). MCP server wired yourself. |
-| **A single skill** | One self-contained skill folder, copied anywhere. MCP server wired yourself. |
+| **GitHub Copilot CLI** | Installs this repo as a plugin from the same marketplace - all eight skills **and the MCP connection** in two commands. |
+| **Any agent via skills.sh** | `npx skills add` installs the skills for ~20 coding agents (Claude Code, Codex, Cursor, Cline, Amp, …). MCP server not wired - run `/observability-mcp-setup` or wire it yourself. |
+| **A single skill** | One self-contained skill folder, copied anywhere. MCP server not wired - run `/observability-mcp-setup` or wire it yourself. |
 
 **Claude Code plugin** - install and restart:
 
@@ -76,8 +77,9 @@ export OBSERVABILITY_MCP_API_KEY="acm_..."
 
 **GitHub Copilot CLI** (`npm install -g @github/copilot`) - Copilot's plugin
 system reads the same marketplace as Claude Code, so this repo installs as a
-plugin directly (verified: "Installed 7 skills", and `copilot mcp list` shows
-the `progress-observability` server wired):
+plugin directly (verified: `copilot plugin install` reports the installed
+skill count, and `copilot mcp list` shows the `progress-observability` server
+wired):
 
 ```bash
 copilot plugin marketplace add observability-oss/progress-observability-plugin
@@ -123,6 +125,7 @@ Verify the connection with the `curl` snippet in [`references/mcp.md`](./referen
 The commands and natural-language triggers are the same across tools (Claude Code
 slash commands and Copilot prompt files share names):
 
+- `/observability-mcp-setup` - wire an AI client (VS Code, Copilot CLI, Claude Code, Cursor) up to the MCP server (skip if you installed the plugin - that's already wired)
 - `/instrument-agent` - add observability to the agent repo you're in, and prove traces arrive
 - `/scaffold-agent triage support tickets against our KB` - new instrumented agent from the template
 - `/health-check` - verify your setup before anything else (no arguments)
@@ -144,8 +147,9 @@ inside it as `references/mcp.md` (a generated copy of the repo-root original;
 - **Any tool:** the skill folder works as standalone agent instructions.
 
 Skills that read the platform still need the MCP server wired (step 2) and the key
-set. Without the plugin you won't get the slash commands - copy `commands/` too, or
-just ask in natural language.
+set - copy `skills/observability-mcp-setup` alongside them to automate that step. Without the
+plugin you won't get the slash commands - copy `commands/` too, or just ask in
+natural language.
 
 ## Notes
 

@@ -45,7 +45,12 @@ strictly needed — they are cheaper, safer, and never gated.
 ## Guardrails
 
 - **72-hour window** on all observation/span/score queries — the max window is 72h,
-  and spans older than 72h are inaccessible.
+  and spans older than 72h are inaccessible. Exceeding it returns *"Time range
+  too large: hours requested, maximum is 72 hours. Use a smaller window or
+  split into multiple queries."* (`list_observations`), *"start_time must
+  be within the last 72 hours relative to now."* (`get_evaluation_scores`), or
+  *"Span is older than 72 hours. Access is restricted to data from the last
+  72 hours."* (`get_observation_details` / `get_observation_details_with_content`).
 - `list_observations`: default 24h, `limit` clamped 1–100.
 - `get_observation_details*`: max 10 IDs (metadata) / **3 IDs** (with content).
 - `get_evaluation_task*`: max 10 IDs (metadata) / 3 IDs (with content, prompt fields truncated to 32KB).
@@ -77,10 +82,19 @@ client treats them as data.
 ```bash
 curl -s https://mcp.observability.progress.com/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -H "X-Api-Key: $OBSERVABILITY_MCP_API_KEY" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
 Expected: 7 tools on a Metadata-only key, 9 on a With-content key. Presence of
 `get_observation_details_with_content` confirms With-content scope.
+
+## Common errors
+
+Authentication — points at the key/plan, not the query:
+- *"Authentication failed: your MCP API key is missing, invalid, or has
+  expired. Please check your MCP API key configuration."* — reissue the key.
+- *"MCP access is not available on the Free plan. Please upgrade to use MCP
+  features."* — needs a plan upgrade.
 <!-- copilot:end -->

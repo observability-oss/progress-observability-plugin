@@ -26,7 +26,7 @@ CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
 
 # The canonical set. scaffold-agent is absent on purpose - see header.
-SKILLS=(cost-report coverage-gaps generate-eval health-check instrument-agent trace-triage)
+SKILLS=(cost-report coverage-gaps generate-eval health-check instrument-agent observability-mcp-setup trace-triage)
 SHARED=(references/mcp.md references/mcp-schema.json)
 
 # Copy into a staging tree first, so --check never mutates the working copy and

@@ -11,7 +11,7 @@
     {
       "name": "progress-observability",
       "source": "./",
-      "description": "Retrofit observability onto an existing Python/TypeScript/.NET agent, scaffold a new instrumented .NET agent, health-check the setup, then triage traces, report cost/usage, find eval coverage gaps, and generate LLM-as-a-Judge evals - over the Progress Observability MCP server."
+      "description": "Wire up the Progress Observability MCP server, retrofit observability onto an existing Python/TypeScript/.NET agent, scaffold a new instrumented .NET agent, health-check the setup, then triage traces, report cost/usage, find eval coverage gaps, and generate LLM-as-a-Judge evals - over the Progress Observability MCP server."
     }
   ]
 }
