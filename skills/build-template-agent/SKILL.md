@@ -11,25 +11,28 @@ read-only tool contract, credential scopes, and query limits.
 <!-- copilot:start -->
 Materialize the finished `release-evidence-reviewer` asset without generating or
 customizing source. This workflow writes a new project folder. The default target
-is `./release-evidence-reviewer`.
+is `./release-evidence-reviewer`. GitHub Copilot in agent mode is the default
+customer execution surface.
 
 ## Workflow
 
-1. Use the requested target folder, or the default above. Do not ask domain or
-   design questions: this route has one fixed template. Locate this skill's own
-   directory, then run:
+1. Require the .NET 10 SDK. Use the requested target folder, or the default
+   above. Do not ask domain or design questions: this route has one fixed
+   template. Locate this skill's own directory, then run its package-free .NET
+   file-based helper:
 
    ```bash
-   python3 <skill-directory>/scripts/copy_template.py --target <target>
+   dotnet run --file <skill-directory>/scripts/copy-template.cs -- --target <target>
    ```
 
    The copier accepts only a missing target or a real empty directory. It must
    succeed before continuing. Do not work around a refusal, overwrite content,
-   or reconstruct the asset from memory.
+   or reconstruct the asset from memory. This customer workflow does not
+   require Python.
 
-2. From the copied project, require the .NET 10 SDK and run `dotnet build`. Do
-   not modify the copied source to make the build pass; report an asset defect if
-   the unchanged template fails.
+2. From the copied project, run `dotnet build`. Do not modify the copied source
+   to make the build pass; report an asset defect if the unchanged template
+   fails.
 
 3. Run all three local cases with `dotnet run -- --smoke`. Parse the single-line
    `SMOKE_REPORT=<json>` marker and require overall `pass` plus exactly these
@@ -58,17 +61,13 @@ is `./release-evidence-reviewer`.
 5. Start the already-built web app, keep it running, and verify its `/api/health`
    endpoint. Use the local URL printed by the app rather than guessing it.
 
-6. Require one official per-trace **UI** URL for each verified ID, explicitly
-   returned or supplied by the Progress platform card/lookup. Match each URL to
-   its exact trace ID; do not construct URLs from an origin or guessed route.
-   The `/api/Traces/<id>` endpoint is an authenticated API that requires tenant
-   headers, not a usable user link. Never return it or the generic Observations
-   page. If any official UI deep link is absent, stop with
-   `TRACE_UI_DEEPLINK_UNAVAILABLE`, include all three verified trace IDs, and do
-   not claim the template is ready.
+6. Return exactly one Progress Observability **Tracing page** link:
+   `https://observability.progress.com/observations`. Do not resolve, construct,
+   or list per-trace deep links. Missing per-trace links are not a failure.
 
 Report success only after every gate passes: the absolute project path, the
-verified local UI link, and three labeled official trace UI deep links with
-their trace IDs. On a failure, report the failed gate and the smallest safe
-retry; do not claim the template is ready.
+verified local UI link, one Progress Observability Tracing page link, and the
+three smoke-case results. Keep trace IDs available for diagnostics, but do not
+present them as three separate links. On a failure, report the failed gate and
+the smallest safe retry; do not claim the template is ready.
 <!-- copilot:end -->

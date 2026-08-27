@@ -156,9 +156,10 @@ just ask in natural language.
   [`references/mcp.md`](./references/mcp.md).
 - Nothing here writes back to the platform; generated agents send traces with
   their separate Integration API key.
-- `build-template-agent` verifies its three exact smoke trace IDs. A successful
-  handoff also requires the platform card to supply official per-trace UI deep
-  links; generic Observations and authenticated API URLs are not substituted.
+- `build-template-agent` defaults to GitHub Copilot agent mode and needs only
+  the .NET 10 SDK on the customer machine; its copy helper is a package-free
+  .NET file-based app. It verifies three exact smoke trace IDs internally, then
+  returns one Tracing-page link instead of three per-trace links.
 - The plugin bundle format (`.claude-plugin/`, slash commands) is specific to
   Claude Code; the [`copilot/`](./copilot/) folder re-packages all eight skills for
   VS Code / Copilot - the classic path for setups without the plugin system.
