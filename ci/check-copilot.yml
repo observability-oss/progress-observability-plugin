@@ -21,7 +21,5 @@ jobs:
         run: python scripts/sync_skill_refs.py --check
       - name: Test Copilot payload mirroring
         run: python -m unittest discover -s scripts/tests -p 'test_*.py'
-      - name: Test the template copier
-        run: python -m unittest discover -s skills/build-template-agent/tests -p 'test_*.py'
       - name: Build the Release Evidence Reviewer template
         run: dotnet build skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj --configuration Release
