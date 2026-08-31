@@ -44,8 +44,11 @@ public sealed class SmokeRunner
     {
         try
         {
+            var markerInstruction =
+                "\n\nSmoke-test requirement: include each of these exact strings verbatim in the final response: " +
+                string.Join(", ", smokeCase.ExpectedMarkers) + ".";
             var response = await _runtime.RunAsync(
-                smokeCase.Prompt,
+                smokeCase.Prompt + markerInstruction,
                 smokeCase.CaseId,
                 cancellationToken);
             var passed = smokeCase.ExpectedMarkers.All(marker =>

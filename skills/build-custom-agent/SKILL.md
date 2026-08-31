@@ -80,6 +80,15 @@ Progress Integration settings are separate from Copilot's MCP credential. If
 settings are missing, report only their configuration names and point to the
 starter README; never request, inspect, or print values.
 
+Set the query start before the smoke command began and its end to the current
+UTC time after smoke completed; never reuse an end time chosen before smoke. Trace
+ingestion can lag behind the process. If the first lookup does not contain all
+three exact trace IDs, wait briefly and retry metadata-only lookup twice within
+60 seconds total, moving the end to the new current time. Do not rerun smoke. A
+passing smoke run proves the model settings worked, and a reported trace ID
+proves tracing was enabled, so do not infer that either setting is missing merely
+because ingestion is delayed.
+
 Start the already-built app, keep it running, and verify `/api/health` at the
 local URL printed by the app. If the default port is occupied, retry with
 `dotnet run --no-build -- --urls http://127.0.0.1:<free-port>` and use the URL
