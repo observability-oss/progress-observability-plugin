@@ -57,6 +57,8 @@ skills/build-custom-agent/
 |-- scripts/
 |   |-- copy-template.cs
 |   `-- validate-project.cs
+|-- tests/
+|   `-- helper-tests.cs
 `-- assets/custom-agent-starter/
     |-- CustomAgent.csproj
     |-- Program.cs
@@ -70,20 +72,23 @@ skills/build-custom-agent/
     |-- data/
     |-- wwwroot/index.html
     |-- README.md
+    |-- .env.example
     `-- .gitignore
 ```
 
 Keep `Program.cs`, the HTTP routes, UI shell, model configuration,
 observability lifecycle, health endpoint, and `SmokeRunner.cs` fixed. Copilot
-may change only `AgentDefinition.cs`, `Tools.cs`, `docs/`, `data/`, and the
-configured smoke prompts. Keep the internal project name and namespace
-`CustomAgent`; customize only display/configuration values.
+may change only `AgentDefinition.cs`, `Tools.cs`, `docs/`, `data/`, the `Agent`
+and `Smoke` values in `appsettings.json`, and an external-source prototype's
+`INTEGRATION_PLAN.md`. Keep the internal project name and namespace
+`CustomAgent`; keep all other runtime and model configuration fixed.
 
-`AgentDefinition.cs` owns display name, service slug, instructions, examples,
-and the tool-registration list. Fixed `Program.cs` and `AgentRuntime.cs` consume
-that contract and must not contain domain-specific identity or tool names. The
-fixed smoke-runner engine consumes exactly three declarative cases from
-configuration: stable case ID, prompt, and bounded expected result markers.
+`AgentDefinition.cs` owns the bounded definition contract and tool-registration
+list; `appsettings.json` supplies its display name, service slug, Purpose,
+instructions, and examples. Fixed `Program.cs` and `AgentRuntime.cs` consume
+that contract and contain no domain-specific identity or tool names. The fixed
+smoke-runner engine consumes exactly three declarative cases from configuration:
+stable case ID, prompt, and bounded expected result markers.
 
 ## Implementation TODOs
 
@@ -92,83 +97,83 @@ configuration: stable case ID, prompt, and bounded expected result markers.
 - [x] Create `build-custom-agent` from `build-template-agent` in the existing
   feature worktree.
 - [x] Add this implementation plan.
-- [ ] Resolve the inherited CI step that targets the currently absent
+- [x] Resolve the inherited CI step that targets the currently absent
   `skills/build-template-agent/tests` directory, in a separate `chore:` commit.
 
 ### 1. Skill contract
 
-- [ ] Add `skills/build-custom-agent/SKILL.md` with the Purpose question,
+- [x] Add `skills/build-custom-agent/SKILL.md` with the Purpose question,
   two-outcome decision rule, editable-file allowlist, and stopping conditions.
-- [ ] Add `references/scope-routing.md` with the three representative intents
+- [x] Add `references/scope-routing.md` with the three representative intents
   and the minimal MAF mapping for tools, middleware, and workflows.
-- [ ] Add the generated read-only MCP reference used for trace verification.
-- [ ] Keep the current `scaffold-agent` unchanged during this iteration.
+- [x] Add the generated read-only MCP reference used for trace verification.
+- [x] Keep the current `scaffold-agent` unchanged during this iteration.
 
 ### 2. Generic .NET 10 starter
 
-- [ ] Derive one domain-neutral starter from the Release Evidence Reviewer
+- [x] Derive one domain-neutral starter from the Release Evidence Reviewer
   runtime; do not copy its release-specific language or rules.
-- [ ] Make UI name, description, examples, service slug, instructions, and
+- [x] Make UI name, description, examples, service slug, instructions, and
   smoke prompts configuration-driven.
-- [ ] Make fixed `Program.cs` and `AgentRuntime.cs` consume
+- [x] Make fixed `Program.cs` and `AgentRuntime.cs` consume
   `AgentDefinition.cs`, including its tool-registration list and service
   identity; leave no inherited release-specific constants.
-- [ ] Make the fixed content loader and project file support `.md`/`.txt` from
+- [x] Make the fixed content loader and project file support `.md`/`.txt` from
   `docs/` and `.json`/`.csv` from `data/`, with source labels and deterministic
   `not_found` behavior.
-- [ ] Support up to three local or simulated tools in `Tools.cs`.
-- [ ] Make the fixed smoke-runner engine read three bounded declarative cases
+- [x] Support up to three local or simulated tools in `Tools.cs`.
+- [x] Make the fixed smoke-runner engine read three bounded declarative cases
   from configuration instead of containing domain assertions.
-- [ ] Label all synthetic data and tool results as `local prototype` or
+- [x] Label all synthetic data and tool results as `local prototype` or
   `simulated`; never report a mock side effect as completed.
-- [ ] Generate `INTEGRATION_PLAN.md` when the original Purpose names an
+- [x] Generate `INTEGRATION_PLAN.md` when the original Purpose names an
   external source, listing the separate live adapter work.
 
 ### 3. Safe materialization
 
-- [ ] Add a package-free C# copier based on the prebuilt-template helper.
-- [ ] Add a package-free C# validator that compares fixed files with the
+- [x] Add a package-free C# copier based on the prebuilt-template helper.
+- [x] Add a package-free C# validator that compares fixed files with the
   bundled starter, permits only the editable-file allowlist, rejects new
   packages, and blocks network/process/file-write/secret-reading APIs in
   generated C#.
-- [ ] Require a missing or real empty target and reject symlinks, overwrites,
+- [x] Require a missing or real empty target and reject symlinks, overwrites,
   `..`, build output, and secret `.env` files while retaining `.env.example`.
-- [ ] Import only workspace-relative regular `.md`, `.txt`, `.json`, or `.csv`
+- [x] Import only workspace-relative regular `.md`, `.txt`, `.json`, or `.csv`
   files: no symlinks or hidden paths, at most 10 files, 1 MiB per file, and
   5 MiB total.
-- [ ] Keep Python out of the customer workflow.
+- [x] Keep Python out of the customer workflow.
 
 ### 4. Build outcome
 
-- [ ] Infer bounded Name, Knowledge, Actions, sample content, and three smoke
+- [x] Infer bounded Name, Knowledge, Actions, sample content, and three smoke
   prompts from Purpose.
-- [ ] Use workspace-relative `.md`/`.txt` files when supplied; otherwise create
+- [x] Use workspace-relative `.md`/`.txt` files when supplied; otherwise create
   small representative documents or synthetic structured records.
-- [ ] Run `dotnet build`, then exactly three smoke cases: known knowledge/data,
+- [x] Run `dotnet build`, then exactly three smoke cases: known knowledge/data,
   a local or simulated tool behavior, and `not_found`.
-- [ ] Run the project validator before build and again before handoff.
-- [ ] Verify the emitted trace IDs with the read-only Progress MCP tools.
-- [ ] Start the UI, verify `/api/health`, and return the project path, UI URL,
+- [x] Run the project validator before build and again before handoff.
+- [x] Verify the emitted trace IDs with the read-only Progress MCP tools.
+- [x] Start the UI, verify `/api/health`, and return the project path, UI URL,
   smoke summary, and one Progress Observability tracing-page link.
 
 ### 5. Plan-only outcome
 
-- [ ] Make no project writes and do not run build, smoke, or trace checks.
-- [ ] Return a concise plan covering MAF shape, external adapters,
+- [x] Make no project writes and do not run build, smoke, or trace checks.
+- [x] Return a concise plan covering MAF shape, external adapters,
   authentication, permissions, data contracts, side-effect controls, failure
   handling, tests, deployment, and observability.
-- [ ] State which parts the builder provides and which remain developer-owned.
-- [ ] Return the plan in Copilot chat only. `INTEGRATION_PLAN.md` is created
+- [x] State which parts the builder provides and which remain developer-owned.
+- [x] Return the plan in Copilot chat only. `INTEGRATION_PLAN.md` is created
   only inside an approved local prototype, never by the plan-only outcome.
 
 ### 6. Packaging
 
-- [ ] Add the skill to `scripts/build_copilot.py`, the instruction template,
+- [x] Add the skill to `scripts/build_copilot.py`, the instruction template,
   mirrored `copilot/skills/`, command/prompt surfaces, and both READMEs.
-- [ ] Add `build-custom-agent` to `scripts/sync_skill_refs.py`.
-- [ ] Extend both Copilot CI definitions to build the starter and run copier
+- [x] Add `build-custom-agent` to `scripts/sync_skill_refs.py`.
+- [x] Extend both Copilot CI definitions to build the starter and run copier
   and project-validator tests.
-- [ ] Regenerate derived artifacts only from their canonical sources.
+- [x] Regenerate derived artifacts only from their canonical sources.
 
 ### 7. Acceptance checks
 
@@ -176,8 +181,11 @@ configuration: stable case ID, prompt, and bounded expected result markers.
 - [ ] Confirm both prototype examples build, pass three smoke cases, expose a
   healthy UI, and produce observable traces without live external calls.
 - [ ] Confirm the plan-only example creates no files.
-- [ ] Run copier tests, starter build/tests, mirror checks, MCP-reference sync,
+- [x] Run copier tests, starter build/tests, mirror checks, MCP-reference sync,
   `git diff --check`, and an independent skill review.
+
+The three end-to-end checks above remain open until fresh Copilot sessions run
+with user-provided model, Progress Integration, and read-only MCP credentials.
 
 ## Explicitly deferred
 

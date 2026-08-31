@@ -13,6 +13,7 @@ on:
       - "scripts/copilot-instructions.template.md"
       - "copilot/.github/copilot-instructions.md"
       - "copilot/skills/build-template-agent/**"
+      - "copilot/skills/build-custom-agent/**"
       - ".github/workflows/check-copilot.yml"
       - "ci/check-copilot.yml"
 
@@ -35,3 +36,11 @@ jobs:
         run: python -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build the Release Evidence Reviewer template
         run: dotnet build skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj --configuration Release
+      - name: Test the custom-agent helpers
+        run: dotnet run --file skills/build-custom-agent/tests/helper-tests.cs
+      - name: Copy, validate, and build the custom-agent starter
+        run: |
+          custom_agent_target="$RUNNER_TEMP/custom-agent-starter"
+          dotnet run --file skills/build-custom-agent/scripts/copy-template.cs -- --target "$custom_agent_target"
+          dotnet run --file skills/build-custom-agent/scripts/validate-project.cs -- --target "$custom_agent_target"
+          dotnet build "$custom_agent_target/CustomAgent.csproj" --configuration Release

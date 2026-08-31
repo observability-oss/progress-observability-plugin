@@ -26,6 +26,9 @@ MIRRORED_SKILL_TREES = {
     ROOT / "skills" / "build-template-agent": (
         ROOT / "copilot" / "skills" / "build-template-agent"
     ),
+    ROOT / "skills" / "build-custom-agent": (
+        ROOT / "copilot" / "skills" / "build-custom-agent"
+    ),
 }
 EXCLUDED_TREE_PARTS = frozenset({"bin", "obj", "__pycache__", ".DS_Store"})
 
@@ -34,6 +37,7 @@ SOURCES = {
     "MCP_CONTRACT": ("references/mcp.md", 1),
     "HEALTH_CHECK": ("skills/health-check/SKILL.md", 1),
     "BUILD_TEMPLATE_AGENT": ("skills/build-template-agent/SKILL.md", 1),
+    "BUILD_CUSTOM_AGENT": ("skills/build-custom-agent/SKILL.md", 1),
     "SCAFFOLD_AGENT": ("skills/scaffold-agent/SKILL.md", 1),
     "INSTRUMENT_AGENT": ("skills/instrument-agent/SKILL.md", 1),
     "TRACE_TRIAGE": ("skills/trace-triage/SKILL.md", 1),

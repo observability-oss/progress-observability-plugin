@@ -1,8 +1,9 @@
 # progress-observability for VS Code / GitHub Copilot
 
-All eight skills from the Claude Code plugin, packaged for GitHub Copilot in
-VS Code - instrument-agent, build-template-agent, scaffold-agent, health-check, trace-triage,
-cost-report, coverage-gaps, and generate-eval. Nothing here is Claude-specific.
+All nine skills from the Claude Code plugin, packaged for GitHub Copilot in
+VS Code - instrument-agent, build-template-agent, build-custom-agent,
+scaffold-agent, health-check, trace-triage, cost-report, coverage-gaps, and
+generate-eval. Nothing here is Claude-specific.
 
 > **Check the plugin install first - it is usually the better path.** Copilot
 > CLI installs this repo as a plugin (`copilot plugin marketplace add
@@ -20,9 +21,10 @@ are already where Copilot expects them):
 
 | File | Role | Claude-plugin equivalent |
 |---|---|---|
-| `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all eight skill workflows | the `skills/` + `references/mcp.md` |
+| `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all nine skill workflows | the `skills/` + `references/mcp.md` |
 | `.github/prompts/instrument-agent.prompt.md` | `/instrument-agent` | `commands/instrument-agent.md` |
 | `.github/prompts/build-template-agent.prompt.md` | `/build-template-agent` | `commands/build-template-agent.md` |
+| `.github/prompts/build-custom-agent.prompt.md` | `/build-custom-agent` | `commands/build-custom-agent.md` |
 | `.github/prompts/scaffold-agent.prompt.md` | `/scaffold-agent` | `commands/scaffold-agent.md` |
 | `.github/prompts/health-check.prompt.md` | `/health-check` | `commands/health-check.md` |
 | `.github/prompts/trace-triage.prompt.md` | `/trace-triage` | `commands/trace-triage.md` |
@@ -31,6 +33,7 @@ are already where Copilot expects them):
 | `.github/prompts/eval-from-trace.prompt.md` | `/eval-from-trace` | `commands/eval-from-trace.md` |
 | `.github/prompts/eval-from-scratch.prompt.md` | `/eval-from-scratch` | `commands/eval-from-scratch.md` |
 | `skills/build-template-agent/` | Complete skill, copy helper, and pinned Release Evidence Reviewer source | `skills/build-template-agent/` |
+| `skills/build-custom-agent/` | Guided custom workflow, helpers, and bounded .NET 10 starter | `skills/build-custom-agent/` |
 | `.vscode/mcp.json` | Connects to the Progress Observability MCP server | `.mcp.json` |
 
 ## Requirements
@@ -41,8 +44,8 @@ are already where Copilot expects them):
   (API Keys → MCP API Keys). Use a *With content* key only if you want Copilot to
   read raw prompt/completion text (trace-triage on a culprit span, or few-shot
   examples in generate-eval).
-- For `/build-template-agent` only: the .NET 10 SDK plus the model and separate
-  Progress Integration-key settings documented in the copied project.
+- For either builder's live prototype path: the .NET 10 SDK plus the model and
+  separate Progress Integration-key settings documented in the copied project.
 
 ## Setup
 
@@ -51,13 +54,15 @@ are already where Copilot expects them):
    ```
    your-repo/
    ├── skills/
-   │   └── build-template-agent/    # fixed template source + copy helper
+   │   ├── build-template-agent/    # fixed prebuilt project
+   │   └── build-custom-agent/      # bounded custom starter
    ├── .vscode/mcp.json
    └── .github/
        ├── copilot-instructions.md
        └── prompts/
            ├── instrument-agent.prompt.md
            ├── build-template-agent.prompt.md
+           ├── build-custom-agent.prompt.md
            ├── scaffold-agent.prompt.md
            ├── health-check.prompt.md
            ├── trace-triage.prompt.md
@@ -82,6 +87,7 @@ are already where Copilot expects them):
 
 - `/instrument-agent` - instrument an existing Python, TypeScript, or .NET agent and verify its traces.
 - `/build-template-agent` - copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer.
+- `/build-custom-agent` - turn a short purpose into a safe local prototype or a no-write integration plan.
 - `/scaffold-agent` - create a new .NET agent project, already instrumented, from the starter template.
 - `/health-check` - verify the setup: connection, key scope, data flow, instrumentation depth. No arguments.
 - `/trace-triage` - give it a trace id, or a service + symptom + window.
@@ -105,12 +111,12 @@ curl -s https://mcp.observability.progress.com/mcp \
 
 Expected: 7 tools on a Metadata-only key, 9 on a With-content key - presence of `get_observation_details_with_content` confirms With-content scope.
 
-## Keeping in sync (generated file)
+## Keeping in sync (generated bundle)
 
-`.github/copilot-instructions.md` and `skills/build-template-agent/` are
+`.github/copilot-instructions.md` and both asset-bearing builder skills are
 **generated** - don't edit them by hand. Copilot can't include external files,
 so the build inlines the plugin's instruction sources into one file and mirrors
-the complete asset-bearing template skill byte-for-byte. The single sources of
+both complete asset-bearing builder skills byte-for-byte. The single sources of
 truth are `../references/mcp.md`, `../skills/*/SKILL.md`, and the eval frame in
 `../skills/generate-eval/references/frame.md` (each exposes the shared region
 between `<!-- copilot:start -->` / `<!-- copilot:end -->` markers).

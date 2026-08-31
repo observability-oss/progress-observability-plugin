@@ -10,22 +10,24 @@
 > with what the user asks for, the user's request wins.
 
 This project works with the Progress Observability Platform over the
-`progress-observability` MCP server. Eight skills are available — pick the one
+`progress-observability` MCP server. Nine skills are available — pick the one
 that matches the request (each also has a matching `/prompt`):
 
 - **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
 - **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
-- **scaffold-agent** — create a new .NET agent project, already instrumented, from the starter template.
+- **build-custom-agent** — turn a purpose into either a bounded .NET 10 local prototype or a no-write integration plan.
+- **scaffold-agent** — directly scaffold a new .NET agent from the general starter template.
 - **health-check** — verify the setup is wired up: connection, key scope, data flow, instrumentation depth. Run first when something looks wrong.
 - **trace-triage** — root-cause a failed or slow run by walking its span tree.
 - **cost-report** — spend by model/app/day, quota burn, spike explanation.
 - **coverage-gaps** — find production behaviors with no eval; rank what to build.
 - **generate-eval** — build a research-grounded LLM-as-a-Judge evaluator prompt.
 
-Five of the eight only read from the MCP server and write nothing. The three that
-write code: `build-template-agent` copies a finished project, `scaffold-agent`
-creates a custom project, and `instrument-agent` edits an existing one. Only
-their verification steps read MCP.
+Five of the nine only read from the MCP server and write nothing. Of the four
+building workflows, `build-template-agent` copies a finished project,
+`build-custom-agent` either creates a bounded local prototype or returns a
+no-write plan, `scaffold-agent` creates a general starter project, and
+`instrument-agent` edits an existing app. Only verification steps read MCP.
 
 ---
 
@@ -572,6 +574,102 @@ verified local UI link, one Progress Observability Tracing page link, and the
 three smoke-case results. Keep trace IDs available for diagnostics, but do not
 present them as three separate links. On a failure, report the failed gate and
 the smallest safe retry; do not claim the template is ready.
+
+---
+
+## build-custom-agent
+
+This workflow has two honest outcomes: a safe local prototype, or an integration
+plan returned only in chat. It never implements live business-system access or
+real side effects.
+
+### Intake and routing
+
+1. Purpose is required. If the user has not already supplied it, ask this exact
+   first question:
+
+   > In 1-2 short sentences, what should this agent help someone accomplish?
+
+2. Read this skill's `references/scope-routing.md`. Normalize Purpose and infer
+   a bounded name, knowledge mode, and at most three actions. Ask at most one
+   clarification, and only when Purpose is not actionable under that reference.
+   Never ask for credentials or secret values.
+
+3. Show the inferred summary and recommended outcome. Offer `Build local
+   prototype`, `Show plan only`, `Revise purpose`, and `Decide for me`. Do not
+   write files until `Build local prototype` is selected. `Decide for me`
+   selects the prototype only when it is safe and meaningful; otherwise it
+   selects plan only.
+
+### Safe local prototype
+
+Use the requested target or a lowercase-hyphen folder inferred from the name.
+Require the .NET 10 SDK, locate this skill's directory, then run:
+
+```bash
+dotnet run --file <skill-directory>/scripts/copy-template.cs -- --target <target>
+```
+
+The copier accepts only a missing target or a real empty directory. Do not work
+around a refusal, overwrite content, or reconstruct the starter.
+
+After copying, edits are restricted to:
+
+- `AgentDefinition.cs`: only the bounded definition contract and one-to-three
+  tool registrations;
+- `Tools.cs`: at most three deterministic local or clearly simulated tools;
+- regular supported files under `docs/` and `data/`;
+- `appsettings.json`: the `Agent` display name, service slug, Purpose,
+  instructions, examples, plus prompts and expected markers for the fixed smoke
+  cases `knowledge`, `tool`, and `not-found`; keep every other setting fixed;
+- optional `INTEGRATION_PLAN.md`, only when the prototype represents a future
+  external adapter.
+
+Do not edit `Program.cs`, `AgentRuntime.cs`, `KnowledgeBase.cs`, `SmokeRunner.cs`,
+the project file, HTTP/UI/health code, model or observability wiring, package
+versions, or any other file. Do not add dependencies. Do not generate network
+calls, process execution, filesystem writes, secret reads, or real side effects.
+Label synthetic records and simulated results plainly. If Purpose names an
+external source represented by local or synthetic data, create
+`INTEGRATION_PLAN.md` describing the separate live adapter, authentication,
+data contract, failure handling, tests, and developer-owned work.
+
+Run the project validator before building:
+
+```bash
+dotnet run --file <skill-directory>/scripts/validate-project.cs -- --target <target>
+dotnet build <target>/CustomAgent.csproj
+dotnet run --project <target>/CustomAgent.csproj -- --smoke
+```
+
+Parse the single-line `SMOKE_REPORT=<json>` marker. Require overall `pass` and
+exactly three passing results with IDs `knowledge`, `tool`, and `not-found`.
+Preserve their exact trace IDs.
+
+Read this skill's `references/mcp.md`, then verify those exact IDs with the
+existing read-only Progress Observability MCP tools using a narrow time window,
+the generated service slug, and metadata only. The app's Azure OpenAI and
+Progress Integration settings are separate from Copilot's MCP credential. If
+settings are missing, report only their configuration names and point to the
+starter README; never request, inspect, or print values.
+
+Start the already-built app, keep it running, and verify `/api/health` at the
+local URL printed by the app. If the default port is occupied, retry with
+`dotnet run --no-build -- --urls http://127.0.0.1:<free-port>` and use the URL
+the app prints. Run the validator again before handoff. Report the absolute
+project path, verified UI URL, three smoke results, and exactly one Progress
+Observability tracing-page link:
+`https://observability.progress.com/observations`. Do not construct per-trace
+deep links. Report success only when validation, build, smoke, trace
+verification, and health all pass.
+
+### Integration plan only
+
+Create no files and run no copier, build, smoke, app, or trace commands. Return
+the plan in chat, covering the proposed MAF shape, external adapters,
+authentication and permissions, data contracts, side-effect controls, failure
+handling, tests, deployment, observability, and developer-owned work. Do not
+call the named external systems or imply that MAF supplies their integrations.
 
 ---
 

@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Marketplace for the progress-observability plugin \u2014 observe, debug, cost-manage, and evaluate AI systems over the Progress Observability MCP server.",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "progress-observability",
       "source": "./",
-      "description": "Copy and run a finished .NET 10 agent template, instrument or scaffold custom agents, verify traces, triage failures, report cost and coverage, and generate LLM-as-a-Judge evals over the Progress Observability MCP server."
+      "description": "Run a finished .NET 10 agent template, build a bounded custom prototype or integration plan, instrument or scaffold agents, verify traces, triage failures, report cost and coverage, and generate LLM-as-a-Judge evals over the Progress Observability MCP server."
     }
   ]
 }

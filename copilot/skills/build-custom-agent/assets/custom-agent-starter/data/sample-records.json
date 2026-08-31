@@ -1,0 +1,17 @@
+{
+  "simulation": true,
+  "records": [
+    {
+      "id": "SAMPLE-001",
+      "status": "open",
+      "owner": "Example Team",
+      "summary": "Representative record used only by the local prototype"
+    },
+    {
+      "id": "SAMPLE-002",
+      "status": "resolved",
+      "owner": "Example Team",
+      "summary": "Second synthetic record for local testing"
+    }
+  ]
+}

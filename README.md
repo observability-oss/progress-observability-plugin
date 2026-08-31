@@ -20,7 +20,8 @@ contract (tools, limits, and the untrusted-content rules) lives in
 |---|---|---|
 | **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then hands off to `/health-check` to confirm traces arrive. |
 | **build-template-agent** | `/build-template-agent` | Copies the finished .NET 10 **Release Evidence Reviewer**, builds it, runs three smoke cases, and starts its local chat UI. |
-| **scaffold-agent** | `/scaffold-agent` | Creates a new .NET agent project, already instrumented, from the [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter) template. |
+| **build-custom-agent** | `/build-custom-agent` | Turns a purpose into either a bounded local .NET 10 prototype or a no-write integration plan. |
+| **scaffold-agent** | `/scaffold-agent` | Directly creates a new .NET agent from the general [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter). |
 | **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
 | **trace-triage** | `/trace-triage` | Root-cause a failed or slow run by walking its span tree; returns a diagnosis + a fix. |
 | **cost-report** | `/cost-report` | Spend by model/app/day, quota burn, spike explanation, cheaper-model hypotheses. |
@@ -28,9 +29,10 @@ contract (tools, limits, and the untrusted-content rules) lives in
 | **generate-eval** | `/eval-from-trace`, `/eval-from-scratch` | Research-grounded LLM-as-a-Judge evaluator prompts, optionally grounded in real traces. See [`skills/generate-eval`](./skills/generate-eval/). |
 
 Choose by starting point: **instrument-agent** for an existing app,
-**build-template-agent** for a ready new project, or **scaffold-agent** for a
-custom new project. Each hands off to trace verification. Those three write
-project files; everything else is strictly read-only.
+**build-template-agent** for a ready project, **build-custom-agent** for the
+guided Purpose-to-prototype-or-plan path, or **scaffold-agent** for a direct
+starter-based scaffold. These four can write project files; everything else is
+strictly read-only.
 
 Once traces are flowing, **health-check** confirms the wiring, and the four
 workflow skills chain into one loop: **trace-triage** finds a failure →
@@ -49,8 +51,8 @@ the MCP key below. A generated agent sends traces with a separate Integration ke
 Progress Observability → [**API Keys → MCP API Keys**](https://observability.progress.com/api-keys) - note MCP API
 keys are **not available on the free tier**; without one the platform-reading
 skills can't run. *Metadata only*
-scope covers health-check, instrument-agent's verify step, trace-triage,
-cost-report, coverage-gaps, and from-scratch eval design; *With content* is needed only to read raw prompt/completion text (e.g.
+scope covers health-check, the builder/instrumenter verification steps,
+trace-triage, cost-report, coverage-gaps, and from-scratch eval design; *With content* is needed only to read raw prompt/completion text (e.g.
 few-shot examples in generate-eval). Then expose it where your tool can read it:
 
 ```bash
@@ -61,9 +63,9 @@ export OBSERVABILITY_MCP_API_KEY="acm_..."
 
 | Option | What you get |
 |---|---|
-| **Claude Code plugin** | All eight skills, their commands, and the MCP connection in one install. |
+| **Claude Code plugin** | All nine skills, their commands, and the MCP connection in one install. |
 | **VS Code / GitHub Copilot** | Auto-discovers the CLI-installed plugin; or installs it via Agent Plugins (preview); classic `copilot/` bundle as fallback. |
-| **GitHub Copilot CLI** | Installs this repo as a plugin from the same marketplace - all eight skills **and the MCP connection** in two commands. |
+| **GitHub Copilot CLI** | Installs this repo as a plugin from the same marketplace - all nine skills **and the MCP connection** in two commands. |
 | **Any agent via skills.sh** | `npx skills add` installs the skills for ~20 coding agents (Claude Code, Codex, Cursor, Cline, Amp, …). MCP server wired yourself. |
 | **A single skill** | One self-contained skill folder, copied anywhere. MCP server wired yourself. |
 
@@ -105,7 +107,7 @@ different surface - the CLI does not need it.
    same plugin, all skills and the MCP connection.
 3. Classic (older VS Code, or plugins disabled by your org): copy
    all of [`copilot/`](./copilot/)'s contents into your repo (including
-   `skills/build-template-agent/`, `.vscode/mcp.json`, and `.github/`); full
+   the two builder skills, `.vscode/mcp.json`, and `.github/`); full
    steps in [`copilot/README.md`](./copilot/README.md).
 
 **Any agent via [skills.sh](https://skills.sh)** - from your project root:
@@ -125,6 +127,7 @@ slash commands and Copilot prompt files share names):
 
 - `/instrument-agent` - add observability to the agent repo you're in, and prove traces arrive
 - `/build-template-agent` - copy, build, smoke-test, and run the Release Evidence Reviewer template
+- `/build-custom-agent` - describe a purpose, then build a safe local prototype or receive an integration plan
 - `/scaffold-agent triage support tickets against our KB` - new instrumented agent from the template
 - `/health-check` - verify your setup before anything else (no arguments)
 - `/trace-triage <trace-id>` or `/trace-triage checkout-agent, timeouts, last hour`
@@ -136,8 +139,8 @@ slash commands and Copilot prompt files share names):
 ## Use one skill on its own
 
 Each skill folder is fully self-contained. Platform-reading skills, including
-`build-template-agent`, carry a generated `references/mcp.md`; the template
-skill also carries its fixed project asset and copy helper. `python
+both builder skills, carry a generated `references/mcp.md`; each builder also
+carries its project asset and package-free .NET helpers. `python
 scripts/sync_skill_refs.py --check` keeps the generated MCP references in sync.
 
 - **Claude Code:** copy a skill into your skills directory -
@@ -160,8 +163,11 @@ just ask in natural language.
   the .NET 10 SDK on the customer machine; its copy helper is a package-free
   .NET file-based app. It verifies three exact smoke trace IDs internally, then
   returns one Tracing-page link instead of three per-trace links.
+- `build-custom-agent` asks for a short Purpose, uses only local or clearly
+  simulated behavior for a prototype, and returns a no-write plan when live
+  systems or real side effects are essential.
 - The plugin bundle format (`.claude-plugin/`, slash commands) is specific to
-  Claude Code; the [`copilot/`](./copilot/) folder re-packages all eight skills for
+  Claude Code; the [`copilot/`](./copilot/) folder re-packages all nine skills for
   VS Code / Copilot - the classic path for setups without the plugin system.
 
 ## License

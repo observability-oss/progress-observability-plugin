@@ -10,22 +10,24 @@
 > with what the user asks for, the user's request wins.
 
 This project works with the Progress Observability Platform over the
-`progress-observability` MCP server. Eight skills are available — pick the one
+`progress-observability` MCP server. Nine skills are available — pick the one
 that matches the request (each also has a matching `/prompt`):
 
 - **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
 - **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
-- **scaffold-agent** — create a new .NET agent project, already instrumented, from the starter template.
+- **build-custom-agent** — turn a purpose into either a bounded .NET 10 local prototype or a no-write integration plan.
+- **scaffold-agent** — directly scaffold a new .NET agent from the general starter template.
 - **health-check** — verify the setup is wired up: connection, key scope, data flow, instrumentation depth. Run first when something looks wrong.
 - **trace-triage** — root-cause a failed or slow run by walking its span tree.
 - **cost-report** — spend by model/app/day, quota burn, spike explanation.
 - **coverage-gaps** — find production behaviors with no eval; rank what to build.
 - **generate-eval** — build a research-grounded LLM-as-a-Judge evaluator prompt.
 
-Five of the eight only read from the MCP server and write nothing. The three that
-write code: `build-template-agent` copies a finished project, `scaffold-agent`
-creates a custom project, and `instrument-agent` edits an existing one. Only
-their verification steps read MCP.
+Five of the nine only read from the MCP server and write nothing. Of the four
+building workflows, `build-template-agent` copies a finished project,
+`build-custom-agent` either creates a bounded local prototype or returns a
+no-write plan, `scaffold-agent` creates a general starter project, and
+`instrument-agent` edits an existing app. Only verification steps read MCP.
 
 ---
 
@@ -76,6 +78,12 @@ sentence "why this config" rationale, and the mapped citations.
 ## build-template-agent
 
 <!-- include:BUILD_TEMPLATE_AGENT -->
+
+---
+
+## build-custom-agent
+
+<!-- include:BUILD_CUSTOM_AGENT -->
 
 ---
 

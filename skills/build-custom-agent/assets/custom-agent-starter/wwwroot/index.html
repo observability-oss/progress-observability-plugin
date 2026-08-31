@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Custom Agent</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #18162b; background: #f5f4fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #eeeaff 0, #f7f6fb 38%, #f1f2f7 100%); }
+    main { width: min(780px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0; }
+    header { margin-bottom: 24px; }
+    .eyebrow { color: #6851d9; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; }
+    .subtitle { margin: 0; color: #626078; line-height: 1.55; }
+    .panel { background: rgba(255,255,255,.92); border: 1px solid #dedbea; border-radius: 18px; box-shadow: 0 18px 50px rgba(40,31,84,.09); overflow: hidden; }
+    .status { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-bottom: 1px solid #ece9f3; color: #66637a; font-size: 13px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
+    .dot.ready { background: #27a36a; box-shadow: 0 0 0 4px #dff5ea; }
+    .conversation { min-height: 270px; padding: 22px; display: grid; align-content: start; gap: 14px; }
+    .empty { color: #747186; line-height: 1.55; }
+    .message { max-width: 88%; padding: 13px 15px; border-radius: 14px; line-height: 1.5; white-space: pre-wrap; }
+    .user { justify-self: end; color: white; background: #5b43cf; border-bottom-right-radius: 4px; }
+    .agent { justify-self: start; background: #f0eef8; border-bottom-left-radius: 4px; }
+    .trace { margin-top: 8px; color: #77738c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 18px; }
+    .examples button { border: 1px solid #d8d3eb; border-radius: 999px; background: white; color: #4c3ba4; padding: 8px 11px; cursor: pointer; }
+    form { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #ece9f3; background: #fbfaff; }
+    input { flex: 1; min-width: 0; border: 1px solid #d5d1e3; border-radius: 11px; padding: 13px 14px; font: inherit; outline: none; }
+    input:focus { border-color: #6d55df; box-shadow: 0 0 0 3px #ece8ff; }
+    form button { border: 0; border-radius: 11px; padding: 0 20px; color: white; background: #21184d; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    footer { margin-top: 16px; text-align: center; color: #77748a; font-size: 12px; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Local prototype</div>
+    <h1 id="agent-name">Custom Agent</h1>
+    <p id="agent-purpose" class="subtitle">Loading the configured purpose…</p>
+  </header>
+
+  <section id="chat-panel" class="panel" aria-label="Custom agent chat">
+    <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">Checking local agent…</span></div>
+    <div id="conversation" class="conversation" aria-live="polite">
+      <div id="empty" class="empty">Try a suggested prompt or ask about the local prototype content.</div>
+    </div>
+    <div id="examples" class="examples"></div>
+    <form id="chat-form">
+      <input id="message" maxlength="4000" autocomplete="off" aria-label="Message" placeholder="Ask the local prototype…" required>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </section>
+  <footer>Local or synthetic data · Azure OpenAI · metadata-only Progress telemetry</footer>
+</main>
+
+<script>
+  const conversation = document.querySelector('#conversation');
+  const input = document.querySelector('#message');
+  const send = document.querySelector('#send');
+
+  function addMessage(kind, text, traceId) {
+    document.querySelector('#empty')?.remove();
+    const message = document.createElement('div');
+    message.className = `message ${kind}`;
+    const body = document.createElement('div');
+    body.textContent = text;
+    message.append(body);
+    if (traceId) {
+      const trace = document.createElement('div');
+      trace.className = 'trace';
+      trace.textContent = `trace ${traceId}`;
+      message.append(trace);
+    }
+    conversation.append(message);
+    message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function usePrompt(prompt) {
+    input.value = prompt;
+    input.focus();
+  }
+
+  async function loadConfig() {
+    try {
+      const response = await fetch('/api/config');
+      if (!response.ok) throw new Error();
+      const config = await response.json();
+      document.title = config.displayName;
+      document.querySelector('#agent-name').textContent = config.displayName;
+      document.querySelector('#agent-purpose').textContent = config.purpose;
+      document.querySelector('#chat-panel').setAttribute('aria-label', `${config.displayName} chat`);
+      const examples = document.querySelector('#examples');
+      config.examples.forEach((prompt, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = `Example ${index + 1}`;
+        button.addEventListener('click', () => usePrompt(prompt));
+        examples.append(button);
+      });
+    } catch {
+      document.querySelector('#agent-purpose').textContent = 'Could not load the configured purpose.';
+    }
+  }
+
+  async function checkHealth() {
+    try {
+      const response = await fetch('/api/health');
+      if (!response.ok) throw new Error();
+      const health = await response.json();
+      document.querySelector('#status-dot').classList.add('ready');
+      document.querySelector('#status-text').textContent = `${health.status} · ${health.sourcesLoaded} local sources · tracing ${health.tracingEnabled ? 'on' : 'off'}`;
+    } catch {
+      document.querySelector('#status-text').textContent = 'Local agent unavailable';
+    }
+  }
+
+  document.querySelector('#chat-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+    addMessage('user', message);
+    input.value = '';
+    send.disabled = true;
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      const result = await response.json();
+      addMessage('agent', response.ok ? result.answer : `Request failed: ${result.error}`, result.traceId);
+    } catch {
+      addMessage('agent', 'Could not reach the local agent.');
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  });
+
+  loadConfig();
+  checkHealth();
+</script>
+</body>
+</html>
