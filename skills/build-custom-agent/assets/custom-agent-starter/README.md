@@ -45,6 +45,11 @@ The builder may customize `AgentDefinition.cs`, `Tools.cs`, the `Agent` and
 and an optional `INTEGRATION_PLAN.md`. The runtime, web routes, UI shell, smoke
 engine, project dependencies, and observability wiring stay fixed.
 
+The fixed UI reads its title, Purpose, suggested prompts, one of four visual
+presets (`knowledge`, `review`, `workflow`, or `analysis`), and its input hint
+from the `Agent` section. Customize those values in `appsettings.json`; do not
+edit the generated copy under `bin/`.
+
 Files in `data/` and tools representing future external sources must be labeled
 as simulated. A live SharePoint, Jira, database, or other adapter remains
 developer-owned work and is documented in `INTEGRATION_PLAN.md` when relevant.

@@ -6,60 +6,183 @@
   <title>Custom Agent</title>
   <link rel="icon" href="data:,">
   <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #18162b; background: #f5f4fb; }
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #171625;
+      background: #f5f6fa;
+      --accent: #3159b8;
+      --accent-strong: #24499e;
+      --accent-soft: #eaf0ff;
+      --accent-border: #c9d7fb;
+      --accent-halo: rgba(49, 89, 184, .16);
+    }
+    body[data-preset="review"] {
+      --accent: #1e7a57;
+      --accent-strong: #176344;
+      --accent-soft: #e7f6ef;
+      --accent-border: #bde3d2;
+      --accent-halo: rgba(30, 122, 87, .15);
+    }
+    body[data-preset="workflow"] {
+      --accent: #6549cf;
+      --accent-strong: #5035b5;
+      --accent-soft: #f0ecff;
+      --accent-border: #d7cdfa;
+      --accent-halo: rgba(101, 73, 207, .16);
+    }
+    body[data-preset="analysis"] {
+      --accent: #a45a18;
+      --accent-strong: #85450f;
+      --accent-soft: #fff0df;
+      --accent-border: #f0cfaa;
+      --accent-halo: rgba(164, 90, 24, .15);
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #eeeaff 0, #f7f6fb 38%, #f1f2f7 100%); }
-    main { width: min(780px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0; }
-    header { margin-bottom: 24px; }
-    .eyebrow { color: #6851d9; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; }
-    .subtitle { margin: 0; color: #626078; line-height: 1.55; }
-    .panel { background: rgba(255,255,255,.92); border: 1px solid #dedbea; border-radius: 18px; box-shadow: 0 18px 50px rgba(40,31,84,.09); overflow: hidden; }
-    .status { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-bottom: 1px solid #ece9f3; color: #66637a; font-size: 13px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
-    .dot.ready { background: #27a36a; box-shadow: 0 0 0 4px #dff5ea; }
-    .conversation { min-height: 270px; padding: 22px; display: grid; align-content: start; gap: 14px; }
-    .empty { color: #747186; line-height: 1.55; }
-    .message { max-width: 88%; padding: 13px 15px; border-radius: 14px; line-height: 1.5; white-space: pre-wrap; }
-    .user { justify-self: end; color: white; background: #5b43cf; border-bottom-right-radius: 4px; }
-    .agent { justify-self: start; background: #f0eef8; border-bottom-left-radius: 4px; }
-    .trace { margin-top: 8px; color: #77738c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
-    .examples { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 18px; }
-    .examples button { border: 1px solid #d8d3eb; border-radius: 999px; background: white; color: #4c3ba4; padding: 8px 11px; cursor: pointer; }
-    form { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #ece9f3; background: #fbfaff; }
-    input { flex: 1; min-width: 0; border: 1px solid #d5d1e3; border-radius: 11px; padding: 13px 14px; font: inherit; outline: none; }
-    input:focus { border-color: #6d55df; box-shadow: 0 0 0 3px #ece8ff; }
-    form button { border: 0; border-radius: 11px; padding: 0 20px; color: white; background: #21184d; font-weight: 700; cursor: pointer; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% 0, var(--accent-halo), transparent 31rem),
+        linear-gradient(180deg, #fafafe 0, #f3f4f8 100%);
+    }
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    main { width: min(860px, calc(100% - 32px)); margin: 0 auto; padding: 52px 0 36px; }
+    .hero { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 24px; }
+    .agent-mark {
+      display: grid;
+      flex: 0 0 auto;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border: 1px solid var(--accent-border);
+      border-radius: 17px;
+      color: var(--accent);
+      background: linear-gradient(145deg, #fff, var(--accent-soft));
+      box-shadow: 0 10px 28px var(--accent-halo);
+    }
+    .agent-icon { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .hero-copy { min-width: 0; padding-top: 1px; }
+    .eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .prototype-pill { padding: 4px 8px; border: 1px solid var(--accent-border); border-radius: 999px; background: var(--accent-soft); letter-spacing: .04em; }
+    h1 { margin: 8px 0 9px; font-size: clamp(30px, 5vw, 44px); line-height: 1.08; letter-spacing: -.035em; }
+    .subtitle { max-width: 680px; margin: 0; color: #626176; line-height: 1.55; }
+    .panel { overflow: hidden; border: 1px solid #dddde8; border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: 0 22px 60px rgba(34, 31, 57, .09); backdrop-filter: blur(12px); }
+    .status { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 49px; padding: 11px 18px; border-bottom: 1px solid #ececf2; color: #656477; font-size: 13px; }
+    .status-copy { display: flex; align-items: center; min-width: 0; gap: 9px; }
+    .dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #aaa9b4; }
+    .dot.ready { background: #22a06b; box-shadow: 0 0 0 4px #dff5ea; }
+    .dot.error { background: #d04d4d; box-shadow: 0 0 0 4px #fce5e5; }
+    .data-pill { flex: 0 0 auto; padding: 5px 9px; border: 1px solid #e2e2ea; border-radius: 999px; color: #747385; background: #f8f8fb; font-size: 11px; font-weight: 700; }
+    .conversation { display: grid; min-height: 300px; padding: 24px; align-content: start; gap: 14px; background: linear-gradient(180deg, #fff 0, #fcfcfe 100%); }
+    .empty { display: grid; place-items: center; align-self: center; min-height: 245px; color: #747386; text-align: center; }
+    .empty-mark { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 11px; border-radius: 13px; color: var(--accent); background: var(--accent-soft); font-size: 20px; }
+    .empty strong { display: block; margin-bottom: 5px; color: #393747; font-size: 15px; }
+    .empty span { display: block; max-width: 390px; line-height: 1.5; }
+    .message { max-width: 88%; padding: 13px 15px; border-radius: 15px; line-height: 1.52; white-space: pre-wrap; box-shadow: 0 3px 10px rgba(35, 31, 58, .04); }
+    .user { justify-self: end; color: white; background: var(--accent-strong); border-bottom-right-radius: 5px; }
+    .agent { justify-self: start; border: 1px solid var(--accent-border); border-bottom-left-radius: 5px; background: var(--accent-soft); }
+    .trace { margin-top: 9px; color: #6f6d80; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
+    .example-section { padding: 0 22px 18px; }
+    .example-label { margin-bottom: 9px; color: #777587; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+    .examples button { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 8px 11px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-strong); background: #fff; line-height: 1.35; text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+    .examples button::after { content: "→"; flex: 0 0 auto; font-weight: 800; }
+    .examples button:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+    .examples button:focus-visible, form button:focus-visible { outline: 3px solid var(--accent-halo); outline-offset: 2px; }
+    form { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #ececf2; background: #fafafe; }
+    input { flex: 1; min-width: 0; padding: 13px 14px; border: 1px solid #d5d5df; border-radius: 11px; color: #252332; background: #fff; outline: none; }
+    input::placeholder { color: #8a8998; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-halo); }
+    form button { min-width: 86px; padding: 0 19px; border: 0; border-radius: 11px; color: white; background: var(--accent-strong); font-weight: 750; cursor: pointer; }
     button:disabled { opacity: .55; cursor: wait; }
-    footer { margin-top: 16px; text-align: center; color: #77748a; font-size: 12px; }
+    footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px 15px; margin-top: 17px; color: #777687; font-size: 12px; }
+    footer span:not(:first-child)::before { content: "•"; margin-right: 15px; color: #aaa8b6; }
+    @media (max-width: 600px) {
+      main { width: min(100% - 20px, 860px); padding: 28px 0 24px; }
+      .hero { gap: 13px; }
+      .agent-mark { width: 48px; height: 48px; border-radius: 14px; }
+      .agent-icon { width: 24px; height: 24px; }
+      h1 { margin-top: 6px; }
+      .status { padding-inline: 14px; }
+      .data-pill { display: none; }
+      .conversation { min-height: 270px; padding: 18px; }
+      .empty { min-height: 220px; }
+      .example-section { padding: 0 16px 16px; }
+      form { padding: 12px; }
+      form button { min-width: 72px; padding-inline: 14px; }
+      footer span::before { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
   </style>
 </head>
-<body>
+<body data-preset="knowledge">
+<svg class="icon-sprite" aria-hidden="true">
+  <symbol id="icon-knowledge" viewBox="0 0 24 24">
+    <path d="M4.5 5.5A2.5 2.5 0 0 1 7 3h5v16H7a2.5 2.5 0 0 0-2.5 2.5z"/>
+    <path d="M19.5 5.5A2.5 2.5 0 0 0 17 3h-5v16h5a2.5 2.5 0 0 1 2.5 2.5z"/>
+  </symbol>
+  <symbol id="icon-review" viewBox="0 0 24 24">
+    <path d="M7 3.5h7l3 3V20H7a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2z"/>
+    <path d="M14 3.5v3h3M8.5 13l2 2 4.5-5"/>
+  </symbol>
+  <symbol id="icon-workflow" viewBox="0 0 24 24">
+    <circle cx="6" cy="6" r="2.25"/><circle cx="18" cy="8" r="2.25"/><circle cx="9" cy="18" r="2.25"/>
+    <path d="M8.2 6.4l7.6 1.2M7 8l1.2 7.8M16.8 10l-6.6 6.2"/>
+  </symbol>
+  <symbol id="icon-analysis" viewBox="0 0 24 24">
+    <path d="M4 20V5M4 20h16"/>
+    <path d="M8 16v-4M12 16V8M16 16v-6"/>
+  </symbol>
+</svg>
+
 <main>
-  <header>
-    <div class="eyebrow">Local prototype</div>
-    <h1 id="agent-name">Custom Agent</h1>
-    <p id="agent-purpose" class="subtitle">Loading the configured purpose…</p>
+  <header class="hero">
+    <div class="agent-mark" aria-hidden="true">
+      <svg class="agent-icon" viewBox="0 0 24 24"><use id="agent-icon" href="#icon-knowledge"></use></svg>
+    </div>
+    <div class="hero-copy">
+      <div class="eyebrow"><span>Local prototype</span><span class="prototype-pill">Safe demo</span></div>
+      <h1 id="agent-name">Custom Agent</h1>
+      <p id="agent-purpose" class="subtitle">Loading the configured purpose…</p>
+    </div>
   </header>
 
   <section id="chat-panel" class="panel" aria-label="Custom agent chat">
-    <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">Checking local agent…</span></div>
-    <div id="conversation" class="conversation" aria-live="polite">
-      <div id="empty" class="empty">Try a suggested prompt or ask about the local prototype content.</div>
+    <div class="status">
+      <div class="status-copy"><span id="status-dot" class="dot"></span><span id="status-text">Checking local agent…</span></div>
+      <span class="data-pill">Local / synthetic data</span>
     </div>
-    <div id="examples" class="examples"></div>
+    <div id="conversation" class="conversation" aria-live="polite">
+      <div id="empty" class="empty">
+        <div>
+          <div class="empty-mark" aria-hidden="true">✦</div>
+          <strong>Ready when you are</strong>
+          <span>Choose a suggested prompt below or ask your own question.</span>
+        </div>
+      </div>
+    </div>
+    <div class="example-section">
+      <div class="example-label">Try an example</div>
+      <div id="examples" class="examples"></div>
+    </div>
     <form id="chat-form">
       <input id="message" maxlength="4000" autocomplete="off" aria-label="Message" placeholder="Ask the local prototype…" required>
       <button id="send" type="submit">Send</button>
     </form>
   </section>
-  <footer>Local or synthetic data · Azure OpenAI · metadata-only Progress telemetry</footer>
+  <footer><span>Local or synthetic data</span><span>Azure OpenAI</span><span>Metadata-only telemetry</span></footer>
 </main>
 
 <script>
   const conversation = document.querySelector('#conversation');
   const input = document.querySelector('#message');
   const send = document.querySelector('#send');
+  const supportedPresets = new Set(['knowledge', 'review', 'workflow', 'analysis']);
 
   function addMessage(kind, text, traceId) {
     document.querySelector('#empty')?.remove();
@@ -88,15 +211,19 @@
       const response = await fetch('/api/config');
       if (!response.ok) throw new Error();
       const config = await response.json();
+      const preset = supportedPresets.has(config.uiPreset) ? config.uiPreset : 'knowledge';
+      document.body.dataset.preset = preset;
+      document.querySelector('#agent-icon').setAttribute('href', `#icon-${preset}`);
       document.title = config.displayName;
       document.querySelector('#agent-name').textContent = config.displayName;
       document.querySelector('#agent-purpose').textContent = config.purpose;
       document.querySelector('#chat-panel').setAttribute('aria-label', `${config.displayName} chat`);
+      input.placeholder = config.inputPlaceholder;
       const examples = document.querySelector('#examples');
-      config.examples.forEach((prompt, index) => {
+      config.examples.forEach(prompt => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.textContent = `Example ${index + 1}`;
+        button.textContent = prompt;
         button.addEventListener('click', () => usePrompt(prompt));
         examples.append(button);
       });
@@ -106,13 +233,15 @@
   }
 
   async function checkHealth() {
+    const dot = document.querySelector('#status-dot');
     try {
       const response = await fetch('/api/health');
       if (!response.ok) throw new Error();
       const health = await response.json();
-      document.querySelector('#status-dot').classList.add('ready');
+      dot.classList.add('ready');
       document.querySelector('#status-text').textContent = `${health.status} · ${health.sourcesLoaded} local sources · tracing ${health.tracingEnabled ? 'on' : 'off'}`;
     } catch {
+      dot.classList.add('error');
       document.querySelector('#status-text').textContent = 'Local agent unavailable';
     }
   }

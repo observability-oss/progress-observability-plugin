@@ -277,12 +277,26 @@ static class ProjectValidator
             throw new InvalidDataException("AzureOpenAI:Deployment is fixed in this MVP.");
 
         var agent = RequireObject(root, "Agent");
-        RequireObjectProperties(agent, "Agent", "DisplayName", "ServiceSlug", "Purpose", "Instructions", "Examples");
+        RequireObjectProperties(
+            agent,
+            "Agent",
+            "DisplayName",
+            "ServiceSlug",
+            "Purpose",
+            "Ui",
+            "Instructions",
+            "Examples");
         RequireString(agent, "DisplayName", 80);
         var slug = RequireString(agent, "ServiceSlug", 64);
         if (!Regex.IsMatch(slug, "^[a-z0-9]+(?:-[a-z0-9]+)*$", RegexOptions.CultureInvariant))
             throw new InvalidDataException("Agent:ServiceSlug must be a lowercase-hyphen slug.");
         RequireString(agent, "Purpose", 500);
+        var ui = RequireObject(agent, "Ui");
+        RequireObjectProperties(ui, "Agent:Ui", "Preset", "InputPlaceholder");
+        var preset = RequireString(ui, "Preset", 20);
+        if (preset is not ("knowledge" or "review" or "workflow" or "analysis"))
+            throw new InvalidDataException("Agent:Ui:Preset must be knowledge, review, workflow, or analysis.");
+        RequireString(ui, "InputPlaceholder", 140);
         RequireString(agent, "Instructions", 4_000);
         ValidateStringArray(RequireArray(agent, "Examples"), "Agent:Examples", 1, 4, 500);
 

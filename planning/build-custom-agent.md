@@ -202,3 +202,66 @@ The platform can measure the `Start from scratch` selection. Purpose is now
 entered in the IDE and must not be transmitted silently. Collecting raw Purpose
 centrally requires a separate, consented telemetry contract; it is not part of
 this skill implementation.
+
+## Pre-user-secrets CLI test baseline
+
+This section preserves the local CLI test flow used before removing the parent
+`.env` bootstrap and mandatory MCP trace lookup. It is historical test evidence,
+not the intended customer setup. Never commit `.env` or paste its values into
+Copilot chat.
+
+The dedicated test folder contained a mode-`600` `.env` with these names:
+
+```dotenv
+Progress__Observability__ApiKey=<Progress Integration key>
+OBSERVABILITY_MCP_API_KEY=<read-only Progress MCP key>
+AzureOpenAI__Endpoint=<Azure OpenAI endpoint>
+AzureOpenAI__Deployment=<Azure OpenAI deployment>
+AzureOpenAI__ApiKey=<Azure OpenAI key>
+```
+
+Create the file without overwriting an existing one, fill it locally, then run
+one of the snippets below:
+
+```bash
+cd /Users/dipeykov/repos/agent-builder-tests
+touch .env
+chmod 600 .env
+```
+
+The cleanup in these snippets is destructive and is safe only in that dedicated
+test folder. It intentionally keeps `.env`, then recreates `.gitignore`.
+
+### Prebuilt Release Evidence Reviewer
+
+```bash
+if cd /Users/dipeykov/repos/agent-builder-tests && [[ -f .env ]]; then
+  find . -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf -- {} +
+  print '.env' > .gitignore
+  set -a; source .env; set +a
+
+  copilot --allow-all \
+    --plugin-dir /Users/dipeykov/repos/progress-observability-plugin-build-template-agent \
+    --model gpt-5.6-terra --effort medium \
+    -i 'Use build-template-agent with template "release-evidence-reviewer" and target "./release-evidence-reviewer". Build it, run its three smoke tests, start and health-check the UI, then return the local UI link and the Progress Observability Tracing page.'
+else
+  echo "Folder or .env not found"
+fi
+```
+
+### Custom Jira-triage prototype
+
+```bash
+if cd /Users/dipeykov/repos/agent-builder-tests && [[ -f .env ]]; then
+  find . -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf -- {} +
+  print '.env' > .gitignore
+  set -a; source .env; set +a
+
+  copilot --allow-all \
+    --plugin-dir /Users/dipeykov/repos/progress-observability-plugin-build-template-agent \
+    --model gpt-5.6-terra --effort medium \
+    -i 'Use build-custom-agent. I want to create an agent that can triage Jira items into smaller actionable chunks. Decide for me, build the recommended local prototype, run its three smoke tests, start and health-check the UI, then return the local UI link and the Progress Observability Tracing page.'
+else
+  echo "Folder or .env not found"
+fi
+```

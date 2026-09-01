@@ -27,7 +27,12 @@ static class HelperTests
                 settingsPath,
                 File.ReadAllText(settingsPath)
                     .Replace("Custom Knowledge Assistant", "HR Knowledge Assistant", StringComparison.Ordinal)
-                    .Replace("custom-knowledge-assistant", "hr-knowledge-assistant", StringComparison.Ordinal));
+                    .Replace("custom-knowledge-assistant", "hr-knowledge-assistant", StringComparison.Ordinal)
+                    .Replace("\"Preset\": \"knowledge\"", "\"Preset\": \"workflow\"", StringComparison.Ordinal)
+                    .Replace(
+                        "Ask about local content or look up a simulated record…",
+                        "Ask an HR policy question…",
+                        StringComparison.Ordinal));
             File.WriteAllText(
                 Path.Combine(valid, "docs", "sample-knowledge.md"),
                 "# Synthetic HR knowledge\n\nThis is local prototype content.\n");
@@ -62,6 +67,23 @@ static class HelperTests
                 modelSettings,
                 File.ReadAllText(modelSettings).Replace("gpt-4.1", "another-model", StringComparison.Ordinal));
             ExpectExit(2, validator, "--target", modelEdit);
+
+            var invalidUiPreset = CopyFresh(copier, root, "invalid-ui-preset");
+            var invalidUiSettings = Path.Combine(invalidUiPreset, "appsettings.json");
+            File.WriteAllText(
+                invalidUiSettings,
+                File.ReadAllText(invalidUiSettings)
+                    .Replace("\"Preset\": \"knowledge\"", "\"Preset\": \"custom-css\"", StringComparison.Ordinal));
+            ExpectExit(2, validator, "--target", invalidUiPreset);
+
+            var invalidUiPlaceholder = CopyFresh(copier, root, "invalid-ui-placeholder");
+            var invalidPlaceholderSettings = Path.Combine(invalidUiPlaceholder, "appsettings.json");
+            var invalidPlaceholderJson = JsonNode.Parse(File.ReadAllText(invalidPlaceholderSettings))!;
+            invalidPlaceholderJson["Agent"]!["Ui"]!["InputPlaceholder"] = new string('x', 141);
+            File.WriteAllText(
+                invalidPlaceholderSettings,
+                invalidPlaceholderJson.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            ExpectExit(2, validator, "--target", invalidUiPlaceholder);
 
             var weakSmoke = CopyFresh(copier, root, "weak-smoke");
             var weakSmokeSettings = Path.Combine(weakSmoke, "appsettings.json");

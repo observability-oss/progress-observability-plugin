@@ -27,6 +27,7 @@ public static class Program
         builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
 
         var definition = AgentDefinition.Load(builder.Configuration);
+        var presentation = AgentPresentation.Load(builder.Configuration);
         var endpointValue = Require(builder.Configuration, "AzureOpenAI:Endpoint");
         if (!Uri.TryCreate(endpointValue, UriKind.Absolute, out var azureEndpoint) ||
             azureEndpoint.Scheme != Uri.UriSchemeHttps)
@@ -96,6 +97,8 @@ public static class Program
                 displayName = definition.DisplayName,
                 purpose = definition.Purpose,
                 examples = definition.ExamplePrompts,
+                uiPreset = presentation.Preset,
+                inputPlaceholder = presentation.InputPlaceholder,
                 prototype = true,
             }));
 
@@ -162,3 +165,31 @@ public static class Program
 public sealed record ChatRequest(string? Message);
 
 internal sealed class AgentMarker;
+
+internal sealed record AgentPresentation(string Preset, string InputPlaceholder)
+{
+    private static readonly HashSet<string> AllowedPresets =
+        ["knowledge", "review", "workflow", "analysis"];
+
+    public static AgentPresentation Load(IConfiguration configuration)
+    {
+        var preset = Require(configuration, "Agent:Ui:Preset", 20);
+        if (!AllowedPresets.Contains(preset))
+        {
+            throw new InvalidOperationException(
+                "Agent:Ui:Preset must be knowledge, review, workflow, or analysis.");
+        }
+
+        return new AgentPresentation(
+            preset,
+            Require(configuration, "Agent:Ui:InputPlaceholder", 140));
+    }
+
+    private static string Require(IConfiguration configuration, string key, int maxLength)
+    {
+        var value = configuration[key]?.Trim();
+        if (string.IsNullOrWhiteSpace(value) || value.Length > maxLength)
+            throw new InvalidOperationException($"{key} must contain 1 to {maxLength} characters.");
+        return value;
+    }
+}

@@ -47,10 +47,17 @@ After copying, edits are restricted to:
 - `Tools.cs`: at most three deterministic local or clearly simulated tools;
 - regular supported files under `docs/` and `data/`;
 - `appsettings.json`: the `Agent` display name, service slug, Purpose,
-  instructions, examples, plus prompts and expected markers for the fixed smoke
-  cases `knowledge`, `tool`, and `not-found`; keep every other setting fixed;
+  instructions, examples, UI preset (`knowledge`, `review`, `workflow`, or
+  `analysis`), input placeholder, plus prompts and expected markers for the
+  fixed smoke cases `knowledge`, `tool`, and `not-found`; keep every other
+  setting fixed;
 - optional `INTEGRATION_PLAN.md`, only when the prototype represents a future
   external adapter.
+
+Choose the closest UI preset from Purpose: `knowledge` for reference Q&A,
+`review` for checking evidence, `workflow` for triage or process work, and
+`analysis` for summaries or metrics. Keep the input placeholder to one short,
+scenario-specific example of what the user can ask.
 
 Do not edit `Program.cs`, `AgentRuntime.cs`, `KnowledgeBase.cs`, `SmokeRunner.cs`,
 the project file, HTTP/UI/health code, model or observability wiring, package
