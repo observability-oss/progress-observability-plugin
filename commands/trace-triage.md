@@ -1,6 +1,6 @@
 ---
 description: Root-cause a failed or slow agent run by walking its trace on the Progress Observability Platform.
-argument-hint: [trace/observation id, OR "service, symptom, time window"]
+argument-hint: 'trace/observation id, OR "service, symptom, time window"'
 ---
 
 Use the `trace-triage` skill.

@@ -1,6 +1,6 @@
 ---
 description: Add Progress Observability instrumentation to an existing agent (Python, TypeScript, or .NET), then hand off with where to confirm the traces.
-argument-hint: [optional: path or repo to instrument, and anything unusual about it]
+argument-hint: "optional: path or repo to instrument, and anything unusual about it"
 ---
 
 Use the `instrument-agent` skill.

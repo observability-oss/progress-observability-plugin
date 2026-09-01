@@ -1,6 +1,6 @@
 ---
 description: Find production behaviors that have no evaluation measuring them, and prioritize which judges to build.
-argument-hint: [optional service or focus, e.g. "checkout-agent"]
+argument-hint: 'optional service or focus, e.g. "checkout-agent"'
 ---
 
 Use the `coverage-gaps` skill.

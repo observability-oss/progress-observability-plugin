@@ -21,7 +21,7 @@ are already where Copilot expects them):
 
 | File | Role | Claude-plugin equivalent |
 |---|---|---|
-| `.github/copilot-instructions.md` | Always-on instructions: the shared MCP contract + all nine skill workflows | the `skills/` + `references/mcp.md` |
+| `.github/copilot-instructions.md` | Always-on instructions: all nine workflows + the MCP contract for platform-reading workflows | the `skills/` + `references/mcp.md` |
 | `.github/prompts/instrument-agent.prompt.md` | `/instrument-agent` | `commands/instrument-agent.md` |
 | `.github/prompts/build-template-agent.prompt.md` | `/build-template-agent` | `commands/build-template-agent.md` |
 | `.github/prompts/build-custom-agent.prompt.md` | `/build-custom-agent` | `commands/build-custom-agent.md` |
@@ -39,13 +39,16 @@ are already where Copilot expects them):
 ## Requirements
 
 - VS Code with the **GitHub Copilot** and **Copilot Chat** extensions.
-- Copilot Chat used in **Agent mode** - MCP tools only appear in agent mode.
-- A **paid Progress Observability plan** and an **MCP API key**
+- Copilot Chat used in **Agent mode** - builders need file and terminal access,
+  and MCP tools only appear in agent mode.
+- For platform-reading workflows, a **paid Progress Observability plan** and an
+  **MCP API key**
   (API Keys → MCP API Keys). Use a *With content* key only if you want Copilot to
   read raw prompt/completion text (trace-triage on a culprit span, or few-shot
-  examples in generate-eval).
+  examples in generate-eval). The two builders do not need an MCP key.
 - For either builder's live prototype path: the .NET 10 SDK plus the model and
   separate Progress Integration-key settings documented in the copied project.
+  Builders do not query Progress afterward, so ingestion remains unverified.
 
 ## Setup
 
@@ -75,10 +78,11 @@ are already where Copilot expects them):
    If you already have a `.github/copilot-instructions.md`, append this one's
    contents to it rather than overwriting.
 
-2. **Reload VS Code.** Open `.vscode/mcp.json` and click **Start** on the
-   `progress-observability` server (or run *MCP: List Servers* → Start). On first
-   start Copilot prompts for your MCP API key and stores it securely - the key is
-   never written to the file.
+2. **For platform-reading workflows, reload VS Code.** Open `.vscode/mcp.json`
+   and click **Start** on the `progress-observability` server (or run *MCP: List
+   Servers* → Start). On first start Copilot prompts for your MCP API key and
+   stores it securely - the key is never written to the file. Skip this step
+   for either builder.
 
 3. **Open Copilot Chat, switch to Agent mode.** The `progress-observability`
    tools now show in the tools picker.
@@ -86,8 +90,8 @@ are already where Copilot expects them):
 ## Usage
 
 - `/instrument-agent` - instrument an existing Python, TypeScript, or .NET agent and verify its traces.
-- `/build-template-agent` - copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer.
-- `/build-custom-agent` - turn a short purpose into a safe local prototype or a no-write integration plan.
+- `/build-template-agent` - copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer without MCP; reports `Progress ingestion: unverified`.
+- `/build-custom-agent` - turn a short purpose into a safe local prototype or a no-write integration plan without MCP; reports `Progress ingestion: unverified`.
 - `/scaffold-agent` - create a new .NET agent project, already instrumented, from the starter template.
 - `/health-check` - verify the setup: connection, key scope, data flow, instrumentation depth. No arguments.
 - `/trace-triage` - give it a trace id, or a service + symptom + window.
@@ -99,7 +103,10 @@ are already where Copilot expects them):
   spend?"*, *"what should I evaluate next?"*, *"write a faithfulness eval for my RAG
   bot"*) - the instructions file routes to the right workflow.
 
-## Verify the MCP connection
+The builders do not invoke `/health-check`. If you have an MCP key, run it
+separately when you want to inspect platform data after a build.
+
+## Verify the MCP connection (platform-reading workflows)
 
 ```bash
 export OBSERVABILITY_MCP_API_KEY="acm_..."

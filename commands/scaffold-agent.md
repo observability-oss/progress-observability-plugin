@@ -1,6 +1,6 @@
 ---
 description: Scaffold a new .NET AI agent with Progress Observability already wired up, from the dotnet-agent-starter template.
-argument-hint: [what the agent should do, e.g. "triage support tickets against our KB"]
+argument-hint: 'what the agent should do, e.g. "triage support tickets against our KB"'
 ---
 
 Use the `scaffold-agent` skill.

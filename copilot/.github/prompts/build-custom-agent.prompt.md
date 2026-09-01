@@ -12,10 +12,12 @@ workflow's prototype-or-plan choice. Create no files until the user selects the
 local prototype. Never call live business systems, perform real side effects,
 or request or print secret values.
 
-For a prototype, use the skill's package-free .NET helpers, keep edits inside
-the allowlist, pass validation and build, require all three smoke cases, verify
-their trace IDs, and health-check the UI. Return the absolute project path,
-verified UI URL, three smoke results, and one Progress Observability Tracing
-page link: `https://observability.progress.com/observations`. Do not construct
-per-trace deep links. For plan-only, return the integration plan in chat and
-write nothing.
+For a prototype, never source or copy a parent `.env`; use the generated
+README's shared .NET user-secrets setup. Use the package-free .NET helpers, keep
+edits inside the allowlist, pass both validations and build, require the three
+`knowledge`, `tool`, and `not-found` smoke cases, and health-check the UI. Do not
+call MCP. Return the absolute project path, verified UI URL, smoke results with
+their emitted trace IDs, and one Progress Observability Tracing page link:
+`https://observability.progress.com/observations`. State explicitly that backend
+trace ingestion is not independently verified. For plan-only, return the plan
+in chat, write nothing, and require no credentials.

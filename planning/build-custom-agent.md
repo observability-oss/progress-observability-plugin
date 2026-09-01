@@ -20,9 +20,10 @@ Decision question:
 > target-business-system credentials, live external calls, or real side
 > effects?
 
-The model-provider, Progress Integration, and read-only MCP credentials remain
-required for live smoke and trace verification; they are separate from the
-deferred SharePoint, Jira, database, or other business-system credentials.
+The model-provider and Progress Integration settings are required only for a
+live Mode 1 smoke run and are stored with .NET Secret Manager. The builder does
+not require MCP access. SharePoint, Jira, database, or other business-system
+credentials remain deferred.
 
 When uncertain, choose the plan-only outcome.
 
@@ -52,8 +53,7 @@ When uncertain, choose the plan-only outcome.
 skills/build-custom-agent/
 |-- SKILL.md
 |-- references/
-|   |-- scope-routing.md
-|   `-- mcp.md
+|   `-- scope-routing.md
 |-- scripts/
 |   |-- copy-template.cs
 |   `-- validate-project.cs
@@ -72,7 +72,6 @@ skills/build-custom-agent/
     |-- data/
     |-- wwwroot/index.html
     |-- README.md
-    |-- .env.example
     `-- .gitignore
 ```
 
@@ -106,7 +105,7 @@ stable case ID, prompt, and bounded expected result markers.
   two-outcome decision rule, editable-file allowlist, and stopping conditions.
 - [x] Add `references/scope-routing.md` with the three representative intents
   and the minimal MAF mapping for tools, middleware, and workflows.
-- [x] Add the generated read-only MCP reference used for trace verification.
+- [x] Keep the builder independent from the read-only MCP contract.
 - [x] Keep the current `scaffold-agent` unchanged during this iteration.
 
 ### 2. Generic .NET 10 starter
@@ -137,7 +136,7 @@ stable case ID, prompt, and bounded expected result markers.
   packages, and blocks network/process/file-write/secret-reading APIs in
   generated C#.
 - [x] Require a missing or real empty target and reject symlinks, overwrites,
-  `..`, build output, and secret `.env` files while retaining `.env.example`.
+  `..`, build output, and every `.env*` file.
 - [x] Import only workspace-relative regular `.md`, `.txt`, `.json`, or `.csv`
   files: no symlinks or hidden paths, at most 10 files, 1 MiB per file, and
   5 MiB total.
@@ -152,7 +151,8 @@ stable case ID, prompt, and bounded expected result markers.
 - [x] Run `dotnet build`, then exactly three smoke cases: known knowledge/data,
   a local or simulated tool behavior, and `not_found`.
 - [x] Run the project validator before build and again before handoff.
-- [x] Verify the emitted trace IDs with the read-only Progress MCP tools.
+- [x] Preserve the emitted trace IDs as local smoke evidence and state that
+  backend ingestion is not independently verified.
 - [x] Start the UI, verify `/api/health`, and return the project path, UI URL,
   smoke summary, and one Progress Observability tracing-page link.
 
@@ -179,18 +179,19 @@ stable case ID, prompt, and bounded expected result markers.
 
 - [ ] Forward-test all three representative intents in fresh Copilot sessions.
 - [ ] Confirm both prototype examples build, pass three smoke cases, expose a
-  healthy UI, and produce observable traces without live external calls.
+  healthy UI, and emit trace IDs without live external calls.
 - [ ] Confirm the plan-only example creates no files.
-- [x] Run copier tests, starter build/tests, mirror checks, MCP-reference sync,
+- [x] Run copier tests, starter build/tests, mirror checks, reference sync,
   `git diff --check`, and an independent skill review.
 
 The three end-to-end checks above remain open until fresh Copilot sessions run
-with user-provided model, Progress Integration, and read-only MCP credentials.
+with user-provided model and Progress Integration settings stored under the
+shared `Progress.AgentBuilder.Mvp` user-secrets ID.
 
 ## Explicitly deferred
 
 - Live SharePoint, Jira, database, SaaS, or other API adapters.
-- Credential collection or secret provisioning.
+- Production credential provisioning.
 - Real writes, approvals, purchases, notifications, or other side effects.
 - Production vector RAG, multi-agent orchestration, durable workflows,
   deployment, and provider switching.
@@ -202,66 +203,3 @@ The platform can measure the `Start from scratch` selection. Purpose is now
 entered in the IDE and must not be transmitted silently. Collecting raw Purpose
 centrally requires a separate, consented telemetry contract; it is not part of
 this skill implementation.
-
-## Pre-user-secrets CLI test baseline
-
-This section preserves the local CLI test flow used before removing the parent
-`.env` bootstrap and mandatory MCP trace lookup. It is historical test evidence,
-not the intended customer setup. Never commit `.env` or paste its values into
-Copilot chat.
-
-The dedicated test folder contained a mode-`600` `.env` with these names:
-
-```dotenv
-Progress__Observability__ApiKey=<Progress Integration key>
-OBSERVABILITY_MCP_API_KEY=<read-only Progress MCP key>
-AzureOpenAI__Endpoint=<Azure OpenAI endpoint>
-AzureOpenAI__Deployment=<Azure OpenAI deployment>
-AzureOpenAI__ApiKey=<Azure OpenAI key>
-```
-
-Create the file without overwriting an existing one, fill it locally, then run
-one of the snippets below:
-
-```bash
-cd /Users/dipeykov/repos/agent-builder-tests
-touch .env
-chmod 600 .env
-```
-
-The cleanup in these snippets is destructive and is safe only in that dedicated
-test folder. It intentionally keeps `.env`, then recreates `.gitignore`.
-
-### Prebuilt Release Evidence Reviewer
-
-```bash
-if cd /Users/dipeykov/repos/agent-builder-tests && [[ -f .env ]]; then
-  find . -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf -- {} +
-  print '.env' > .gitignore
-  set -a; source .env; set +a
-
-  copilot --allow-all \
-    --plugin-dir /Users/dipeykov/repos/progress-observability-plugin-build-template-agent \
-    --model gpt-5.6-terra --effort medium \
-    -i 'Use build-template-agent with template "release-evidence-reviewer" and target "./release-evidence-reviewer". Build it, run its three smoke tests, start and health-check the UI, then return the local UI link and the Progress Observability Tracing page.'
-else
-  echo "Folder or .env not found"
-fi
-```
-
-### Custom Jira-triage prototype
-
-```bash
-if cd /Users/dipeykov/repos/agent-builder-tests && [[ -f .env ]]; then
-  find . -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf -- {} +
-  print '.env' > .gitignore
-  set -a; source .env; set +a
-
-  copilot --allow-all \
-    --plugin-dir /Users/dipeykov/repos/progress-observability-plugin-build-template-agent \
-    --model gpt-5.6-terra --effort medium \
-    -i 'Use build-custom-agent. I want to create an agent that can triage Jira items into smaller actionable chunks. Decide for me, build the recommended local prototype, run its three smoke tests, start and health-check the UI, then return the local UI link and the Progress Observability Tracing page.'
-else
-  echo "Folder or .env not found"
-fi
-```

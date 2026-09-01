@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>CustomAgent</RootNamespace>
-    <UserSecretsId>8f1bc53b-88ce-4cf6-b19e-597e0890fb8b</UserSecretsId>
+    <UserSecretsId>Progress.AgentBuilder.Mvp</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

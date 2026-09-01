@@ -1,6 +1,6 @@
 ---
 description: Build an LLM-as-a-Judge eval grounded in real traces from the Progress Observability Platform.
-argument-hint: [application/service name and optional symptom, e.g. "checkout-agent, wrong tool calls"]
+argument-hint: 'application/service name and optional symptom, e.g. "checkout-agent, wrong tool calls"'
 ---
 
 Use the `generate-eval` skill, Workflow A (from traces).

@@ -1,6 +1,6 @@
 ---
 description: Build an LLM-as-a-Judge eval from a pasted system prompt or a description — no observability data needed.
-argument-hint: [paste a system prompt or describe the system and what could go wrong]
+argument-hint: "paste a system prompt or describe the system and what could go wrong"
 ---
 
 Use the `generate-eval` skill, Workflow B (from a description or system prompt). Do not call the observability MCP tools.

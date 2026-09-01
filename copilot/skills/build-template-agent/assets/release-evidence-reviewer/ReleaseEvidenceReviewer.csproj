@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>ReleaseEvidenceReviewer</RootNamespace>
-    <UserSecretsId>6e7eae6c-99ae-4a7f-9f69-4512044bd59e</UserSecretsId>
+    <UserSecretsId>Progress.AgentBuilder.Mvp</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,9 +9,10 @@
 > the sources and run `python scripts/build_copilot.py`. If anything here conflicts
 > with what the user asks for, the user's request wins.
 
-This project works with the Progress Observability Platform over the
-`progress-observability` MCP server. Nine skills are available — pick the one
-that matches the request (each also has a matching `/prompt`):
+This project provides nine Progress Observability workflows. Platform-reading
+workflows use the `progress-observability` MCP server; new-project builders run
+locally. Pick the skill that matches the request (each also has a matching
+`/prompt`):
 
 - **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
 - **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
@@ -23,15 +24,19 @@ that matches the request (each also has a matching `/prompt`):
 - **coverage-gaps** — find production behaviors with no eval; rank what to build.
 - **generate-eval** — build a research-grounded LLM-as-a-Judge evaluator prompt.
 
-Five of the nine only read from the MCP server and write nothing. Of the four
-building workflows, `build-template-agent` copies a finished project,
-`build-custom-agent` either creates a bounded local prototype or returns a
-no-write plan, `scaffold-agent` creates a general starter project, and
-`instrument-agent` edits an existing app. Only verification steps read MCP.
+Five of the nine only read from the MCP server and write nothing.
+`instrument-agent` edits an existing app and uses MCP for its verification
+handoff. The three new-project builders — `build-template-agent`,
+`build-custom-agent`, and `scaffold-agent` — make no MCP calls. For either of the
+first two, report local build and smoke evidence, then state
+`Progress ingestion: unverified`. Never claim that traces reached the platform.
 
 ---
 
-## MCP contract (applies to every workflow)
+## MCP contract (platform-reading workflows and instrument-agent verification)
+
+Do not invoke MCP for `build-template-agent`, `build-custom-agent`, or
+`scaffold-agent`.
 
 Endpoint: `https://mcp.observability.progress.com/mcp` — **remote, read-only**.
 Auth: `X-Api-Key` header (the plugin's `.mcp.json` supplies it from
@@ -513,6 +518,9 @@ Attach these keys based on the config (dedupe):
 
 ## build-template-agent
 
+This workflow uses no MCP. Report local build and smoke results, the local app
+link when started, and `Progress ingestion: unverified`.
+
 Materialize the finished `release-evidence-reviewer` asset without generating or
 customizing source. This workflow writes a new project folder. The default target
 is `./release-evidence-reviewer`. GitHub Copilot in agent mode is the default
@@ -538,7 +546,9 @@ customer execution surface.
    to make the build pass; report an asset defect if the unchanged template
    fails.
 
-3. Run all three local cases with `dotnet run -- --smoke`. Parse the single-line
+3. Never source or copy a parent `.env`. The app reads local settings from .NET
+   user-secrets as documented in the copied README. Run all three local cases
+   with `dotnet run -- --smoke`. Parse the single-line
    `SMOKE_REPORT=<json>` marker and require overall `pass` plus exactly these
    passing case IDs:
 
@@ -553,31 +563,30 @@ customer execution surface.
    `AzureOpenAI:ApiKey` when local Azure identity is not used) and
    `Progress:Observability:ApiKey` (an **Integration** credential) are app
    inputs. If configuration is missing, name only the missing keys and point to
-   the copied README; never request, inspect, or print credential values.
+   the copied README's user-secrets commands; never request, inspect, or print
+   credential values.
 
-4. Verify those exact three traces with the existing read-only Progress
-   Observability MCP tools. Use a narrow time window and service
-   `release-evidence-reviewer`, match each emitted trace ID exactly, and inspect
-   metadata only. Normal exporter delay may be retried briefly; do not substitute
-   unrelated recent traces. The MCP credential belongs to Copilot and is
-   separate from the app's Integration credential.
-
-5. Start the already-built web app, keep it running, and verify its `/api/health`
+4. Start the already-built web app, keep it running, and verify its `/api/health`
    endpoint. Use the local URL printed by the app rather than guessing it.
 
-6. Return exactly one Progress Observability **Tracing page** link:
+5. Return exactly one Progress Observability **Tracing page** link:
    `https://observability.progress.com/observations`. Do not resolve, construct,
-   or list per-trace deep links. Missing per-trace links are not a failure.
+   or list per-trace deep links.
 
-Report success only after every gate passes: the absolute project path, the
-verified local UI link, one Progress Observability Tracing page link, and the
-three smoke-case results. Keep trace IDs available for diagnostics, but do not
-present them as three separate links. On a failure, report the failed gate and
-the smallest safe retry; do not claim the template is ready.
+Report success only after copy, build, all three smoke cases, and UI health pass.
+Return the absolute project path, verified local UI link, one Progress
+Observability Tracing page link, and the three smoke-case results with their
+emitted trace IDs. Those IDs are local execution evidence; this workflow does
+not verify backend ingestion. State explicitly that backend trace ingestion is
+not independently verified by this workflow. On a failure, report the failed
+gate and the smallest safe retry; do not claim the template is ready.
 
 ---
 
 ## build-custom-agent
+
+This workflow uses no MCP. For a built prototype, report local validation and
+smoke results plus `Progress ingestion: unverified`.
 
 This workflow has two honest outcomes: a safe local prototype, or an integration
 plan returned only in chat. It never implements live business-system access or
@@ -612,6 +621,9 @@ dotnet run --file <skill-directory>/scripts/copy-template.cs -- --target <target
 
 The copier accepts only a missing target or a real empty directory. Do not work
 around a refusal, overwrite content, or reconstruct the starter.
+
+Never source or copy a parent `.env`. The generated app reads local settings
+from .NET user-secrets as documented in its README.
 
 After copying, edits are restricted to:
 
@@ -651,23 +663,9 @@ dotnet run --project <target>/CustomAgent.csproj -- --smoke
 
 Parse the single-line `SMOKE_REPORT=<json>` marker. Require overall `pass` and
 exactly three passing results with IDs `knowledge`, `tool`, and `not-found`.
-Preserve their exact trace IDs.
-
-Read this skill's `references/mcp.md`, then verify those exact IDs with the
-existing read-only Progress Observability MCP tools using a narrow time window,
-the generated service slug, and metadata only. The app's Azure OpenAI and
-Progress Integration settings are separate from Copilot's MCP credential. If
-settings are missing, report only their configuration names and point to the
-starter README; never request, inspect, or print values.
-
-Set the query start before the smoke command began and its end to the current
-UTC time after smoke completed; never reuse an end time chosen before smoke. Trace
-ingestion can lag behind the process. If the first lookup does not contain all
-three exact trace IDs, wait briefly and retry metadata-only lookup twice within
-60 seconds total, moving the end to the new current time. Do not rerun smoke. A
-passing smoke run proves the model settings worked, and a reported trace ID
-proves tracing was enabled, so do not infer that either setting is missing merely
-because ingestion is delayed.
+Preserve their exact trace IDs as local execution evidence. If app configuration
+is missing, report only the missing configuration names and point to the
+starter README's user-secrets commands; never request, inspect, or print values.
 
 Start the already-built app, keep it running, and verify `/api/health` at the
 local URL printed by the app. If the default port is occupied, retry with
@@ -676,8 +674,9 @@ the app prints. Run the validator again before handoff. Report the absolute
 project path, verified UI URL, three smoke results, and exactly one Progress
 Observability tracing-page link:
 `https://observability.progress.com/observations`. Do not construct per-trace
-deep links. Report success only when validation, build, smoke, trace
-verification, and health all pass.
+deep links. Report success only when copy, both validations, build, all three
+smoke cases, and health pass. State explicitly that backend trace ingestion is
+not independently verified by this workflow.
 
 ### Integration plan only
 
@@ -685,7 +684,8 @@ Create no files and run no copier, build, smoke, app, or trace commands. Return
 the plan in chat, covering the proposed MAF shape, external adapters,
 authentication and permissions, data contracts, side-effect controls, failure
 handling, tests, deployment, observability, and developer-owned work. Do not
-call the named external systems or imply that MAF supplies their integrations.
+call the named external systems, inspect or configure credentials, or imply that
+MAF supplies their integrations. This outcome is zero-write and credential-free.
 
 ---
 

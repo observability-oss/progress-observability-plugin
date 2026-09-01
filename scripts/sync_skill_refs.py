@@ -17,8 +17,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "references" / "mcp.md"
 
-# scaffold-agent makes no MCP calls and is intentionally excluded.
-# Code-writing workflows that verify emitted traces carry the contract.
+# The three new-project builders make no MCP calls and are intentionally
+# excluded. instrument-agent carries the contract for its verification handoff.
 MCP_SKILLS = [
     "trace-triage",
     "cost-report",
@@ -26,8 +26,6 @@ MCP_SKILLS = [
     "generate-eval",
     "health-check",
     "instrument-agent",
-    "build-template-agent",
-    "build-custom-agent",
 ]
 
 BANNER = (

@@ -1,6 +1,6 @@
 ---
 description: Summarize and explain LLM spend and quota usage from the Progress Observability Platform.
-argument-hint: [optional date range and/or focus, e.g. "last 30 days, by model"]
+argument-hint: 'optional date range and/or focus, e.g. "last 30 days, by model"'
 ---
 
 Use the `cost-report` skill.

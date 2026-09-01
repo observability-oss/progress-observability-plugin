@@ -5,9 +5,6 @@ description: Copy, build, smoke-test, and run the finished .NET 10 Release Evide
 
 # Build the Release Evidence Reviewer
 
-Read `references/mcp.md` before the trace-verification step. It defines the
-read-only tool contract, credential scopes, and query limits.
-
 <!-- copilot:start -->
 Materialize the finished `release-evidence-reviewer` asset without generating or
 customizing source. This workflow writes a new project folder. The default target
@@ -34,7 +31,9 @@ customer execution surface.
    to make the build pass; report an asset defect if the unchanged template
    fails.
 
-3. Run all three local cases with `dotnet run -- --smoke`. Parse the single-line
+3. Never source or copy a parent `.env`. The app reads local settings from .NET
+   user-secrets as documented in the copied README. Run all three local cases
+   with `dotnet run -- --smoke`. Parse the single-line
    `SMOKE_REPORT=<json>` marker and require overall `pass` plus exactly these
    passing case IDs:
 
@@ -49,25 +48,21 @@ customer execution surface.
    `AzureOpenAI:ApiKey` when local Azure identity is not used) and
    `Progress:Observability:ApiKey` (an **Integration** credential) are app
    inputs. If configuration is missing, name only the missing keys and point to
-   the copied README; never request, inspect, or print credential values.
+   the copied README's user-secrets commands; never request, inspect, or print
+   credential values.
 
-4. Verify those exact three traces with the existing read-only Progress
-   Observability MCP tools. Use a narrow time window and service
-   `release-evidence-reviewer`, match each emitted trace ID exactly, and inspect
-   metadata only. Normal exporter delay may be retried briefly; do not substitute
-   unrelated recent traces. The MCP credential belongs to Copilot and is
-   separate from the app's Integration credential.
-
-5. Start the already-built web app, keep it running, and verify its `/api/health`
+4. Start the already-built web app, keep it running, and verify its `/api/health`
    endpoint. Use the local URL printed by the app rather than guessing it.
 
-6. Return exactly one Progress Observability **Tracing page** link:
+5. Return exactly one Progress Observability **Tracing page** link:
    `https://observability.progress.com/observations`. Do not resolve, construct,
-   or list per-trace deep links. Missing per-trace links are not a failure.
+   or list per-trace deep links.
 
-Report success only after every gate passes: the absolute project path, the
-verified local UI link, one Progress Observability Tracing page link, and the
-three smoke-case results. Keep trace IDs available for diagnostics, but do not
-present them as three separate links. On a failure, report the failed gate and
-the smallest safe retry; do not claim the template is ready.
+Report success only after copy, build, all three smoke cases, and UI health pass.
+Return the absolute project path, verified local UI link, one Progress
+Observability Tracing page link, and the three smoke-case results with their
+emitted trace IDs. Those IDs are local execution evidence; this workflow does
+not verify backend ingestion. State explicitly that backend trace ingestion is
+not independently verified by this workflow. On a failure, report the failed
+gate and the smallest safe retry; do not claim the template is ready.
 <!-- copilot:end -->

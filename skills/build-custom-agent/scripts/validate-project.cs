@@ -12,7 +12,6 @@ static class ProjectValidator
 
     private static readonly HashSet<string> FixedFiles = new(StringComparer.Ordinal)
     {
-        ".env.example",
         ".gitignore",
         "AgentRuntime.cs",
         "CustomAgent.csproj",

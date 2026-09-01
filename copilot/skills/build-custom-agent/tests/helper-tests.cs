@@ -21,6 +21,8 @@ static class HelperTests
         {
             var valid = Path.Combine(root, "valid");
             ExpectExit(0, copier, "--target", valid);
+            Expect(!File.Exists(Path.Combine(valid, ".env.example")),
+                "Copied projects must not contain .env.example.");
             ExpectExit(0, validator, "--target", valid);
             var settingsPath = Path.Combine(valid, "appsettings.json");
             File.WriteAllText(
@@ -60,6 +62,10 @@ static class HelperTests
             var secretFile = CopyFresh(copier, root, "secret-file");
             File.WriteAllText(Path.Combine(secretFile, ".env"), "EXAMPLE=not-a-real-secret\n");
             ExpectExit(2, validator, "--target", secretFile);
+
+            var secretExample = CopyFresh(copier, root, "secret-example");
+            File.WriteAllText(Path.Combine(secretExample, ".env.example"), "EXAMPLE=not-a-real-secret\n");
+            ExpectExit(2, validator, "--target", secretExample);
 
             var modelEdit = CopyFresh(copier, root, "model-edit");
             var modelSettings = Path.Combine(modelEdit, "appsettings.json");
@@ -166,6 +172,12 @@ static class HelperTests
             throw new InvalidOperationException(
                 $"Expected exit {expected}, got {process.ExitCode} for {Path.GetFileName(script)}.\n{stdout}{stderr}");
         }
+    }
+
+    private static void Expect(bool condition, string message)
+    {
+        _assertions++;
+        if (!condition) throw new InvalidOperationException(message);
     }
 
     private static void ExpectBuild(string project)

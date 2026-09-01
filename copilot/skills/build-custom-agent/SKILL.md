@@ -40,6 +40,9 @@ dotnet run --file <skill-directory>/scripts/copy-template.cs -- --target <target
 The copier accepts only a missing target or a real empty directory. Do not work
 around a refusal, overwrite content, or reconstruct the starter.
 
+Never source or copy a parent `.env`. The generated app reads local settings
+from .NET user-secrets as documented in its README.
+
 After copying, edits are restricted to:
 
 - `AgentDefinition.cs`: only the bounded definition contract and one-to-three
@@ -78,23 +81,9 @@ dotnet run --project <target>/CustomAgent.csproj -- --smoke
 
 Parse the single-line `SMOKE_REPORT=<json>` marker. Require overall `pass` and
 exactly three passing results with IDs `knowledge`, `tool`, and `not-found`.
-Preserve their exact trace IDs.
-
-Read this skill's `references/mcp.md`, then verify those exact IDs with the
-existing read-only Progress Observability MCP tools using a narrow time window,
-the generated service slug, and metadata only. The app's Azure OpenAI and
-Progress Integration settings are separate from Copilot's MCP credential. If
-settings are missing, report only their configuration names and point to the
-starter README; never request, inspect, or print values.
-
-Set the query start before the smoke command began and its end to the current
-UTC time after smoke completed; never reuse an end time chosen before smoke. Trace
-ingestion can lag behind the process. If the first lookup does not contain all
-three exact trace IDs, wait briefly and retry metadata-only lookup twice within
-60 seconds total, moving the end to the new current time. Do not rerun smoke. A
-passing smoke run proves the model settings worked, and a reported trace ID
-proves tracing was enabled, so do not infer that either setting is missing merely
-because ingestion is delayed.
+Preserve their exact trace IDs as local execution evidence. If app configuration
+is missing, report only the missing configuration names and point to the
+starter README's user-secrets commands; never request, inspect, or print values.
 
 Start the already-built app, keep it running, and verify `/api/health` at the
 local URL printed by the app. If the default port is occupied, retry with
@@ -103,8 +92,9 @@ the app prints. Run the validator again before handoff. Report the absolute
 project path, verified UI URL, three smoke results, and exactly one Progress
 Observability tracing-page link:
 `https://observability.progress.com/observations`. Do not construct per-trace
-deep links. Report success only when validation, build, smoke, trace
-verification, and health all pass.
+deep links. Report success only when copy, both validations, build, all three
+smoke cases, and health pass. State explicitly that backend trace ingestion is
+not independently verified by this workflow.
 
 ## Integration plan only
 
@@ -112,5 +102,6 @@ Create no files and run no copier, build, smoke, app, or trace commands. Return
 the plan in chat, covering the proposed MAF shape, external adapters,
 authentication and permissions, data contracts, side-effect controls, failure
 handling, tests, deployment, observability, and developer-owned work. Do not
-call the named external systems or imply that MAF supplies their integrations.
+call the named external systems, inspect or configure credentials, or imply that
+MAF supplies their integrations. This outcome is zero-write and credential-free.
 <!-- copilot:end -->

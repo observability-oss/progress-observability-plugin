@@ -178,7 +178,7 @@ static class TemplateCopier
     private static bool ShouldExclude(string name) =>
         ExcludedNames.Contains(name) ||
         name == ".env" ||
-        (name.StartsWith(".env.", StringComparison.Ordinal) && name != ".env.example");
+        name.StartsWith(".env.", StringComparison.Ordinal);
 
     private static bool IsLink(string path)
     {

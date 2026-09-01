@@ -4,4 +4,3 @@ obj/
 *.user
 .env
 .env.*
-!.env.example

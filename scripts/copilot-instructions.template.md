@@ -9,9 +9,10 @@
 > the sources and run `python scripts/build_copilot.py`. If anything here conflicts
 > with what the user asks for, the user's request wins.
 
-This project works with the Progress Observability Platform over the
-`progress-observability` MCP server. Nine skills are available — pick the one
-that matches the request (each also has a matching `/prompt`):
+This project provides nine Progress Observability workflows. Platform-reading
+workflows use the `progress-observability` MCP server; new-project builders run
+locally. Pick the skill that matches the request (each also has a matching
+`/prompt`):
 
 - **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
 - **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
@@ -23,15 +24,19 @@ that matches the request (each also has a matching `/prompt`):
 - **coverage-gaps** — find production behaviors with no eval; rank what to build.
 - **generate-eval** — build a research-grounded LLM-as-a-Judge evaluator prompt.
 
-Five of the nine only read from the MCP server and write nothing. Of the four
-building workflows, `build-template-agent` copies a finished project,
-`build-custom-agent` either creates a bounded local prototype or returns a
-no-write plan, `scaffold-agent` creates a general starter project, and
-`instrument-agent` edits an existing app. Only verification steps read MCP.
+Five of the nine only read from the MCP server and write nothing.
+`instrument-agent` edits an existing app and uses MCP for its verification
+handoff. The three new-project builders — `build-template-agent`,
+`build-custom-agent`, and `scaffold-agent` — make no MCP calls. For either of the
+first two, report local build and smoke evidence, then state
+`Progress ingestion: unverified`. Never claim that traces reached the platform.
 
 ---
 
-## MCP contract (applies to every workflow)
+## MCP contract (platform-reading workflows and instrument-agent verification)
+
+Do not invoke MCP for `build-template-agent`, `build-custom-agent`, or
+`scaffold-agent`.
 
 <!-- include:MCP_CONTRACT -->
 
@@ -77,11 +82,17 @@ sentence "why this config" rationale, and the mapped citations.
 
 ## build-template-agent
 
+This workflow uses no MCP. Report local build and smoke results, the local app
+link when started, and `Progress ingestion: unverified`.
+
 <!-- include:BUILD_TEMPLATE_AGENT -->
 
 ---
 
 ## build-custom-agent
+
+This workflow uses no MCP. For a built prototype, report local validation and
+smoke results plus `Progress ingestion: unverified`.
 
 <!-- include:BUILD_CUSTOM_AGENT -->
 
