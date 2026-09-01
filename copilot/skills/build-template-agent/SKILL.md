@@ -51,8 +51,16 @@ customer execution surface.
    the copied README's user-secrets commands; never request, inspect, or print
    credential values.
 
-4. Start the already-built web app, keep it running, and verify its `/api/health`
-   endpoint. Use the local URL printed by the app rather than guessing it.
+4. Start the already-built web app on an OS-assigned loopback port:
+
+   ```bash
+   dotnet run --project <target>/ReleaseEvidenceReviewer.csproj --no-build -- --urls http://127.0.0.1:0
+   ```
+
+   Keep that process running and wait for its own standard
+   `Now listening on: http://127.0.0.1:<port>` line. Verify `/api/health` only
+   at that exact URL. Never guess, scan, or reuse a default or nearby port. If
+   the process exits or never prints the listening line, the health gate fails.
 
 5. Return exactly one Progress Observability **Tracing page** link:
    `https://observability.progress.com/observations`. Do not resolve, construct,

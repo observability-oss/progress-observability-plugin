@@ -26,13 +26,15 @@ secret store in production.
 ```bash
 dotnet build
 dotnet run -- --smoke
-dotnet run
+dotnet run --no-build -- --urls http://127.0.0.1:0
 ```
 
-The UI opens at <http://127.0.0.1:5078>. The smoke command runs exactly three
-cases and prints one parseable `SMOKE_REPORT=<json>` line with each case ID,
-status, and W3C trace ID. Its three non-secret prompts live under `Smoke` in
-`appsettings.json`; the runner rejects missing or empty prompt values.
+For the UI, .NET chooses an available loopback port and prints it in the
+standard `Now listening on: http://127.0.0.1:<port>` line. The smoke command
+runs exactly three cases and prints one parseable `SMOKE_REPORT=<json>` line
+with each case ID, status, and W3C trace ID. Its three non-secret prompts live
+under `Smoke` in `appsettings.json`; the runner rejects missing or empty prompt
+values.
 
 A passing smoke run proves the local agent execution and tracing setup. The
 emitted trace IDs do not independently prove backend ingestion; open the

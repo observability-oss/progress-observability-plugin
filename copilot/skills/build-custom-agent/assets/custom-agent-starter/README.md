@@ -26,25 +26,20 @@ secret store in production.
 ```bash
 dotnet build
 dotnet run -- --smoke
-dotnet run
+dotnet run --no-build -- --urls http://127.0.0.1:0
 ```
 
-The UI opens at <http://127.0.0.1:5078>. Smoke mode runs exactly the
-`knowledge`, `tool`, and `not-found` cases configured in `appsettings.json` and
-prints one `SMOKE_REPORT=<json>` line. Raw prompts and responses are not sent to
-Progress telemetry (`RecordInputs=false`, `RecordOutputs=false`).
+For the UI, .NET chooses an available loopback port and prints it in the
+standard `Now listening on: http://127.0.0.1:<port>` line. Smoke mode runs
+exactly the `knowledge`, `tool`, and `not-found` cases configured in
+`appsettings.json` and prints one `SMOKE_REPORT=<json>` line. Raw prompts and
+responses are not sent to Progress telemetry (`RecordInputs=false`,
+`RecordOutputs=false`).
 
 A passing smoke run proves the local agent execution and tracing setup. The
 emitted trace IDs do not independently prove backend ingestion; open the
 [Progress Tracing page](https://observability.progress.com/observations) to
 confirm that the traces arrived.
-
-If port 5078 is already in use, choose another loopback port without editing
-the project:
-
-```bash
-dotnet run --no-build -- --urls http://127.0.0.1:5079
-```
 
 ## Customization boundary
 

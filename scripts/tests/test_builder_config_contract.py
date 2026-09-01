@@ -65,6 +65,32 @@ class BuilderConfigContractTests(unittest.TestCase):
         for name in builder_names:
             self.assertNotIn(name, synced_skills)
 
+    def test_both_builders_use_the_process_reported_dynamic_ui_port(self) -> None:
+        starters = {
+            "build-template-agent": ROOT
+            / "skills/build-template-agent/assets/release-evidence-reviewer",
+            "build-custom-agent": ROOT
+            / "skills/build-custom-agent/assets/custom-agent-starter",
+        }
+
+        for name, starter in starters.items():
+            with self.subTest(builder=name):
+                program = (starter / "Program.cs").read_text(encoding="utf-8")
+                instructions = (
+                    ROOT / "skills" / name / "SKILL.md"
+                ).read_text(encoding="utf-8")
+                command = (ROOT / "commands" / f"{name}.md").read_text(
+                    encoding="utf-8"
+                )
+
+                self.assertNotIn("Microsoft.Hosting.Lifetime", program)
+                self.assertNotIn("Local UI:", program)
+                self.assertNotIn("PublicListenUrl", program)
+                self.assertIn("--urls http://127.0.0.1:0", instructions)
+                self.assertIn("Now listening on:", instructions)
+                self.assertIn("--urls http://127.0.0.1:0", command)
+                self.assertIn("Now listening on:", command)
+
 
 if __name__ == "__main__":
     unittest.main()

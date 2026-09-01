@@ -19,7 +19,10 @@ README's .NET user-secrets setup. If app configuration is missing, name only the
 missing keys and point to those commands. Require successful copy, project
 validation before build and again before handoff, build, and exactly three
 passing smoke results with IDs `knowledge`, `tool`, and `not-found`, then
-health-check the UI.
+start the UI with
+`dotnet run --project <target>/CustomAgent.csproj --no-build -- --urls http://127.0.0.1:0`.
+Wait for that process's own `Now listening on:` URL and health-check only that
+URL; never guess or scan ports.
 
 Return the project path, verified local UI, smoke results with their emitted
 trace IDs, and exactly one Progress Observability Tracing-page link:

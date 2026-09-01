@@ -24,7 +24,6 @@ public static class Program
             .AddUserSecrets<AgentMarker>(optional: true)
             .AddEnvironmentVariables();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
 
         var definition = AgentDefinition.Load(builder.Configuration);
         var presentation = AgentPresentation.Load(builder.Configuration);
@@ -141,7 +140,6 @@ public static class Program
             });
 
             app.MapFallbackToFile("index.html");
-            Console.WriteLine($"Local UI: {PublicListenUrl(builder.Configuration)}");
             await app.RunAsync();
             return 0;
         }
@@ -155,11 +153,6 @@ public static class Program
         => configuration[key]
            ?? throw new InvalidOperationException(
                $"Missing configuration '{key}'. Set it with dotnet user-secrets or an environment variable.");
-
-    private static string PublicListenUrl(IConfiguration configuration)
-        => configuration["urls"]
-           ?? configuration["ASPNETCORE_URLS"]
-           ?? "http://127.0.0.1:5078";
 }
 
 public sealed record ChatRequest(string? Message);
