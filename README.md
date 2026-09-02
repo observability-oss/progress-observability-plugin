@@ -196,9 +196,11 @@ just ask in natural language.
   three smoke results, and one generic Tracing-page link without claiming that
   Progress ingested the traces.
 - `build-custom-agent` asks for a short Purpose, uses only local or clearly
-  simulated behavior for a prototype, and returns a no-write plan when live
-  systems or real side effects are essential. Its prototype path also reports
-  Progress ingestion as unverified.
+  simulated behavior for a prototype, and offers a no-write implementation plan
+  for complex/live requests. When meaningful, it can also propose a simplified
+  mock PoC, with reduced scope confirmed before building. It never implements
+  live business-system actions. Its prototype path reports Progress ingestion
+  as unverified.
 - The plugin bundle format (`.claude-plugin/`, slash commands) is specific to
   Claude Code; the [`copilot/`](./copilot/) folder re-packages all nine skills for
   VS Code / Copilot - the classic path for setups without the plugin system.

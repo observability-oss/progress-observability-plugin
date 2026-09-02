@@ -3,6 +3,10 @@
 A small .NET 10 agent that reviews local Markdown release evidence. It reports
 `Ready`, `Blocked`, or `not_found`; it never approves or performs a release.
 
+The chat UI lives in `wwwroot/index.html`: one self-contained, responsive page
+with the same visual style as the custom starter, fixed release-review content,
+and no frontend dependencies or separate build step.
+
 ## Configure
 
 Store the local builder settings once under the shared Secret Manager ID. These

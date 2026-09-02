@@ -1,7 +1,12 @@
 # Custom Agent local prototype
 
-A bounded .NET 10 starter for an agent grounded in local files or deterministic
-synthetic data. It does not connect to or update a live business system.
+A bounded .NET 10 starter for an agent grounded in supplied local files or mock
+data. It does not connect to or update a live business system, even if you
+already have an adapter or connector configured.
+
+For a simplified mock PoC, only the agreed local decision logic is demonstrated.
+Mock inputs and assumed rules do not validate real outcomes or production
+safety; `INTEGRATION_PLAN.md` describes the original goal and remaining work.
 
 ## Configure
 
@@ -53,6 +58,11 @@ presets (`knowledge`, `review`, `workflow`, or `analysis`), and its input hint
 from the `Agent` section. Customize those values in `appsettings.json`; do not
 edit the generated copy under `bin/`.
 
-Files in `data/` and tools representing future external sources must be labeled
-as simulated. A live SharePoint, Jira, database, or other adapter remains
-developer-owned work and is documented in `INTEGRATION_PLAN.md` when relevant.
+Mock data and tools representing future external sources must be labeled as
+simulated; supplied local files must be identified accurately. For a prototype
+representing SharePoint, Jira, a database, or another external source, see
+`INTEGRATION_PLAN.md` for the remaining adapter work and a follow-up Copilot
+prompt. A simplified mock PoC also includes this plan to distinguish its tested
+sample logic from the original full scope and deferred developer work.
+Connecting the real system is a separate step, not part of this build. Other
+local-file-only prototypes do not need that plan.
