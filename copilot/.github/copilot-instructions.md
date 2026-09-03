@@ -600,6 +600,10 @@ This workflow has two honest outcomes: a safe local prototype, or an integration
 plan returned only in chat. It never implements live business-system access or
 real side effects.
 
+Treat `Try-and-refine: on` or `Try-and-refine: off` as an optional workflow
+preference, not part of Purpose. Retain the latest explicit choice across
+revisions and path changes; do not ask an extra question about it.
+
 When Purpose is supplied, read the routing reference without a scenario-summary
 preamble. If a complex request needs a choice, go directly from that read to
 the question tool: its question body owns the scope explanation. Do not repeat
@@ -619,7 +623,10 @@ clarification, local proposal, explicit plan response, or text fallback below.
    clarification, and only when Purpose is not actionable under that reference.
    Never ask for credentials or secret values.
 
-3. Assess the current requested scope internally, then choose the response:
+3. Assess the current requested behavior, not just named systems. Advisory
+   Jira triage or SharePoint Q&A without required live access goes directly to
+   a disclosed local proposal when safe local sources fit the request, not an
+   extra plan/mock gate. Then choose:
 
    - **Buildable local request:** show a compact **Proposed local prototype**
      with Purpose, Name, Knowledge, and Actions. Nothing has been built yet.
@@ -640,6 +647,8 @@ clarification, local proposal, explicit plan response, or text fallback below.
 
    An explicit request for an implementation plan already selects that outcome:
    return the chat-only plan without another menu or confirmation.
+   Declining mocks is not a request for a plan: retain the native plan/revise
+   choice unless the user explicitly asks for the plan.
 
    Present exactly two choices for the current situation through the host's
    interactive question tool. A simplified mock PoC uses the same
@@ -656,8 +665,11 @@ clarification, local proposal, explicit plan response, or text fallback below.
    `<brief scope explanation>\n\nHow would you like to continue?` so the rationale
    and options appear together inside "Copilot needs information." Do not send
    the rationale as a standalone chat paragraph or put it only in option help
-   text. For local proposals, keep the four-field summary and use the short
-   question `How would you like to continue?`.
+   text. For every local proposal (initial, revised, or simplified mock), show
+   the four-field summary, then actually call the tool with the short question
+   `How would you like to continue?` and exactly
+   `choices: ["Build proposed agent", "Revise proposed agent"]`.
+   Ending with that question as ordinary text does not present a native picker.
    In VS Code Copilot, use `vscode/askQuestions` with the same question-body
    content and equivalent single-select options when available. Do not just
    print Markdown bullets or embed the options only in the question text.
@@ -722,11 +734,18 @@ Choose the closest UI preset from Purpose: `knowledge` for reference Q&A,
 `review` for checking evidence, `workflow` for triage or process work, and
 `analysis` for summaries or metrics. Keep the input placeholder to one short,
 scenario-specific example of what the user can ask.
+Keep custom instructions aligned with the fixed response policy: concise plain
+text, source and exact section citations, and explicit source referrals or
+missing evidence. Do not request diagnostic tokens unless the user asks to debug.
+Reuse actual source labels from the local content tools; never invent a filename
+in tool results, descriptions, instructions, or smoke markers. Literal `docs/`
+and `data/` file references must resolve to bundled files.
 
-Do not edit `Program.cs`, `AgentRuntime.cs`, `KnowledgeBase.cs`, `SmokeRunner.cs`,
-the project file, HTTP/UI/health code, model or observability wiring, package
-versions, or any other file. Do not add dependencies. Do not generate network
-calls, process execution, filesystem writes, secret reads, or real side effects.
+Do not edit `Program.cs`, `AgentRuntime.cs`, `ChatHistory.cs`, `KnowledgeBase.cs`,
+`SmokeRunner.cs`, the project file, HTTP/UI/health code, model or observability
+wiring, package versions, or any other file. Do not add dependencies. Do not
+generate network calls, process execution, filesystem writes, secret reads, or
+real side effects.
 Do not invoke an existing adapter, installed connector, or business-system MCP
 tool to fetch real records during intake, building, or smoke tests. Its
 availability does not change the MVP scope; Azure OpenAI and Progress runtime
@@ -740,16 +759,27 @@ For an external-source prototype or simplified mock PoC, create
 `INTEGRATION_PLAN.md` with the reference's separate, developer-led continuation
 steps. Do not execute that follow-up as part of this build.
 
-Run the project validator before building:
+Run the project validator before building. After it passes, copy the current
+`appsettings.json` once to `smoke-baseline.json` in a temporary directory outside
+the project, before the first smoke run. Keep that snapshot unchanged and use
+`--smoke-baseline <snapshot>` on every subsequent validation, including after
+repairs. It freezes the three smoke prompts and expected markers, not the Agent
+settings. Never delete or replace it to get a pass. If a test expectation really
+needs redesign, report the build as unverified instead of silently weakening it.
 
 ```bash
 dotnet run --file <skill-directory>/scripts/validate-project.cs -- --target <target>
+## Save the validated appsettings.json to the temporary smoke baseline here.
 dotnet build <target>/CustomAgent.csproj
 dotnet run --project <target>/CustomAgent.csproj -- --smoke
 ```
 
 Parse the single-line `SMOKE_REPORT=<json>` marker. Require overall `pass` and
 exactly three passing results with IDs `knowledge`, `tool`, and `not-found`.
+Use ordinary questions without expected-answer hints; keep expected markers
+separate, grounded in stable facts or source references rather than `status=`
+or `mode=` tokens. Green smokes are execution and content checks, not proof of
+reasoning quality, actual tool invocation, or backend ingestion.
 For a simplified mock PoC, these exercise sample knowledge, a local decision,
 and a missing-record path; they do not validate live integration, real outcomes,
 or production safety.
@@ -763,11 +793,38 @@ Start the already-built app on an OS-assigned loopback port:
 dotnet run --project <target>/CustomAgent.csproj --no-build -- --urls http://127.0.0.1:0
 ```
 
+Launch it as a persistent background process, not merely a command that is
+asynchronous while Copilot is open. In Copilot CLI use `bash` with
+`mode: "async", detach: true`; keep its shell/process ID for later cleanup or
+restart. Other hosts should use their supported persistent-process equivalent.
+If persistence is unavailable, disclose that the UI stops with the session.
 Keep that process running and wait for its own standard
 `Now listening on: http://127.0.0.1:<port>` line. Verify `/api/health` only at
 that exact URL. Never guess, scan, or reuse a default or nearby port. If the
 process exits or never prints the listening line, the health gate fails. Run
-the validator again before handoff. Report the absolute project path, verified
+the validator again with the frozen smoke baseline before the optional review
+or handoff:
+
+```bash
+dotnet run --file <skill-directory>/scripts/validate-project.cs -- --target <target> --smoke-baseline <snapshot>
+```
+
+### Optional try and refine
+
+Default: `Try-and-refine: on`.
+
+Only after a confirmed local prototype passes all the required gates above,
+and the preference is not `off`, read and follow
+`references/try-and-refine.md` once. Otherwise skip that reference and its extra
+calls and edits. Plan-only never enters this step. This is a build-session
+preference, not a generated app setting; it changes none of the required gates.
+If the reference is unavailable, report the optional check as skipped and
+continue to handoff without reconstructing it. For a prototype with the
+preference `off`, add only `Behavior check: skipped (off)` to the handoff.
+
+### Prototype handoff
+
+Report the absolute project path, verified
 UI URL, three smoke results, and exactly one Progress Observability tracing-page link:
 `https://observability.progress.com/observations`. Do not construct per-trace
 deep links. Report success only when copy, both validations, build, all three
@@ -787,6 +844,8 @@ contracts, side-effect controls, failure handling, tests, deployment,
 observability, and developer-owned work. Do not call the named external systems,
 inspect or configure credentials, or imply that
 MAF supplies their integrations. This outcome is zero-write and credential-free.
+Preserve requested automation; label recommended safety changes as changed
+assumptions rather than silently substituting human approval for automation.
 
 ---
 

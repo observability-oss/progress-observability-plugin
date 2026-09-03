@@ -44,11 +44,8 @@ public sealed class SmokeRunner
     {
         try
         {
-            var markerInstruction =
-                "\n\nSmoke-test requirement: include each of these exact strings verbatim in the final response: " +
-                string.Join(", ", smokeCase.ExpectedMarkers) + ".";
             var response = await _runtime.RunAsync(
-                smokeCase.Prompt + markerInstruction,
+                smokeCase.Prompt,
                 smokeCase.CaseId,
                 cancellationToken);
             var passed = smokeCase.ExpectedMarkers.All(marker =>
@@ -57,7 +54,7 @@ public sealed class SmokeRunner
                 smokeCase.CaseId,
                 passed ? "pass" : "fail",
                 response.TraceId,
-                passed ? "expected_behavior_observed" : "expected_markers_missing");
+                passed ? "expected_content_observed" : "expected_markers_missing");
         }
         catch (AgentRunException ex)
         {

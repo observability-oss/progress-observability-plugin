@@ -18,6 +18,7 @@ public static class Program
             ContentRootPath = AppContext.BaseDirectory,
             WebRootPath = "wwwroot",
         });
+        builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 256 * 1_024);
 
         // Standard .NET precedence: appsettings.json -> user secrets -> environment.
         builder.Configuration
@@ -79,7 +80,7 @@ public static class Program
             if (tracingEnabled) chatClient = chatClient.AddObservability();
 
             var agent = chatClient.AsAIAgent(
-                instructions: definition.Instructions,
+                instructions: definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
                 name: definition.ServiceSlug,
                 tools: definition.CreateTools(knowledgeBase));
             var runtime = new AgentRuntime(agent, definition.ServiceSlug);
@@ -99,6 +100,7 @@ public static class Program
                 uiPreset = presentation.Preset,
                 inputPlaceholder = presentation.InputPlaceholder,
                 prototype = true,
+                chatHistory = new { maxTurns = ChatHistory.MaxTurns, maxCharacters = ChatHistory.MaxCharacters },
             }));
 
             app.MapGet("/api/health", () => Results.Ok(new
@@ -114,15 +116,12 @@ public static class Program
                 ChatRequest? request,
                 CancellationToken cancellationToken) =>
             {
-                var message = request?.Message?.Trim();
-                if (string.IsNullOrWhiteSpace(message))
-                    return Results.BadRequest(new { error = "message_required" });
-                if (message.Length > 4_000)
-                    return Results.BadRequest(new { error = "message_too_long" });
+                if (!ChatHistory.TryCreateMessages(request, out var messages, out var error))
+                    return Results.BadRequest(new { error });
 
                 try
                 {
-                    var response = await runtime.RunAsync(message, "chat", cancellationToken);
+                    var response = await runtime.RunAsync(messages, "chat", cancellationToken);
                     return Results.Ok(new { answer = response.Answer, traceId = response.TraceId });
                 }
                 catch (AgentRunException ex)
@@ -154,8 +153,6 @@ public static class Program
            ?? throw new InvalidOperationException(
                $"Missing configuration '{key}'. Set it with dotnet user-secrets or an environment variable.");
 }
-
-public sealed record ChatRequest(string? Message);
 
 internal sealed class AgentMarker;
 

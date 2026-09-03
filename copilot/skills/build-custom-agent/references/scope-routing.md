@@ -13,8 +13,8 @@ role, ask this one optional clarification:
 > What should the agent mainly do: answer from information, analyze or summarize
 > records, or take actions in another system?
 
-Do not ask another clarification. If the result is still uncertain, route to
-plan only and leave missing details unspecified internally rather than inventing
+Do not ask another clarification. If the result is still uncertain, offer
+plan/revise and leave missing details unspecified internally rather than inventing
 a scenario. A user-requested `Revise proposed agent` updates the proposal; it is
 not an additional automatic clarification.
 
@@ -48,7 +48,9 @@ or hidden reasoning in this record.
 
 Keep mode labels internal. For a buildable local request, show a short
 **Proposed local prototype** with Purpose, Name, Knowledge, and up to three
-Actions. Do not describe a proposal as an already-created agent.
+Actions, then invoke the native Build/Revise picker. Do this for initial,
+revised, and simplified mock proposals; a plain-text question is not a picker.
+Do not describe a proposal as an already-created agent.
 
 For a complex/live request, compose two to four plain sentences for the native
 question body, not a separate assistant message:
@@ -83,7 +85,9 @@ Use the same interactive selection for build/revise and plan/revise; follow
 
 If no mock alternative is appropriate, replace the example's mock explanation
 with the value of revising the scope, and use
-plan/revise instead. Do not imply that choosing a plan starts implementation.
+plan/revise instead. Declining mocks does not select a plan: still call the
+native picker unless the user explicitly requests the plan. Do not imply that
+choosing a plan starts implementation.
 
 For an external-system prototype, explicitly tell the user that it will use
 mock data and will not connect to their real system or use an existing adapter,
@@ -113,6 +117,13 @@ Choose `local-prototype` only when the answer is yes. It may use supplied safe
 workspace documents, generated Markdown, or deterministic synthetic records.
 A future external read adapter may be represented by a clearly simulated tool
 when that still demonstrates the core user experience.
+Mentioning Jira, SharePoint, or another system does not by itself require live
+integration. Simple advisory work such as breaking Jira items into actionable
+chunks or answering policy questions goes directly to a disclosed local
+proposal and native Build/Revise picker when live access is not essential.
+Do not infer a live backlog, connection requirement, or real write that the
+user did not request; use supplied local content or clearly labeled mock data.
+Honor rejected data sources, including a no-mock preference.
 
 Recommend `plan-only` for the original goal when live data or credentials are
 essential, a real write or notification is required, the request needs approval
@@ -142,7 +153,8 @@ Put the scope-first context above inside the question body, not a plan proposal
 or separate chat message.
 Selecting the mock option only requests a proposal: create no files,
 inspect no credentials, and call no business systems. Show the reduced Purpose,
-Name, Knowledge, and Actions with the existing build/revise choices. Preserve
+Name, Knowledge, and Actions, then invoke the native picker with exactly
+`Build proposed agent` and `Revise proposed agent`. Preserve
 the original goal and deferred requirements for `INTEGRATION_PLAN.md`; do not
 present the reduced Purpose as fulfillment of that full goal.
 
@@ -198,8 +210,9 @@ confirmation. Do not silently drop requirements to make a request fit.
 
 | Purpose | Outcome |
 |---|---|
-| Answer HR questions using our SharePoint HR knowledge base. | Build from supplied or generated Markdown, label it a local prototype, and document the future SharePoint adapter. |
-| Read Jira issues and summarize release blockers, using an already configured Jira adapter. | Offer mock Jira issues and clearly simulated read-only tools; explicitly leave the existing adapter unused and document the separate live integration. Essential live access routes through the complex-request choice. |
+| Triage Jira items into smaller actionable chunks. | Direct local proposal using supplied content or disclosed mock Jira issues, then native Build/Revise; no plan/mock gate. |
+| Answer HR questions using our SharePoint HR knowledge base. | Direct local proposal from supplied local documents or clearly labeled mock policies, then native Build/Revise; document the future SharePoint adapter. Required live retrieval instead uses the complex-request choice. |
+| Read the current Jira backlog through our live adapter. | Complex-request choice: developer plan or a separately proposed mock slice. The existing live adapter stays unused. |
 | Update Jira priorities, collect approval, and notify Slack. | Offer an integration plan or a proposal for mock priority recommendations; no Jira writes, approval workflow, or Slack delivery. |
 | Continuously monitor production Kubernetes, restart services, and roll back failed deployments. | Offer the full implementation plan or a proposal for a mock incident/remediation advisor; disclose the reduced scope before building. |
 | Connect to SAP and bank APIs, approve claims, reimburse employees, and notify managers. | Offer the full plan or a proposal to assess mock expense claims against sample rules; never approve, pay, or notify. |
@@ -220,6 +233,12 @@ external source is represented locally, the prototype's `INTEGRATION_PLAN.md`
 describes the future adapter and developer-owned work.
 
 ## Prototype continuation plan
+
+In both continuation and chat-only plans, preserve the original automation
+requirement. Label any proposed safety change (for example, human approval
+before an otherwise automatic payment) as a **Recommended changed assumption**
+and explain its effect. Distinguish requested policy-authorized automation from
+recommended human review or escalation; do not imply the user accepted a change.
 
 Keep `INTEGRATION_PLAN.md` short and specific to the generated prototype: name
 the mock data or supplied local files, the simulated tools, and what has not

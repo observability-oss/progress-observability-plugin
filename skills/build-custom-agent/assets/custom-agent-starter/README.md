@@ -41,10 +41,26 @@ exactly the `knowledge`, `tool`, and `not-found` cases configured in
 responses are not sent to Progress telemetry (`RecordInputs=false`,
 `RecordOutputs=false`).
 
-A passing smoke run proves the local agent execution and tracing setup. The
-emitted trace IDs do not independently prove backend ingestion; open the
+A passing smoke run checks execution and expected answer fragments, without
+telling the model those expected answers. It does not prove reasoning quality,
+actual tool use, or production safety. The emitted trace IDs do not independently
+prove backend ingestion; open the
 [Progress Tracing page](https://observability.progress.com/observations) to
 confirm that the traces arrived.
+
+## Chat behavior
+
+The chat sends up to six completed exchanges (at most 24,000 characters), plus
+the current question, to the configured Azure model. History is kept only in
+this browser tab's memory: **New chat** or a reload clears it. Older exchanges
+fall out of context as those limits are reached; failed requests are not kept.
+There is no shared server-side conversation or conversation database. Each smoke
+case still starts independently.
+
+Answers default to short plain text. Local Markdown passages retain their exact
+section headings for citations; the agent can read the full bounded source when
+more context is needed. Citations and model judgments still need review for
+important decisions.
 
 ## Customization boundary
 

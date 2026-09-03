@@ -89,12 +89,17 @@ copilot plugin marketplace add observability-oss/progress-observability-plugin
 copilot plugin install progress-observability@progress-observability
 ```
 
-For either builder, start Copilot from the desired empty folder without the
-paid MCP server, then paste the prompt supplied by the platform:
+For either builder, start Copilot from the desired empty folder with the
+server-disable flag, then paste the prompt supplied by the platform:
 
 ```bash
 copilot --disable-mcp-server progress-observability
 ```
+
+Copilot CLI 1.0.82 may probe the plugin's MCP server before applying this flag,
+so an MCP authentication warning can still appear at startup. The builder
+skills do not call MCP or require an MCP API key; do not configure one to
+resolve this startup warning.
 
 Before that first builder run, store the app settings once. The same local
 Secret Manager ID is shared by prebuilt and custom agents:
@@ -164,6 +169,26 @@ slash commands and Copilot prompt files share names):
 
 The builders do not invoke `/health-check`. If you have an MCP key, run it
 separately when you want to inspect platform data after a build.
+
+### Optional custom-prototype review
+
+After the custom app passes its required checks, Copilot normally tries four
+chat interactions: a real task, an exact-history follow-up, a fresh-chat check,
+and a missing-evidence or live-action boundary. It may make one small, verified
+repair. A package-free .NET helper handles requests/history/timeouts; Copilot
+judges the answers. To skip
+this extra work, add `Try-and-refine: off` to your build prompt; use `on` to
+enable it explicitly. This adds no intake question and does not skip build,
+the three smoke tests, or the running UI's health check. It never runs for
+plan-only or prebuilt templates.
+
+The [optional phase](./skills/build-custom-agent/references/try-and-refine.md)
+is isolated from the starter/runtime. Maintainers can disable it globally by
+changing the single default in `skills/build-custom-agent/SKILL.md`. To remove
+it, remove that skill's preference paragraph and optional-phase section, this
+note, the reference and `scripts/check-behavior.cs` (and its developer test wiring),
+then regenerate the Copilot bundle with
+`python3 scripts/build_copilot.py`. No app code or required checks depend on it.
 
 ## Use one skill on its own
 

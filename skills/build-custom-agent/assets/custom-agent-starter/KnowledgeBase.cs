@@ -29,7 +29,7 @@ public sealed class KnowledgeBase
     public int SourceCount => _sources.Count;
 
     public string Search(string query, int topK = 3)
-        => SearchChunks(query, _chunks, "local_content");
+        => SearchChunks(query, _chunks, "local_content", topK);
 
     public string SearchData(string query, int topK = 3)
         => SearchChunks(query, _chunks.Where(chunk => chunk.IsSyntheticData), "simulated_data", topK);
@@ -47,7 +47,10 @@ public sealed class KnowledgeBase
         var content = source.Content.Length <= MaxReadCharacters
             ? source.Content
             : source.Content[..MaxReadCharacters] + "\n[truncated]";
-        return $"status=found; mode={mode}; source={source.Label}\n{content}";
+        // Keep original headings with the full document so the agent can verify
+        // exact citations and surrounding qualifications after a search.
+        return $"status=found; mode={mode}; source={source.Label}; section=full_document; " +
+               $"content_complete={source.Content.Length <= MaxReadCharacters}\n{content}";
     }
 
     private void LoadFolder(string folder, HashSet<string> allowedExtensions, bool isSyntheticData)
@@ -78,7 +81,7 @@ public sealed class KnowledgeBase
             var source = new SourceDocument(label, content, info.Length, isSyntheticData);
             _sources.Add(label, source);
             foreach (var chunk in SplitIntoChunks(content))
-                _chunks.Add(new ContentChunk(label, chunk, isSyntheticData));
+                _chunks.Add(new ContentChunk(label, chunk.Section, chunk.Content, isSyntheticData));
         }
     }
 
@@ -89,16 +92,34 @@ public sealed class KnowledgeBase
         return Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), folder));
     }
 
-    private static IEnumerable<string> SplitIntoChunks(string content)
+    private static IEnumerable<SectionChunk> SplitIntoChunks(string content)
     {
         var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
-        foreach (var block in normalized.Split(
-                     "\n\n",
-                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        var section = "(no heading)";
+        var paragraph = new List<string>();
+        foreach (var line in normalized.Split('\n'))
         {
-            for (var offset = 0; offset < block.Length; offset += MaxChunkCharacters)
-                yield return block.Substring(offset, Math.Min(MaxChunkCharacters, block.Length - offset));
+            var trimmed = line.Trim();
+            var headingLength = trimmed.TakeWhile(character => character == '#').Count();
+            var isHeading = headingLength is >= 1 and <= 6 &&
+                            (trimmed.Length == headingLength || char.IsWhiteSpace(trimmed[headingLength]));
+            if (isHeading || trimmed.Length == 0)
+            {
+                foreach (var chunk in SplitParagraph(section, paragraph)) yield return chunk;
+                paragraph.Clear();
+                if (isHeading) section = trimmed[headingLength..].Trim();
+            }
+            else paragraph.Add(line);
         }
+        foreach (var chunk in SplitParagraph(section, paragraph)) yield return chunk;
+    }
+
+    private static IEnumerable<SectionChunk> SplitParagraph(string section, List<string> lines)
+    {
+        var paragraph = string.Join('\n', lines).Trim();
+        for (var offset = 0; offset < paragraph.Length; offset += MaxChunkCharacters)
+            yield return new SectionChunk(section, paragraph.Substring(
+                offset, Math.Min(MaxChunkCharacters, paragraph.Length - offset)));
     }
 
     private static string SearchChunks(
@@ -115,7 +136,10 @@ public sealed class KnowledgeBase
             .Select(item => new
             {
                 Chunk = item,
-                Score = terms.Count(term => item.Content.Contains(term, StringComparison.OrdinalIgnoreCase)),
+                Score = terms.Count(term =>
+                    item.Content.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    (item.Section != "(no heading)" &&
+                     item.Section.Contains(term, StringComparison.OrdinalIgnoreCase))),
             })
             .Where(item => item.Score > 0)
             .OrderByDescending(item => item.Score)
@@ -128,7 +152,7 @@ public sealed class KnowledgeBase
         return string.Join("\n\n", hits.Select(hit =>
         {
             var mode = hit.Chunk.IsSyntheticData ? "simulated" : "local_prototype";
-            return $"status=found; mode={mode}; source={hit.Chunk.Source}\n{hit.Chunk.Content}";
+            return $"status=found; mode={mode}; source={hit.Chunk.Source}; section={hit.Chunk.Section}\n{hit.Chunk.Content}";
         }));
     }
 
@@ -150,5 +174,6 @@ public sealed class KnowledgeBase
         => value.Trim().Replace('\\', '/').TrimStart('.', '/');
 
     private sealed record SourceDocument(string Label, string Content, long Size, bool IsSyntheticData);
-    private sealed record ContentChunk(string Source, string Content, bool IsSyntheticData);
+    private sealed record SectionChunk(string Section, string Content);
+    private sealed record ContentChunk(string Source, string Section, string Content, bool IsSyntheticData);
 }

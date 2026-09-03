@@ -44,10 +44,67 @@ static class HelperTests
             File.AppendAllText(
                 Path.Combine(valid, "Tools.cs"),
                 "\n// Mentioning HttpClient in a comment is harmless and must not trigger validation.\n");
+            Directory.CreateDirectory(Path.Combine(valid, "docs", "nested"));
+            Directory.CreateDirectory(Path.Combine(valid, "data", "nested"));
+            File.WriteAllText(Path.Combine(valid, "docs", "nested", "policy.md"), "# Nested policy\n\nTest guidance.");
+            File.WriteAllText(Path.Combine(valid, "data", "nested", "records.csv"), "id,status\nMOCK-1,open\n");
             ExpectExit(0, validator, "--target", valid);
             ExpectBuild(Path.Combine(valid, "CustomAgent.csproj"));
+            var output = Path.Combine(valid, "bin", "Release", "net10.0");
+            Expect(File.Exists(Path.Combine(output, "docs", "sample-knowledge.md")),
+                "Built source labels must keep their relative paths. Found: " +
+                string.Join(", ", Directory.GetFiles(valid, "sample-knowledge.md", SearchOption.AllDirectories)));
+            Expect(File.Exists(Path.Combine(output, "docs", "nested", "policy.md")), "Nested Markdown paths must remain unchanged.");
+            Expect(File.Exists(Path.Combine(output, "data", "nested", "records.csv")), "Nested CSV paths must remain unchanged.");
+            Expect(File.Exists(Path.Combine(output, "data", "sample-records.json")), "JSON source paths must remain unchanged.");
+            Expect(File.Exists(Path.Combine(output, "wwwroot", "index.html")), "The UI must remain under wwwroot.");
+            Expect(!Directory.Exists(Path.Combine(output, "docs", "docs")), "The build must not duplicate the docs prefix.");
             ExpectExit(0, validator, "--target", valid);
             ExpectExit(2, copier, "--target", valid);
+
+            var frozen = CopyFresh(copier, root, "frozen-smoke");
+            var frozenSettingsPath = Path.Combine(frozen, "appsettings.json");
+            var baseline = Path.Combine(root, "smoke-baseline.json");
+            File.Copy(frozenSettingsPath, baseline);
+            var baselineText = File.ReadAllText(baseline);
+            ExpectExit(0, validator, "--target", frozen, "--smoke-baseline", baseline);
+            var frozenSettings = JsonNode.Parse(baselineText)!;
+            frozenSettings["Agent"]!["Purpose"] = "A revised local prototype purpose.";
+            File.WriteAllText(frozenSettingsPath, frozenSettings.ToJsonString());
+            ExpectExit(0, validator, "--target", frozen, "--smoke-baseline", baseline);
+            // Whitespace and object-property ordering are not changes to expectations.
+            foreach (var smokeCase in frozenSettings["Smoke"]!["Cases"]!.AsArray())
+            {
+                var smokeObject = smokeCase!.AsObject();
+                var prompt = smokeObject["Prompt"];
+                smokeObject.Remove("Prompt");
+                smokeObject.Add("Prompt", prompt);
+            }
+            File.WriteAllText(frozenSettingsPath, frozenSettings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            ExpectExit(0, validator, "--smoke-baseline", baseline, "--target", frozen);
+            frozenSettings = JsonNode.Parse(baselineText)!;
+            frozenSettings["Smoke"]!["Cases"]![1]!["ExpectedMarkers"]!.AsArray().RemoveAt(0);
+            File.WriteAllText(frozenSettingsPath, frozenSettings.ToJsonString());
+            ExpectExit(0, validator, "--target", frozen);
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", baseline);
+            frozenSettings = JsonNode.Parse(baselineText)!;
+            frozenSettings["Smoke"]!["Cases"]![1]!["Prompt"] = "A changed smoke question.";
+            File.WriteAllText(frozenSettingsPath, frozenSettings.ToJsonString());
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", baseline);
+            // Without the flag, ordinary pre-test customization is still allowed.
+            ExpectExit(0, validator, "--target", frozen);
+            File.WriteAllText(frozenSettingsPath, baselineText);
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", Path.Combine(root, "missing.json"));
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", frozenSettingsPath);
+            var invalidBaseline = Path.Combine(root, "invalid-baseline.json");
+            File.WriteAllText(invalidBaseline, "{}");
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", invalidBaseline);
+            File.WriteAllText(invalidBaseline, "not JSON");
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", invalidBaseline);
+            var baselineLink = Path.Combine(root, "baseline-link.json");
+            File.CreateSymbolicLink(baselineLink, baseline);
+            ExpectExit(2, validator, "--target", frozen, "--smoke-baseline", baselineLink);
+            Expect(File.ReadAllText(baseline) == baselineText, "Validation must never overwrite the smoke baseline.");
 
             var fixedEdit = CopyFresh(copier, root, "fixed-edit");
             File.AppendAllText(Path.Combine(fixedEdit, "Program.cs"), "\n// changed\n");
@@ -58,6 +115,27 @@ static class HelperTests
                 Path.Combine(unsafeEdit, "Tools.cs"),
                 "\npublic sealed class UnsafeProbe { public bool Exists(string path) => new FileInfo(path).Exists; }\n");
             ExpectExit(2, validator, "--target", unsafeEdit);
+
+            var inventedSource = CopyFresh(copier, root, "invented-source");
+            File.AppendAllText(Path.Combine(inventedSource, "Tools.cs"),
+                "\npublic static class SourceProbe { public const string Citation = \"data/nonexistent-issues.json\"; }\n");
+            ExpectExit(2, validator, "--target", inventedSource);
+
+            var completeSource = CopyFresh(copier, root, "complete-source");
+            File.WriteAllText(Path.Combine(completeSource, "docs", "policy.md-v2.md"), "# Revised policy\n\nExample only.");
+            File.AppendAllText(Path.Combine(completeSource, "Tools.cs"),
+                "\npublic static class SourceProbe { public const string Citation = \"docs/policy.md-v2.md\"; }\n");
+            ExpectExit(0, validator, "--target", completeSource);
+
+            var unicodeSource = CopyFresh(copier, root, "unicode-source");
+            File.WriteAllText(Path.Combine(unicodeSource, "docs", "правила.md"), "# Правила\n\nПримерни данни.");
+            var unicodeSettingsPath = Path.Combine(unicodeSource, "appsettings.json");
+            var unicodeSettings = JsonNode.Parse(File.ReadAllText(unicodeSettingsPath))!;
+            unicodeSettings["Agent"]!["Examples"]![0] = "Explain docs/правила.md.";
+            var escapedSettings = unicodeSettings.ToJsonString();
+            Expect(escapedSettings.Contains("\\u", StringComparison.Ordinal), "The fixture must actually use JSON Unicode escapes.");
+            File.WriteAllText(unicodeSettingsPath, escapedSettings);
+            ExpectExit(0, validator, "--target", unicodeSource);
 
             var secretFile = CopyFresh(copier, root, "secret-file");
             File.WriteAllText(Path.Combine(secretFile, ".env"), "EXAMPLE=not-a-real-secret\n");
@@ -100,6 +178,13 @@ static class HelperTests
                 weakSmokeSettings,
                 settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             ExpectExit(2, validator, "--target", weakSmoke);
+
+            var diagnosticSmoke = CopyFresh(copier, root, "diagnostic-smoke");
+            var diagnosticSettings = Path.Combine(diagnosticSmoke, "appsettings.json");
+            var diagnosticJson = JsonNode.Parse(File.ReadAllText(diagnosticSettings))!;
+            diagnosticJson["Smoke"]!["Cases"]![1]!["ExpectedMarkers"] = new JsonArray(JsonValue.Create("mode=simulated"));
+            File.WriteAllText(diagnosticSettings, diagnosticJson.ToJsonString());
+            ExpectExit(2, validator, "--target", diagnosticSmoke);
 
             var toolOverflow = CopyFresh(copier, root, "tool-overflow");
             var definitionPath = Path.Combine(toolOverflow, "AgentDefinition.cs");

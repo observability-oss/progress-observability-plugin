@@ -6,6 +6,7 @@ return ProjectValidator.Run(args);
 
 static class ProjectValidator
 {
+    private const string Usage = "Usage: dotnet run --file validate-project.cs -- [--target <directory>] [--smoke-baseline <appsettings-snapshot>]";
     private const int MaxContentFiles = 10;
     private const long MaxContentFileBytes = 1_048_576;
     private const long MaxContentTotalBytes = 5_242_880;
@@ -14,6 +15,7 @@ static class ProjectValidator
     {
         ".gitignore",
         "AgentRuntime.cs",
+        "ChatHistory.cs",
         "CustomAgent.csproj",
         "KnowledgeBase.cs",
         "Program.cs",
@@ -45,11 +47,11 @@ static class ProjectValidator
         {
             if (args.Length == 1 && args[0] is "--help" or "-h")
             {
-                Console.WriteLine("Usage: dotnet run --file validate-project.cs -- [--target <directory>]");
+                Console.WriteLine(Usage);
                 return 0;
             }
 
-            var targetArgument = ParseTarget(args);
+            var (targetArgument, smokeBaseline) = ParseOptions(args);
             var asset = Path.GetFullPath(Path.Combine(
                 Path.GetDirectoryName(CurrentFile())!, "..", "assets", "custom-agent-starter"));
             var target = ValidateTarget(asset, targetArgument);
@@ -57,8 +59,8 @@ static class ProjectValidator
             ValidateFixedFiles(asset, target, files);
             ValidateRequiredEditableFiles(files);
             var content = ValidateAllowedFiles(target, files);
-            ValidateEditableCode(target);
-            ValidateSettings(asset, target);
+            ValidateEditableCode(target, files);
+            ValidateSettings(asset, target, files, smokeBaseline);
             Console.WriteLine(
                 $"VALIDATION_OK target={target} content_files={content.Count} content_bytes={content.TotalBytes}");
             return 0;
@@ -74,13 +76,21 @@ static class ProjectValidator
         }
     }
 
-    private static string ParseTarget(string[] args)
+    private static (string Target, string? SmokeBaseline) ParseOptions(string[] args)
     {
-        if (args.Length == 0) return "custom-agent";
-        if (args.Length == 2 && args[0] == "--target" && !string.IsNullOrWhiteSpace(args[1]))
-            return args[1];
-        throw new ArgumentException(
-            "Usage: dotnet run --file validate-project.cs -- [--target <directory>]");
+        string? target = null, baseline = null;
+        for (var index = 0; index < args.Length; index += 2)
+        {
+            if (index + 1 >= args.Length || string.IsNullOrWhiteSpace(args[index + 1]))
+                throw new ArgumentException(Usage);
+            switch (args[index])
+            {
+                case "--target" when target is null: target = args[index + 1]; break;
+                case "--smoke-baseline" when baseline is null: baseline = args[index + 1]; break;
+                default: throw new ArgumentException(Usage);
+            }
+        }
+        return (target ?? "custom-agent", baseline);
     }
 
     private static string ValidateTarget(string asset, string targetArgument)
@@ -212,12 +222,13 @@ static class ProjectValidator
         return false;
     }
 
-    private static void ValidateEditableCode(string target)
+    private static void ValidateEditableCode(string target, IReadOnlyDictionary<string, string> files)
     {
         foreach (var relative in new[] { "AgentDefinition.cs", "Tools.cs" })
         {
             var code = File.ReadAllText(Path.Combine(target, relative));
             var codeWithoutComments = StripComments(code);
+            ValidateLocalSourceReferences(codeWithoutComments, relative, files);
             foreach (var (label, pattern) in ForbiddenCodePatterns)
             {
                 if (Regex.IsMatch(
@@ -253,7 +264,37 @@ static class ProjectValidator
             throw new InvalidDataException("AgentDefinition.cs must register one to three tools.");
     }
 
-    private static void ValidateSettings(string asset, string target)
+    private static void ValidateLocalSourceReferences(
+        string text, string relative, IReadOnlyDictionary<string, string> files)
+    {
+        // Catch invented literal citation paths; dynamic tool behavior still needs review.
+        foreach (Match match in Regex.Matches(text,
+                     @"\b(?:docs|data)/[^\s""'`<>;:\\]+",
+                     RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
+        {
+            // Match the whole token before checking its extension: policy.md-v2.md
+            // is one filename, not a reference to policy.md. Strip prose/link suffixes.
+            var source = match.Value.Split('#', '?')[0].TrimEnd('.', ',', ')', ']', '}');
+            if (Path.GetExtension(source).ToLowerInvariant() is not (".md" or ".txt" or ".json" or ".csv"))
+                continue;
+            if (!files.ContainsKey(source))
+                throw new InvalidDataException($"Unknown local source '{source}' in {relative}. Use the actual bundled source label.");
+        }
+    }
+
+    private static void ValidateJsonSourceReferences(
+        JsonElement value, IReadOnlyDictionary<string, string> files)
+    {
+        if (value.ValueKind == JsonValueKind.String)
+            ValidateLocalSourceReferences(value.GetString()!, "appsettings.json", files);
+        else if (value.ValueKind == JsonValueKind.Object)
+            foreach (var property in value.EnumerateObject()) ValidateJsonSourceReferences(property.Value, files);
+        else if (value.ValueKind == JsonValueKind.Array)
+            foreach (var item in value.EnumerateArray()) ValidateJsonSourceReferences(item, files);
+    }
+
+    private static void ValidateSettings(
+        string asset, string target, IReadOnlyDictionary<string, string> files, string? smokeBaseline)
     {
         var targetPath = Path.Combine(target, "appsettings.json");
         if (new FileInfo(targetPath).Length > 65_536)
@@ -262,6 +303,7 @@ static class ProjectValidator
         using var targetDocument = JsonDocument.Parse(File.ReadAllText(targetPath));
         using var assetDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(asset, "appsettings.json")));
         var root = targetDocument.RootElement;
+        ValidateJsonSourceReferences(root, files);
         RequireObjectProperties(root, "root", "Urls", "AzureOpenAI", "Agent", "Smoke");
 
         var expectedUrls = RequireString(assetDocument.RootElement, "Urls", 200);
@@ -313,51 +355,47 @@ static class ProjectValidator
             RequireObjectProperties(smokeCase, $"Smoke:Cases:{index}", "Id", "Prompt", "ExpectedMarkers");
             if (!string.Equals(RequireString(smokeCase, "Id", 32), expectedIds[index], StringComparison.Ordinal))
                 throw new InvalidDataException("Smoke case IDs must be knowledge, tool, and not-found in that order.");
-            var prompt = RequireString(smokeCase, "Prompt", 4_000);
+            RequireString(smokeCase, "Prompt", 4_000);
             var markers = ValidateStringArray(
                 RequireArray(smokeCase, "ExpectedMarkers"),
                 $"Smoke:Cases:{index}:ExpectedMarkers",
                 1,
                 4,
                 120);
-            ValidateSmokeMarkers(expectedIds[index], prompt, markers);
+            ValidateSmokeMarkers(expectedIds[index], markers);
         }
+        if (smokeBaseline is not null) ValidateSmokeBaseline(target, smoke, smokeBaseline);
     }
 
-    private static void ValidateSmokeMarkers(string caseId, string prompt, IReadOnlyList<string> markers)
+    private static void ValidateSmokeBaseline(string target, JsonElement smoke, string baselineArgument)
+    {
+        var baseline = Path.GetFullPath(baselineArgument);
+        if (IsWithin(target, baseline))
+            throw new InvalidDataException("Smoke baseline must be outside the generated project.");
+        RejectSymlinkPathComponents(baseline, "Smoke baseline");
+        if (!File.Exists(baseline) || new FileInfo(baseline).Length > 65_536)
+            throw new InvalidDataException("Smoke baseline must be an existing appsettings snapshot of at most 64 KiB.");
+        using var document = JsonDocument.Parse(File.ReadAllText(baseline));
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("Smoke baseline must be an appsettings JSON object.");
+        var expected = RequireObject(document.RootElement, "Smoke");
+        if (!JsonElement.DeepEquals(smoke, expected))
+            throw new InvalidDataException(
+                "Smoke expectations changed after the baseline was captured. Restore the original Smoke section; do not replace the baseline to make tests pass.");
+    }
+
+    private static void ValidateSmokeMarkers(string caseId, IReadOnlyList<string> markers)
     {
         if (markers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != markers.Count)
             throw new InvalidDataException($"Smoke case '{caseId}' has duplicate expected markers.");
-        if (markers.Any(marker => !prompt.Contains(marker, StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidDataException($"Smoke case '{caseId}' prompt must request every expected marker exactly.");
-
-        var has = (string value) => markers.Contains(value, StringComparer.OrdinalIgnoreCase);
-        if (caseId == "knowledge")
-        {
-            var hasSource = markers.Any(marker =>
-                marker.StartsWith("source=docs/", StringComparison.OrdinalIgnoreCase) ||
-                marker.StartsWith("source=data/", StringComparison.OrdinalIgnoreCase));
-            if (!has("status=found") || !hasSource)
-                throw new InvalidDataException("Smoke case 'knowledge' must require status=found and a local source= marker.");
-            return;
-        }
-
-        if (caseId == "tool")
-        {
-            var hasMode = has("mode=simulated") || has("mode=local_prototype");
-            var hasScenarioToken = markers.Any(marker =>
-                marker.Length >= 4 &&
-                !marker.StartsWith("status=", StringComparison.OrdinalIgnoreCase) &&
-                !marker.StartsWith("mode=", StringComparison.OrdinalIgnoreCase) &&
-                !marker.StartsWith("source=", StringComparison.OrdinalIgnoreCase) &&
-                marker.Any(char.IsLetterOrDigit));
-            if (!hasMode || !hasScenarioToken)
-                throw new InvalidDataException("Smoke case 'tool' must require a prototype mode and a scenario-specific marker.");
-            return;
-        }
-
-        if (caseId == "not-found" && !has("status=not_found"))
-            throw new InvalidDataException("Smoke case 'not-found' must require status=not_found.");
+        if (markers.Any(marker => marker.Length < 4 || !marker.Any(char.IsLetterOrDigit)))
+            throw new InvalidDataException($"Smoke case '{caseId}' needs meaningful expected answer fragments (at least four characters).");
+        if (markers.Any(marker => Regex.IsMatch(marker, @"^(status|mode|source)=", RegexOptions.IgnoreCase)))
+            throw new InvalidDataException($"Smoke case '{caseId}' must check plain-text facts or source paths, not internal diagnostic tokens.");
+        if (caseId == "knowledge" && !markers.Any(marker =>
+                marker.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+                marker.StartsWith("data/", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Smoke case 'knowledge' must include a local docs/ or data/ source path marker.");
     }
 
     private static JsonElement RequireObject(JsonElement parent, string name)

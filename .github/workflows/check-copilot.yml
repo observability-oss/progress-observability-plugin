@@ -38,6 +38,8 @@ jobs:
         run: dotnet build skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj --configuration Release
       - name: Test the custom-agent helpers
         run: dotnet run --file skills/build-custom-agent/tests/helper-tests.cs
+      - name: Test custom-agent history and retrieval
+        run: dotnet run --project skills/build-custom-agent/tests/runtime/RuntimeTests.csproj
       - name: Copy, validate, and build the custom-agent starter
         run: |
           custom_agent_target="$RUNNER_TEMP/custom-agent-starter"

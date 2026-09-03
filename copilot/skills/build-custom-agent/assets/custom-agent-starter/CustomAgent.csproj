@@ -18,15 +18,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Preserve source-relative paths; RecursiveDir may already include the folder. -->
     <None Update="docs/**/*.md;docs/**/*.txt"
           CopyToOutputDirectory="PreserveNewest"
-          TargetPath="docs/%(RecursiveDir)%(Filename)%(Extension)" />
-    <None Update="data/**/*.json;data/**/*.csv"
+          TargetPath="%(Identity)" />
+    <None Update="data/**/*.csv"
           CopyToOutputDirectory="PreserveNewest"
-          TargetPath="data/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Content Update="wwwroot/**/*"
+          TargetPath="%(Identity)" />
+    <Content Update="data/**/*.json;wwwroot/**/*"
              CopyToOutputDirectory="PreserveNewest"
-             TargetPath="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+             TargetPath="%(Identity)" />
   </ItemGroup>
 
 </Project>

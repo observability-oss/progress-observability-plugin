@@ -13,7 +13,7 @@ public sealed class AssistantTools(KnowledgeBase knowledgeBase)
         [Description("The question or keywords to find in local prototype content.")] string query)
         => knowledgeBase.Search(query);
 
-    [Description("Read one known local prototype source by its source label, such as docs/sample-knowledge.md.")]
+    [Description("Read one known local prototype source using the exact source label returned by search.")]
     public string ReadLocalSource(
         [Description("The source label returned by SearchLocalContent.")] string source)
         => knowledgeBase.Read(source);

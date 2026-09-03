@@ -14,6 +14,23 @@ SPEC.loader.exec_module(BUILD_COPILOT)
 
 
 class CopilotPayloadTests(unittest.TestCase):
+    def test_custom_references_are_packaged_outside_app_code(self) -> None:
+        source = SCRIPT_PATH.parents[1] / "skills/build-custom-agent"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "skill"
+            BUILD_COPILOT.write_skill_payload(source, output)
+            for reference in (source / "references").glob("*.md"):
+                with self.subTest(reference=reference.name):
+                    self.assertEqual(
+                        reference.read_bytes(),
+                        (output / "references" / reference.name).read_bytes(),
+                    )
+            starter = output / "assets/custom-agent-starter"
+            self.assertFalse((starter / "references").exists())
+            for relative, contents in BUILD_COPILOT.tree_files(starter).items():
+                with self.subTest(file=relative):
+                    self.assertNotIn(b"try-and-refine", contents.lower())
+
     def test_copy_excludes_build_output_and_secret_env_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

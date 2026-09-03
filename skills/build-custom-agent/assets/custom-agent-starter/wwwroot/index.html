@@ -84,6 +84,9 @@
     .message { max-width: 88%; padding: 13px 15px; border-radius: 15px; line-height: 1.52; white-space: pre-wrap; box-shadow: 0 3px 10px rgba(35, 31, 58, .04); }
     .user { justify-self: end; color: white; background: var(--accent-strong); border-bottom-right-radius: 5px; }
     .agent { justify-self: start; border: 1px solid var(--accent-border); border-bottom-left-radius: 5px; background: var(--accent-soft); }
+    .pending { color: #747386; }
+    .chat-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 22px 14px; color: #777587; font-size: 12px; }
+    .chat-controls button { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #d5d5df; border-radius: 8px; background: #fff; color: #626176; cursor: pointer; }
     .trace { margin-top: 9px; color: #6f6d80; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
     .example-section { padding: 0 22px 18px; }
     .example-label { margin-bottom: 9px; color: #777587; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -91,7 +94,7 @@
     .examples button { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 8px 11px; border: 1px solid var(--accent-border); border-radius: 10px; color: var(--accent-strong); background: #fff; line-height: 1.35; text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
     .examples button::after { content: "→"; flex: 0 0 auto; font-weight: 800; }
     .examples button:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
-    .examples button:focus-visible, form button:focus-visible { outline: 3px solid var(--accent-halo); outline-offset: 2px; }
+    button:focus-visible { outline: 3px solid var(--accent-halo); outline-offset: 2px; }
     form { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #ececf2; background: #fafafe; }
     input { flex: 1; min-width: 0; padding: 13px 14px; border: 1px solid #d5d5df; border-radius: 11px; color: #252332; background: #fff; outline: none; }
     input::placeholder { color: #8a8998; }
@@ -170,6 +173,10 @@
       <div class="example-label">Try an example</div>
       <div id="examples" class="examples"></div>
     </div>
+    <div class="chat-controls">
+      <span id="history-note">Remembers up to 6 recent exchanges in this tab.</span>
+      <button id="new-chat" type="button">New chat</button>
+    </div>
     <form id="chat-form">
       <input id="message" maxlength="4000" autocomplete="off" aria-label="Message" placeholder="Ask the local prototype…" required>
       <button id="send" type="submit">Send</button>
@@ -182,6 +189,11 @@
   const conversation = document.querySelector('#conversation');
   const input = document.querySelector('#message');
   const send = document.querySelector('#send');
+  const newChat = document.querySelector('#new-chat');
+  const emptyState = document.querySelector('#empty').cloneNode(true);
+  const history = [];
+  let historyLimits = { maxTurns: 6, maxCharacters: 24000 };
+  let historyTrimmed = false;
   const supportedPresets = new Set(['knowledge', 'review', 'workflow', 'analysis']);
 
   function addMessage(kind, text, traceId) {
@@ -199,7 +211,35 @@
     }
     conversation.append(message);
     message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return message;
   }
+
+  function updateHistoryNote() {
+    document.querySelector('#history-note').textContent = historyTrimmed
+      ? 'Older exchanges are no longer sent. Start a new chat to clear the context.'
+      : `Remembers up to ${historyLimits.maxTurns} recent exchanges in this tab.`;
+  }
+
+  function remember(user, assistant) {
+    history.push({ user, assistant });
+    // Drop whole exchanges, never a detached answer or half a user's message.
+    while (history.length > historyLimits.maxTurns ||
+      history.reduce((size, turn) => size + turn.user.length + turn.assistant.length, 0) > historyLimits.maxCharacters) {
+      history.shift();
+      historyTrimmed = true;
+    }
+    updateHistoryNote();
+  }
+
+  newChat.addEventListener('click', () => {
+    if (send.disabled) return;
+    history.length = 0;
+    historyTrimmed = false;
+    conversation.replaceChildren(emptyState.cloneNode(true));
+    input.value = '';
+    updateHistoryNote();
+    input.focus();
+  });
 
   function usePrompt(prompt) {
     input.value = prompt;
@@ -211,6 +251,8 @@
       const response = await fetch('/api/config');
       if (!response.ok) throw new Error();
       const config = await response.json();
+      historyLimits = config.chatHistory;
+      updateHistoryNote();
       const preset = supportedPresets.has(config.uiPreset) ? config.uiPreset : 'knowledge';
       document.body.dataset.preset = preset;
       document.querySelector('#agent-icon').setAttribute('href', `#icon-${preset}`);
@@ -249,22 +291,28 @@
   document.querySelector('#chat-form').addEventListener('submit', async event => {
     event.preventDefault();
     const message = input.value.trim();
-    if (!message) return;
+    if (!message || send.disabled) return;
     addMessage('user', message);
     input.value = '';
     send.disabled = true;
+    newChat.disabled = true;
+    const pending = addMessage('agent pending', 'Working on your answer…');
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ message, history })
       });
       const result = await response.json();
+      if (response.ok) remember(message, result.answer);
+      pending.remove();
       addMessage('agent', response.ok ? result.answer : `Request failed: ${result.error}`, result.traceId);
     } catch {
+      pending.remove();
       addMessage('agent', 'Could not reach the local agent.');
     } finally {
       send.disabled = false;
+      newChat.disabled = false;
       input.focus();
     }
   });

@@ -25,18 +25,24 @@ what the mock PoC cannot connect to, do, or validate. Keep mode labels internal.
 If Purpose was not supplied, ask only: `In 1-2 short sentences, what should this
 agent help someone accomplish?` Assess scope internally. For a buildable local
 request, show Purpose, Name, Knowledge, and Actions with
-`Build proposed agent` / `Revise proposed agent`. For a complex request, first
+an actual native picker with exactly `Build proposed agent` /
+`Revise proposed agent`. Naming Jira or SharePoint does not require live access:
+simple advisory triage or Q&A goes directly to a disclosed local proposal when
+safe local sources fit the request; honor a no-mock preference.
+For a complex request, first
 show only a brief scope explanation and choices together in the question box,
 without a plan heading, plan preview, or four-field block. Explain the separate developer work and
 possible local slice, then offer `Show implementation plan` /
 `Propose a simplified mock PoC` when that slice fits the starter. The plan guides
 later full development with the user's coding agent; the mock option first
 proposes reduced scope for review.
-If mocks are declined or no suitable PoC exists, keep plan/revise. An explicit
+If mocks are declined or no suitable PoC exists, keep the native plan/revise
+picker; declining mocks is not a request for a plan. An explicit
 request for the implementation plan returns it directly in chat without another
 confirmation. Requesting a mock PoC only presents a reduced-scope four-field
-proposal, its exclusions, and build/revise choices; create nothing and wait for
-confirmation. Preserve the original goal for the continuation plan.
+proposal and its exclusions, then calls the native Build/Revise picker; never
+stop with only a plain-text question. Create nothing and wait for confirmation.
+Preserve the original goal for the continuation plan.
 Revision uses one prefilled four-field
 block: preserve unchanged values, reassess scope and mock eligibility, then
 show a local proposal or complex scope explanation as appropriate. Create no
@@ -61,3 +67,6 @@ reduced-scope limits visible in its UI Purpose, responses, and handoff; passing
 sample smoke cases does not validate real outcomes or production safety. After
 `Show implementation plan` is selected, return the plan in chat, write nothing,
 and require no credentials.
+In both chat-only and continuation plans, preserve requested automation and
+label recommended safety changes, such as added human approval, as recommended
+changed assumptions rather than accepted requirements.
