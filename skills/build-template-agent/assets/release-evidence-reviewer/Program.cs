@@ -1,7 +1,6 @@
 using Azure;
 using Azure.AI.OpenAI;
 using Azure.Identity;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Progress.Observability.Extensions.AI;
 
@@ -70,35 +69,16 @@ public static class Program
         try
         {
             var knowledgeBase = new KnowledgeBase("docs");
-            var assistantTools = new AssistantTools(knowledgeBase);
-            List<AITool> tools =
-            [
-                AIFunctionFactory.Create(assistantTools.SearchKnowledgeBase),
-                AIFunctionFactory.Create(assistantTools.CheckReleaseReadiness),
-            ];
-
             var azureClient = string.IsNullOrWhiteSpace(azureKey)
                 ? new AzureOpenAIClient(azureEndpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(azureEndpoint, new AzureKeyCredential(azureKey));
 
             IChatClient chatClient = azureClient.GetChatClient(deployment).AsIChatClient();
-            if (tracingEnabled) chatClient = chatClient.AddObservability();
+            // SDK 1.2.2 captures prompts and tool arguments even with content recording
+            // disabled. This wrapper records only provider-call timing, model and usage.
+            if (tracingEnabled) chatClient = new MetadataOnlyChatClient(chatClient, deployment, appName);
 
-            const string instructions = """
-                You are the Release Evidence Reviewer. You are read-only: you assess documented
-                release evidence but never approve or perform a release. For policy questions,
-                call SearchKnowledgeBase. For a named project, always call
-                CheckReleaseReadiness and preserve its exact machine-readable status token:
-                status=Ready, status=Blocked, or status=not_found.
-                A release is Ready only when security approval and a rollback owner are both
-                documented. Never invent missing evidence. Be concise.
-                """;
-
-            var agent = chatClient.AsAIAgent(
-                instructions: instructions,
-                name: appName,
-                tools: tools);
-            var runtime = new AgentRuntime(agent);
+            var runtime = new AgentRuntime(chatClient, knowledgeBase, appName);
 
             if (smokeMode)
                 return await new SmokeRunner(runtime, builder.Configuration).RunAsync();
@@ -119,22 +99,19 @@ public static class Program
                 ChatRequest? request,
                 CancellationToken cancellationToken) =>
             {
-                var message = request?.Message?.Trim();
-                if (string.IsNullOrWhiteSpace(message))
-                    return Results.BadRequest(new { error = "message_required" });
-                if (message.Length > 4_000)
-                    return Results.BadRequest(new { error = "message_too_long" });
+                string message;
+                try { message = AgentRuntime.Validate(request?.Message, request?.Context); }
+                catch (ArgumentException error) { return Results.BadRequest(new { error = error.Message }); }
 
                 try
                 {
-                    var response = await runtime.RunAsync(message, "chat", cancellationToken);
-                    return Results.Ok(new { answer = response.Answer, traceId = response.TraceId });
+                    return Results.Ok(await runtime.RunAsync(message, "chat", cancellationToken, request?.Context));
                 }
                 catch (AgentRunException ex)
                 {
                     return Results.Json(
-                        new { error = "agent_run_failed", traceId = ex.TraceId },
-                        statusCode: StatusCodes.Status502BadGateway);
+                        new { error = ex.Code, traceId = ex.TraceId },
+                        statusCode: ex.Code == "agent_deadline_exceeded" ? 504 : 502);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -160,6 +137,6 @@ public static class Program
                $"Missing configuration '{key}'. Set it with dotnet user-secrets or an environment variable.");
 }
 
-public sealed record ChatRequest(string? Message);
+public sealed record ChatRequest(string? Message, ReviewContext? Context = null);
 
 internal sealed class AgentMarker;

@@ -1,23 +1,28 @@
 ---
-description: Build the ready Release Evidence Reviewer template, pass three local smoke cases, and return its local UI and Tracing page.
-argument-hint: "optional target folder; defaults to ./release-evidence-reviewer"
+description: Build a selected ready .NET agent, pass its three local smoke cases, and return its local UI and Tracing page.
+argument-hint: "[template ID] [target folder]; defaults to release-evidence-reviewer"
 ---
 
 Use the `build-template-agent` skill.
 
-Target: $ARGUMENTS
+Template and/or target: $ARGUMENTS
 
-Use `./release-evidence-reviewer` when no target was supplied. Require .NET 10
-and use the skill's package-free .NET helper to copy the fixed asset without
-source generation or domain questions. Build it, run `dotnet run -- --smoke`,
-and require the `SMOKE_REPORT=<json>` marker to pass for `policy-markdown`,
-`atlas-blocked`, and `unknown-not-found`. Never source or copy a parent `.env`;
+Resolve the template from the skill's `templates.json`; use
+`release-evidence-reviewer` only when no template was specified. Reject an
+explicitly unknown template. The default target is `./<template-id>`.
+Require .NET 10 and use the skill's package-free copier with
+`--template <id> --target <target>`; no source generation or domain questions.
+Build it, run `dotnet run -- --smoke`, and require `SMOKE_REPORT=<json>` to pass
+with exactly the selected catalog entry's three case IDs.
+Never source or copy a parent `.env`;
 use the copied README's .NET user-secrets setup. If app configuration is
 missing, name only the missing keys and point to those commands. Start and
 health-check the local UI with
-`dotnet run --project <target>/ReleaseEvidenceReviewer.csproj --no-build -- --urls http://127.0.0.1:0`.
+`dotnet run --project <target>/<catalog-project> --no-build -- --urls http://127.0.0.1:0`.
 Wait for that process's own `Now listening on:` URL and use only that URL; never
-guess or scan ports.
+guess or scan ports. Require `status=ready` from `/api/health` and HTTP 200 from
+`/`. When browser tools are available, exercise the main UI action as well;
+distinguish browser verification from HTTP-only checks.
 
 Finish only with the absolute project path, one verified local UI link, one
 Progress Observability Tracing page link, and the three smoke-case results.

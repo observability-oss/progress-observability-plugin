@@ -15,7 +15,7 @@ locally. Pick the skill that matches the request (each also has a matching
 `/prompt`):
 
 - **instrument-agent** — retrofit instrumentation onto an existing Python, TypeScript, or .NET agent, then hand off to health-check to confirm traces arrive.
-- **build-template-agent** — copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer template.
+- **build-template-agent** — copy, build, smoke-test, and run a finished .NET 10 template: Release Evidence Reviewer, Docs Q&A, Operations Data Analyst, or Ticket Triage.
 - **build-custom-agent** — turn a purpose into either a bounded .NET 10 local prototype or a no-write integration plan.
 - **scaffold-agent** — directly scaffold a new .NET agent from the general starter template.
 - **health-check** — verify the setup is wired up: connection, key scope, data flow, instrumentation depth. Run first when something looks wrong.

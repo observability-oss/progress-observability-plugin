@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../../../skills/build-template-agent/assets/release-evidence-reviewer/Program.cs" Link="privacy-sources/release-evidence-reviewer.cs" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/assets/docs-qa/Program.cs" Link="privacy-sources/docs-qa.cs" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/assets/operations-data-analyst/Program.cs" Link="privacy-sources/operations-data-analyst.cs" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/assets/ticket-triage/Program.cs" Link="privacy-sources/ticket-triage.cs" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../../../skills/build-template-agent/assets/docs-qa/DocsQa.csproj" />
+    <None Include="../../../../skills/build-template-agent/assets/docs-qa/docs/**/*.md" Link="docs/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/assets/docs-qa/appsettings.json" Link="smoke-appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/templates.json" Link="templates.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

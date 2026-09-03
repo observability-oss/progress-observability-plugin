@@ -1,11 +1,29 @@
 # Release Evidence Reviewer
 
+Runtime retrieval stays within the requested review: fresh unnamed questions
+search policy only; a named/selected project adds only that project's evidence.
+Unrequested readiness checks are rejected. Explicit project switches supersede
+the previous selection; New review does not choose a project from retrieved docs.
+
 A small .NET 10 agent that reviews local Markdown release evidence. It reports
 `Ready`, `Blocked`, or `not_found`; it never approves or performs a release.
 
 The chat UI lives in `wwwroot/index.html`: one self-contained, responsive page
 with the same visual style as the custom starter, fixed release-review content,
 and no frontend dependencies or separate build step.
+
+Review Atlas, then ask “What is still missing?”: the next request carries the
+project identified by the real readiness tool and just the last question/answer.
+The agent checks current evidence again; a prior answer is never evidence.
+Naming another project switches the review. **New review** clears the project,
+last exchange and visible discussion, and cancels any in-flight response.
+There is no server conversation store, database, or browser persistence.
+
+`POST /api/chat` accepts `message` and optional `context: {project, question,
+answer}`. Messages/prior questions are capped at 4,000 characters, prior answers
+at 8,000, and project context at 100. Each request has fresh tool state, a
+45-second deadline, at most six tool calls and four model requests. Replies
+include the actual tool-derived project and tool history alongside the answer.
 
 ## Configure
 
@@ -33,6 +51,13 @@ dotnet run -- --smoke
 dotnet run --no-build -- --urls http://127.0.0.1:0
 ```
 
+Each reply shows the documented evidence behind the verdict — every release
+requirement, its documented value, whether it is satisfied, and the Markdown file
+it came from — followed by the trace ID, the resolved project and the tools the
+agent actually ran. Those rows are the typed result of `CheckReleaseReadiness`,
+the same facts the model received, so the panel cannot disagree with the answer.
+An unknown project shows no rows rather than inventing evidence.
+
 For the UI, .NET chooses an available loopback port and prints it in the
 standard `Now listening on: http://127.0.0.1:<port>` line. The smoke command
 runs exactly three cases and prints one parseable `SMOKE_REPORT=<json>` line
@@ -45,5 +70,15 @@ emitted trace IDs do not independently prove backend ingestion; open the
 [Progress Tracing page](https://observability.progress.com/observations) to
 confirm that the traces arrived.
 
-The template sends trace metadata to Progress Observability but disables raw
-prompt and response capture (`RecordInputs=false`, `RecordOutputs=false`).
+Each run exports one trace shaped like the agent's real execution: a workflow
+span, a `gen_ai.chat` span per model request, and a `gen_ai.execute_tool` span
+per tool the model selected. Progress receives explicit metadata only — span
+timing and status, the model and its provider-reported token counts, and the
+declared tool name. The SDK's automatic `AddObservability()` instrumentation is
+omitted because pinned SDK 1.2.2 captures prompts and tool arguments despite its
+content flags; the wrappers in `MetadataOnlyChatClient.cs` and
+`MetadataOnlyTool.cs` produce the same span shape without prompts, answers, tool
+arguments, results or exception text. The workflow span also records
+`agent.tool.count`, `agent.source.count` and `agent.readiness.status`, so traces
+can be filtered by verdict and by how much evidence backed it without exposing
+the evidence itself.

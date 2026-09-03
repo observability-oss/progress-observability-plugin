@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OperationsDataAnalyst</RootNamespace>
+    <UserSecretsId>Progress.AgentBuilder.Mvp</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.15.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.1" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.1" />
+    <PackageReference Include="Progress.Observability.Instrumentation" Version="1.2.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Always: an edited CSV that kept its timestamp must never leave a stale copy beside the binary. -->
+    <None Update="data/operations.csv" CopyToOutputDirectory="Always" TargetPath="data/operations.csv" />
+    <Content Update="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" TargetPath="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -32,7 +32,7 @@ are already where Copilot expects them):
 | `.github/prompts/coverage-gaps.prompt.md` | `/coverage-gaps` | `commands/coverage-gaps.md` |
 | `.github/prompts/eval-from-trace.prompt.md` | `/eval-from-trace` | `commands/eval-from-trace.md` |
 | `.github/prompts/eval-from-scratch.prompt.md` | `/eval-from-scratch` | `commands/eval-from-scratch.md` |
-| `skills/build-template-agent/` | Complete skill, copy helper, and pinned Release Evidence Reviewer source | `skills/build-template-agent/` |
+| `skills/build-template-agent/` | Complete skill, template catalog, copy helper, and four finished agent sources | `skills/build-template-agent/` |
 | `skills/build-custom-agent/` | Guided custom workflow, helpers, and bounded .NET 10 starter | `skills/build-custom-agent/` |
 | `.vscode/mcp.json` | Connects to the Progress Observability MCP server | `.mcp.json` |
 
@@ -57,7 +57,7 @@ are already where Copilot expects them):
    ```
    your-repo/
    ├── skills/
-   │   ├── build-template-agent/    # fixed prebuilt project
+   │   ├── build-template-agent/    # catalog and finished prebuilt projects
    │   └── build-custom-agent/      # bounded custom starter
    ├── .vscode/mcp.json
    └── .github/
@@ -90,7 +90,7 @@ are already where Copilot expects them):
 ## Usage
 
 - `/instrument-agent` - instrument an existing Python, TypeScript, or .NET agent and verify its traces.
-- `/build-template-agent` - copy, build, smoke-test, and run the finished .NET 10 Release Evidence Reviewer without MCP; reports `Progress ingestion: unverified`.
+- `/build-template-agent docs-qa` - copy, build, smoke-test, and run a finished .NET 10 template without MCP. IDs: `release-evidence-reviewer` (default), `docs-qa`, `operations-data-analyst`, `ticket-triage`. Reports `Progress ingestion: unverified`.
 - `/build-custom-agent` - turn a short purpose into a safe local prototype or a no-write integration plan without MCP; reports `Progress ingestion: unverified`.
 - `/scaffold-agent` - create a new .NET agent project, already instrumented, from the starter template.
 - `/health-check` - verify the setup: connection, key scope, data flow, instrumentation depth. No arguments.
@@ -105,6 +105,14 @@ are already where Copilot expects them):
 
 The builders do not invoke `/health-check`. If you have an MCP key, run it
 separately when you want to inspect platform data after a build.
+
+The templates have distinct local UIs: contextual release-review chat, cited
+document Q&A with follow-ups, a prompt-driven CSV dashboard, and a JSON ticket
+inbox with questions and temporary missing-fact scenarios. Resets clear local
+context; no template persists conversations or changes business-system records.
+Each copies one finished project unchanged to `./<template-id>` (or your chosen
+missing/empty target), then validates its own three catalogued smoke cases.
+No live ticket writes, external business-data connections, or source generation.
 
 ## Verify the MCP connection (platform-reading workflows)
 

@@ -9,6 +9,8 @@ on:
       - "skills/**"
       - "scripts/build_copilot.py"
       - "scripts/tests/**"
+      - "commands/build-template-agent.md"
+      - "copilot/.github/prompts/build-template-agent.prompt.md"
       - "scripts/sync_skill_refs.py"
       - "scripts/copilot-instructions.template.md"
       - "copilot/.github/copilot-instructions.md"
@@ -28,14 +30,28 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Verify copilot-instructions.md is in sync
         run: python scripts/build_copilot.py --check
       - name: Verify skill MCP references are in sync
         run: python scripts/sync_skill_refs.py --check
       - name: Test Copilot payload mirroring
         run: python -m unittest discover -s scripts/tests -p 'test_*.py'
-      - name: Build the Release Evidence Reviewer template
-        run: dotnet build skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj --configuration Release
+      - name: Build every ready template and test domain behavior (no credentials)
+        run: |
+          for project in skills/build-template-agent/assets/*/*.csproj; do
+            dotnet build "$project" --configuration Release
+          done
+          for project in scripts/tests/template_runtime/*/*.csproj; do
+            dotnet run --project "$project" --configuration Release
+          done
+      - name: Test template UI state (no browser or credentials)
+        run: |
+          for script in scripts/tests/template_runtime/*/ui-state.test.mjs; do
+            node "$script"
+          done
       - name: Test the custom-agent helpers
         run: dotnet run --file skills/build-custom-agent/tests/helper-tests.cs
       - name: Test custom-agent history and retrieval

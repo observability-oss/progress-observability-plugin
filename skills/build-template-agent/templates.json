@@ -1,0 +1,26 @@
+[
+  {
+    "id": "release-evidence-reviewer",
+    "name": "Release Evidence Reviewer",
+    "project": "ReleaseEvidenceReviewer.csproj",
+    "smokeCases": ["policy-markdown", "atlas-blocked", "unknown-not-found"]
+  },
+  {
+    "id": "docs-qa",
+    "name": "Docs Q&A (RAG)",
+    "project": "DocsQa.csproj",
+    "smokeCases": ["grounded-answer", "two-sources", "unknown-not-found"]
+  },
+  {
+    "id": "operations-data-analyst",
+    "name": "Operations Data Analyst",
+    "project": "OperationsDataAnalyst.csproj",
+    "smokeCases": ["known-aggregate", "comparison-spike", "empty-selection"]
+  },
+  {
+    "id": "ticket-triage",
+    "name": "Ticket Triage",
+    "project": "TicketTriage.csproj",
+    "smokeCases": ["clear-routing", "missing-information", "unknown-not-found"]
+  }
+]

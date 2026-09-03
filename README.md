@@ -21,7 +21,7 @@ shared contract (tools, limits, and the untrusted-content rules) lives in
 | Skill | Command | What it does |
 |---|---|---|
 | **instrument-agent** | `/instrument-agent` | Adds instrumentation to an **existing** agent - Python, TypeScript, or .NET - then hands off to `/health-check` to confirm traces arrive. |
-| **build-template-agent** | `/build-template-agent` | Copies the finished .NET 10 **Release Evidence Reviewer**, builds it, runs three smoke cases, and starts its local chat UI. |
+| **build-template-agent** | `/build-template-agent` | Copies a selected finished .NET 10 agent, builds it, runs its three smoke cases, and starts its local UI. |
 | **build-custom-agent** | `/build-custom-agent` | Turns a purpose into either a bounded local .NET 10 prototype or a no-write integration plan. |
 | **scaffold-agent** | `/scaffold-agent` | Directly creates a new .NET agent from the general [dotnet-agent-starter](https://github.com/observability-oss/dotnet-agent-starter). |
 | **health-check** | `/health-check` | Read-only setup check: connection, key scope, whether traces are flowing, and instrumentation depth. Run it first. |
@@ -157,7 +157,7 @@ The commands and natural-language triggers are the same across tools (Claude Cod
 slash commands and Copilot prompt files share names):
 
 - `/instrument-agent` - add observability to the agent repo you're in, and prove traces arrive
-- `/build-template-agent` - copy, build, smoke-test, and run the Release Evidence Reviewer template; reports `Progress ingestion: unverified`
+- `/build-template-agent docs-qa` - copy, build, smoke-test, and run the Docs Q&A template; omit the ID for Release Evidence Reviewer. Reports `Progress ingestion: unverified`.
 - `/build-custom-agent` - describe a purpose, then build a safe local prototype or receive an integration plan; reports `Progress ingestion: unverified`
 - `/scaffold-agent triage support tickets against our KB` - new instrumented agent from the template
 - `/health-check` - verify your setup before anything else (no arguments)
@@ -169,6 +169,36 @@ slash commands and Copilot prompt files share names):
 
 The builders do not invoke `/health-check`. If you have an MCP key, run it
 separately when you want to inspect platform data after a build.
+
+### Ready agent templates
+
+Each selection copies one finished standalone project unchanged. No domain
+interview, generated source, frontend build, live business-system integration,
+or separate plugin install is needed. All use .NET 10 and the same model and
+Integration settings above; the sample business data is bundled locally.
+
+| Template ID | Bundled data | Local UI |
+|---|---|---|
+| `release-evidence-reviewer` (default) | Markdown policy and release evidence | Contextual review chat with explicit reset |
+| `docs-qa` | Short synthetic product/policy Markdown documents | Source-scoped Q&A and grounded follow-ups |
+| `operations-data-analyst` | Synthetic daily service metrics in CSV | Questions, clickable KPIs, trends and breakdowns |
+| `ticket-triage` | Synthetic JSON tickets plus Markdown routing policy | Inbox questions, missing-fact intake and temporary scenarios |
+
+The analyst computes metrics in C#; the model explains them. Ticket Triage
+suggests a queue and priority or requests missing information; it never assigns,
+updates, or sends a ticket. Docs Q&A returns no-match when its local corpus
+cannot support the question. All three new UIs render structured tool evidence,
+not fields extracted from generated prose.
+
+The [catalog](./skills/build-template-agent/templates.json) defines project
+filenames and each template's three smoke cases. Default destination:
+`./<template-id>`. A target must be missing or empty; unknown IDs are rejected.
+For a platform-to-IDE handoff, supply the selected ID explicitly, for example:
+`Use build-template-agent with template "ticket-triage".`
+
+See the [initial validation report](./planning/prebuilt-template-validation.md)
+and [interaction upgrade report](./planning/prebuilt-template-ux-validation.md)
+for CLI sessions, browser checks, regression coverage, and verification boundaries.
 
 ### Optional custom-prototype review
 

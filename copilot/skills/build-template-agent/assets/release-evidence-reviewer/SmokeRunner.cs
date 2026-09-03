@@ -15,17 +15,20 @@ public sealed class SmokeRunner
             new(
                 "policy-markdown",
                 RequirePrompt(configuration, "Smoke:KnowledgePrompt"),
-                answer => Contains(answer, "Security approval") && Contains(answer, "Rollback owner"),
+                reply => reply.ToolsUsed.Contains(nameof(AssistantTools.SearchKnowledgeBase)) &&
+                    Contains(reply.Answer, "Security approval") && Contains(reply.Answer, "Rollback owner"),
                 "policy_requirements_missing"),
             new(
                 "atlas-blocked",
                 RequirePrompt(configuration, "Smoke:ToolPrompt"),
-                answer => Contains(answer, "status=Blocked"),
+                reply => reply.Project == "Atlas" && reply.ToolsUsed.Contains(nameof(AssistantTools.CheckReleaseReadiness)) &&
+                    Contains(reply.Answer, "status=Blocked"),
                 "blocked_status_missing"),
             new(
                 "unknown-not-found",
                 RequirePrompt(configuration, "Smoke:NotFoundPrompt"),
-                answer => Contains(answer, "status=not_found"),
+                reply => reply.ToolsUsed.Contains(nameof(AssistantTools.CheckReleaseReadiness)) &&
+                    Contains(reply.Answer, "status=not_found"),
                 "not_found_status_missing"),
         ];
     }
@@ -55,7 +58,7 @@ public sealed class SmokeRunner
                 smokeCase.Prompt,
                 smokeCase.CaseId,
                 cancellationToken);
-            var passed = smokeCase.Passes(response.Answer);
+            var passed = smokeCase.Passes(response);
             return new SmokeCaseResult(
                 smokeCase.CaseId,
                 passed ? "pass" : "fail",
@@ -86,7 +89,7 @@ public sealed class SmokeRunner
     private sealed record SmokeCase(
         string CaseId,
         string Prompt,
-        Func<string, bool> Passes,
+        Func<AgentReply, bool> Passes,
         string FailureReason);
 
     private sealed record SmokeReport(

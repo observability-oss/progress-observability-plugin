@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
 SHARED_USER_SECRETS_ID = "Progress.AgentBuilder.Mvp"
+TEMPLATE_SKILL = ROOT / "skills/build-template-agent"
+TEMPLATES = json.loads((TEMPLATE_SKILL / "templates.json").read_text(encoding="utf-8"))
 
 
 class BuilderConfigContractTests(unittest.TestCase):
     def test_both_starters_share_user_secrets_without_env_example(self) -> None:
-        projects = (
-            ROOT
-            / "skills/build-template-agent/assets/release-evidence-reviewer"
-            / "ReleaseEvidenceReviewer.csproj",
-            ROOT
+        projects = [
+            TEMPLATE_SKILL / "assets" / item["id"] / item["project"]
+            for item in TEMPLATES
+        ] + [ROOT
             / "skills/build-custom-agent/assets/custom-agent-starter"
-            / "CustomAgent.csproj",
-        )
+            / "CustomAgent.csproj"]
 
         for project in projects:
             with self.subTest(project=project):
@@ -31,7 +32,7 @@ class BuilderConfigContractTests(unittest.TestCase):
                     (project.parent / "Program.cs").read_text(encoding="utf-8"),
                 )
 
-        custom_starter = projects[1].parent
+        custom_starter = projects[-1].parent
         self.assertFalse((custom_starter / ".env.example").exists())
         self.assertNotIn(
             "!.env.example",
@@ -90,6 +91,17 @@ class BuilderConfigContractTests(unittest.TestCase):
                 self.assertIn("Now listening on:", instructions)
                 self.assertIn("--urls http://127.0.0.1:0", command)
                 self.assertIn("Now listening on:", command)
+
+    def test_every_template_keeps_secret_and_ui_runtime_contract(self) -> None:
+        for item in TEMPLATES:
+            with self.subTest(template=item["id"]):
+                source = TEMPLATE_SKILL / "assets" / item["id"]
+                program = (source / "Program.cs").read_text(encoding="utf-8")
+                self.assertNotIn("Microsoft.Hosting.Lifetime", program)
+                self.assertIn("RecordInputs = false", program)
+                self.assertIn("RecordOutputs = false", program)
+                self.assertIn('"/api/health"', program)
+                self.assertFalse(any(source.glob(".env*")))
 
 
 if __name__ == "__main__":

@@ -36,11 +36,13 @@ public sealed class KnowledgeBase
     }
 
     public int DocumentCount => _documents.Count;
+    public IEnumerable<string> ProjectNames => _documents.Keys
+        .Where(id => id.StartsWith("project-", StringComparison.OrdinalIgnoreCase)).Select(id => id[8..]);
 
     public bool TryRead(string documentId, out string markdown)
         => _documents.TryGetValue(documentId, out markdown!);
 
-    public string Search(string query, int topK = 3)
+    public string Search(string query, int topK = 3, IReadOnlySet<string>? sources = null)
     {
         if (_paragraphs.Count == 0)
             return "status=not_found; reason=release_evidence_corpus_empty";
@@ -57,6 +59,7 @@ public sealed class KnowledgeBase
             .ToArray();
 
         var hits = _paragraphs
+            .Where(item => sources is null || sources.Contains(item.Source))
             .Select(item => new
             {
                 item.Source,

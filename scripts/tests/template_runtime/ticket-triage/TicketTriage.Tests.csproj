@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../skills/build-template-agent/assets/ticket-triage/TicketTriage.csproj" />
+    <Content Include="../../../../skills/build-template-agent/assets/ticket-triage/data/tickets.json" Link="data/tickets.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../../skills/build-template-agent/assets/ticket-triage/docs/triage-policy.md" Link="docs/triage-policy.md" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../../skills/build-template-agent/assets/ticket-triage/appsettings.json" Link="ticket-appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../../skills/build-template-agent/templates.json" Link="templates.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

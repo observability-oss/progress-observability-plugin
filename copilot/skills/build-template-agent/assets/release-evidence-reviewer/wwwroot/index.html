@@ -62,6 +62,14 @@
     .message { min-width: 0; max-width: 88%; padding: 13px 15px; border-radius: 15px; line-height: 1.52; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 3px 10px rgba(35, 31, 58, .04); }
     .user { justify-self: end; color: white; background: var(--accent-strong); border-bottom-right-radius: 5px; }
     .agent { justify-self: start; border: 1px solid var(--accent-border); border-bottom-left-radius: 5px; background: var(--accent-soft); }
+    .evidence { margin-top: 11px; padding-top: 10px; border-top: 1px solid #e6e4f0; white-space: normal; }
+    .evidence h4 { margin: 0 0 7px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #6f6d80; font-weight: 600; }
+    .check { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; line-height: 1.7; }
+    .check .mark { flex: none; width: 12px; font-weight: 700; }
+    .check .met { color: #1f7a4d; }
+    .check .unmet { color: #b3261e; }
+    .check .value { color: #4a4860; }
+    .check .src { margin-left: auto; padding-left: 10px; color: #8a88a0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; }
     .trace { margin-top: 9px; color: #6f6d80; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
     .example-section { padding: 0 22px 18px; }
     .example-label { margin-bottom: 9px; color: #777587; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -76,6 +84,11 @@
     input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-halo); }
     form button { min-width: 86px; padding: 0 19px; border: 0; border-radius: 11px; color: white; background: var(--accent-strong); font-weight: 750; cursor: pointer; }
     button:disabled { opacity: .55; cursor: wait; }
+    .review-context { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 22px; border-bottom:1px solid #ececf2; color:#6f6d80; font-size:12px; }
+    .review-context button { padding:7px 10px; border:1px solid var(--accent-border); border-radius:8px; color:var(--accent-strong); background:white; cursor:pointer; }
+    .review-context button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    .review-context small { display:block; margin-top:3px; }
+    [hidden] { display:none!important; }
     footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px 15px; margin-top: 17px; color: #777687; font-size: 12px; }
     footer span:not(:first-child)::before { content: "•"; margin-right: 15px; color: #aaa8b6; }
     @media (max-width: 600px) {
@@ -119,7 +132,8 @@
       <div class="status-copy" role="status"><span id="status-dot" class="dot" aria-hidden="true"></span><span id="status-text">Checking local agent…</span></div>
       <span class="data-pill">Sample release data</span>
     </div>
-    <div id="conversation" class="conversation" aria-live="polite">
+    <div class="review-context"><div><strong id="review-scope" role="status">New review · no project selected</strong><small>Follow-ups remember this project and the last exchange. Evidence is checked again.</small></div><button id="new-review" type="button">New review</button></div>
+    <div id="conversation" class="conversation" aria-live="polite" aria-busy="false">
       <div id="empty" class="empty">
         <div>
           <div class="empty-mark" aria-hidden="true">✦</div>
@@ -135,6 +149,8 @@
         <button type="button" data-prompt="Check release readiness for Project Atlas.">Check Atlas</button>
         <button type="button" data-prompt="Check release readiness for Project Orion.">Check Orion</button>
         <button type="button" data-prompt="Check release readiness for Project Nova.">Unknown project</button>
+        <button type="button" data-followup data-prompt="What is still missing for this project?" hidden>What is still missing?</button>
+        <button type="button" data-followup data-prompt="Which documented evidence supports that result?" hidden>Show supporting evidence</button>
       </div>
     </div>
     <form id="chat-form">
@@ -149,18 +165,64 @@
   const conversation = document.querySelector('#conversation');
   const input = document.querySelector('#message');
   const send = document.querySelector('#send');
+  const initialConversation = conversation.innerHTML;
+  let reviewContext = null, revision = 0, controller = null, busy = false;
+  function updateContext() {
+    document.querySelector('#review-scope').textContent = reviewContext?.project ? `Reviewing ${reviewContext.project}` : reviewContext ? 'Policy discussion · no project selected' : 'New review · no project selected';
+    document.querySelectorAll('[data-followup]').forEach(button => button.hidden = !reviewContext?.project);
+    input.placeholder = reviewContext?.project ? `Ask a follow-up about ${reviewContext.project}…` : 'Ask about release evidence…';
+  }
+  function setBusy(value) {
+    busy = value; send.disabled = value; input.disabled = value;
+    send.textContent = value ? 'Reviewing…' : 'Send';
+    conversation.setAttribute('aria-busy',String(value));
+    document.querySelectorAll('[data-prompt]').forEach(button => button.disabled = value);
+  }
+  document.querySelector('#new-review').addEventListener('click', () => {
+    revision++; controller?.abort(); controller = null; reviewContext = null;
+    conversation.innerHTML = initialConversation;
+    input.value = ''; setBusy(false); updateContext(); input.focus();
+  });
 
-  function addMessage(kind, text, traceId) {
+  function addMessage(kind, text, traceId, project, toolsUsed, evidence) {
     document.querySelector('#empty')?.remove();
     const message = document.createElement('div');
     message.className = `message ${kind}`;
     const body = document.createElement('div');
     body.textContent = text;
     message.append(body);
+    if (evidence && (evidence.checks || []).length) {
+      const panel = document.createElement('div');
+      panel.className = 'evidence';
+      const heading = document.createElement('h4');
+      heading.textContent = `Documented evidence · ${evidence.project} · ${evidence.status}`;
+      panel.append(heading);
+      for (const check of evidence.checks) {
+        const row = document.createElement('div');
+        row.className = 'check';
+        const mark = document.createElement('span');
+        mark.className = `mark ${check.satisfied ? 'met' : 'unmet'}`;
+        mark.textContent = check.satisfied ? '\u2713' : '\u2717';
+        const label = document.createElement('span');
+        label.textContent = check.requirement;
+        const value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = check.documentedValue || 'not documented';
+        const src = document.createElement('span');
+        src.className = 'src';
+        src.textContent = check.sourceId;
+        row.append(mark, label, value, src);
+        panel.append(row);
+      }
+      message.append(panel);
+    }
     if (traceId) {
       const trace = document.createElement('div');
       trace.className = 'trace';
-      trace.textContent = `trace ${traceId}`;
+      const ran = (toolsUsed || []).join(', ');
+      trace.textContent = `trace ${traceId}`
+        + (project ? ` · project: ${project}` : '')
+        + (ran ? ` · tools: ${ran}` : '');
       message.append(trace);
     }
     conversation.append(message);
@@ -183,23 +245,34 @@
   document.querySelector('#chat-form').addEventListener('submit', async event => {
     event.preventDefault();
     const text = input.value.trim();
-    if (!text) return;
+    if (!text || busy) return;
+    const ownRevision = ++revision;
+    const submittedContext = reviewContext;
+    const requestController = new AbortController(); controller = requestController;
+    const timeout = setTimeout(() => requestController.abort(), 48000);
     addMessage('user', text);
     input.value = '';
-    send.disabled = true;
+    setBusy(true);
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, context: submittedContext }),
+        signal: requestController.signal
       });
       const result = await response.json();
-      addMessage('agent', response.ok ? result.answer : `Request failed: ${result.error}`, result.traceId);
-    } catch {
-      addMessage('agent', 'Could not reach the local agent.');
+      if (ownRevision !== revision) return;
+      addMessage('agent', response.ok ? result.answer : `Request failed: ${result.error}`,
+        result.traceId, result.project, result.toolsUsed, result.evidence);
+      if (response.ok) { reviewContext = {project:result.project,question:text,answer:result.answer}; updateContext(); }
+      else input.value = text;
+    } catch (error) {
+      if (ownRevision !== revision) return;
+      addMessage('agent', error.name === 'AbortError' ? 'The review timed out. You can retry; no release action was taken.' : 'Could not reach the local agent.');
+      input.value = text;
     } finally {
-      send.disabled = false;
-      input.focus();
+      clearTimeout(timeout);
+      if (ownRevision === revision) { controller = null; setBusy(false); input.focus(); }
     }
   });
 

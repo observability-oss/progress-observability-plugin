@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docs Q&A · Document workspace</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #192b3e; background: #f3f5f7; --accent: #245a83; --soft: #eaf2f8; --border: #dce3e9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(ellipse at 90% 0, #dceaf4 0, transparent 38rem), #f3f5f7; }
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
+    button:focus-visible, summary:focus-visible, textarea:focus-visible { outline: 3px solid #6aa2ce; outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    main { max-width: 1190px; margin: auto; padding: 42px 26px; }
+    .hero { display: flex; align-items: center; gap: 18px; margin-bottom: 26px; }
+    .mark { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 16px; background: #1e496a; color: #fff; box-shadow: 0 8px 22px #23486626; flex-shrink: 0; }
+    .mark svg { width: 29px; height: 29px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 800; color: #50738d; }
+    h1 { margin: 6px 0 7px; font-size: clamp(28px, 4vw, 38px); letter-spacing: -.035em; }
+    .subtitle { margin: 0; color: #667486; line-height: 1.55; font-size: 14px; }
+    .demo { margin-left: auto; align-self: flex-start; border: 1px solid #cddde9; color: #3b657e; padding: 7px 10px; border-radius: 8px; white-space: nowrap; font-size: 11px; background: #ffffffa6; }
+    .health { display: flex; gap: 9px; align-items: center; padding: 12px 16px; border: 1px solid var(--border); border-radius: 11px; font-size: 12px; color: #637385; background: #ffffff9c; margin-bottom: 20px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #94a2b1; flex-shrink: 0; }
+    .dot.ready { background: #268461; }
+    .dot.degraded { background: #ba7c23; }
+    .dot.error { background: #b14343; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 20px; }
+    .stack { display: grid; gap: 20px; min-width: 0; }
+    .panel { background: white; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 9px 26px #172e4310; min-width: 0; overflow: hidden; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid #e9edf0; }
+    h2 { font-size: 15px; letter-spacing: -.01em; margin: 0; }
+    .step { font-family: ui-monospace, monospace; color: #9ba9b5; font-size: 11px; }
+    .question-body { padding: 22px; }
+    label { display: block; font-size: 13px; color: #4c6276; margin-bottom: 9px; }
+    textarea { display: block; width: 100%; min-height: 108px; resize: vertical; padding: 14px; border: 1px solid #cad7e2; border-radius: 9px; background: #fcfdff; color: #213b51; line-height: 1.6; }
+    textarea::placeholder { color: #8999a8; }
+    .form-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 12px; }
+    .hint { font-size: 11px; color: #7b8895; line-height: 1.5; }
+    .primary { border: 0; background: var(--accent); color: #fff; padding: 11px 17px; border-radius: 8px; font-weight: 650; font-size: 13px; white-space: nowrap; }
+    .secondary { border: 1px solid #cddde9; background: #fff; color: #345d7d; border-radius: 7px; padding: 8px 10px; font-size: 12px; }
+    .context-chip { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 9px 11px; border-radius: 8px; background: var(--soft); color: #3c6685; font-size: 12px; line-height: 1.5; }
+    .context-chip span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .context-chip button { flex-shrink: 0; }
+    #follow-up, #scope-source { margin-top: 16px; }
+    .examples { display: flex; gap: 7px; flex-wrap: wrap; padding-top: 19px; }
+    .examples button, .citation { border: 1px solid #d6e3ed; background: #f3f8fc; color: #345d7d; border-radius: 7px; padding: 7px 9px; font-size: 11px; text-align: left; line-height: 1.4; }
+    .examples button:hover, .citation:hover { border-color: #72a1c3; background: #e9f2f9; }
+    .answer-body { padding: 24px; min-height: 235px; }
+    .empty { min-height: 180px; display: grid; place-content: center; text-align: center; color: #8b98a5; }
+    .empty-icon { font-size: 29px; color: #94aec1; margin-bottom: 10px; }
+    .empty strong { color: #566e82; font-size: 14px; margin-bottom: 7px; }
+    .empty p { margin: 0; font-size: 12px; line-height: 1.6; max-width: 310px; }
+    #answer { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; font-size: 14px; color: #33495d; }
+    #submitted-question { margin: 0 0 17px; padding-bottom: 14px; border-bottom: 1px solid #e8edf2; font-size: 12px; line-height: 1.6; color: #758696; overflow-wrap: anywhere; white-space: pre-line; }
+    .status-pill { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #4f728b; background: #eef5f9; border-radius: 5px; padding: 5px 7px; }
+    .citations { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e8edf2; }
+    .trace { font: 10px/1.6 ui-monospace, monospace; color: #8393a0; margin-top: 16px; overflow-wrap: anywhere; }
+    #progress { color: #3c6685; background: #eef5fb; border-radius: 9px; padding: 13px; margin: 0 0 14px; font-size: 13px; }
+    #error { color: #914141; background: #fff1f0; border: 1px solid #f0cfcb; border-radius: 9px; padding: 12px; margin: 0 0 14px; font-size: 13px; line-height: 1.6; }
+    .source-body { padding: 20px; }
+    .source-label { color: #6d8aa0; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; font-weight: 750; }
+    #source-heading { font-size: 18px; margin: 10px 0 12px; line-height: 1.3; }
+    #source-excerpt { color: #5a6d7f; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+    #source-id { margin-top: 16px; font: 10px/1.5 ui-monospace, monospace; color: #8394a2; overflow-wrap: anywhere; }
+    #library { padding: 5px 16px 15px; }
+    details { border-bottom: 1px solid #edf0f3; padding: 10px 0; }
+    details:last-child { border: 0; }
+    summary { color: #3f5b73; font-size: 12px; font-weight: 650; cursor: pointer; padding: 4px 0; }
+    .section-button { width: 100%; margin-top: 5px; background: transparent; border: 0; border-radius: 6px; padding: 8px 10px; color: #7b8997; font-size: 11px; text-align: left; }
+    .section-button:hover, .section-button[aria-pressed="true"] { background: #eef5fa; color: #2b5a7b; }
+    footer { color: #85929f; font-size: 11px; line-height: 1.7; margin-top: 22px; text-align: center; }
+    @media (max-width: 850px) { .workspace { grid-template-columns: minmax(0, 1fr) 290px; gap: 14px; } main { padding: 28px 18px; } .demo { display: none; } }
+    @media (max-width: 680px) { .workspace { grid-template-columns: 1fr; } .hero { gap: 13px; align-items: flex-start; } .mark { width: 47px; height: 47px; } .question-body, .answer-body { padding: 18px; } .panel-head { padding: 16px 18px; } .form-footer { align-items: flex-end; } }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1zm0 0v15M6 8h3m-3 4h3m6-4h3m-3 4h3"/></svg></div>
+    <div><div class="eyebrow">Document workspace</div><h1>Docs Q&A</h1><p class="subtitle">A clear answer. The source behind it.<br>Explore a small, bundled product manual with local retrieval.</p></div>
+    <span class="demo">Read-only · Synthetic documents</span>
+  </header>
+  <div class="health" role="status"><span id="health-dot" class="dot" aria-hidden="true"></span><span id="health-text">Loading the document collection…</span></div>
+  <div class="workspace">
+    <div class="stack">
+      <section class="panel" aria-labelledby="question-title">
+        <div class="panel-head"><h2 id="question-title">Ask the documents</h2><button type="button" id="new-question" class="secondary">New question</button></div>
+        <div class="question-body">
+          <div id="follow-up-context" class="context-chip" aria-live="polite" hidden><span id="follow-up-label"></span><button type="button" id="clear-follow-up" class="secondary">Clear follow-up</button></div>
+          <div id="scope-context" class="context-chip" aria-live="polite" hidden><span id="scope-label"></span><button type="button" id="clear-scope" class="secondary">Clear scope</button></div>
+          <form id="ask-form">
+            <label for="question">What would you like to know?</label>
+            <textarea id="question" maxlength="4000" placeholder="How long are audit logs retained?" required aria-describedby="question-hint"></textarea>
+            <div class="form-footer"><span id="question-hint" class="hint">Answers use these documents only.<br>Follow-ups also retrieve fresh evidence.</span><button class="primary" id="ask" type="submit">Find an answer →</button></div>
+          </form>
+          <div class="examples" aria-label="Example questions">
+            <button type="button" data-question="How many days are audit logs retained?">Audit history</button>
+            <button type="button" data-question="How long are audit logs retained, and how long is a CSV export download available?">Compare two sources</button>
+            <button type="button" data-question="What is the lunar rover battery capacity?">Try a missing topic</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="answer-title" id="answer-panel" aria-busy="false">
+        <div class="panel-head"><h2 id="answer-title">Answer & evidence</h2><span id="answer-status" class="status-pill">Ready to explore</span></div>
+        <div class="answer-body">
+          <p id="progress" role="status" hidden>Searching documents and reading relevant sections…</p>
+          <p id="error" role="alert" hidden></p>
+          <div id="empty" class="empty"><div class="empty-icon" aria-hidden="true">⌕</div><strong>Start with a question</strong><p>Your answer will appear here, with the actual source sections the agent read.</p></div>
+          <div id="result" aria-live="polite" hidden><p id="submitted-question"></p><p id="answer"></p><div id="citations" class="citations" aria-label="Answer sources"></div><div id="trace" class="trace"></div><button type="button" id="follow-up" class="secondary">Ask a follow-up →</button></div>
+        </div>
+      </section>
+    </div>
+    <aside class="stack" aria-label="Source documents">
+      <section class="panel" aria-labelledby="source-title" id="source-panel">
+        <div class="panel-head"><h2 id="source-title">Source preview</h2><span class="step">02 / EVIDENCE</span></div>
+        <div class="source-body" aria-live="polite"><div id="source-document" class="source-label">Select a source</div><h3 id="source-heading">Look a little closer</h3><p id="source-excerpt">Choose a section from the library or an answer's source buttons to read the exact bundled excerpt.</p><div id="source-id"></div><button type="button" id="scope-source" class="secondary" hidden>Ask about this section →</button></div>
+      </section>
+      <section class="panel" aria-labelledby="library-title"><div class="panel-head"><h2 id="library-title">Bundled library</h2><span id="library-count" class="step">—</span></div><div id="library"><p class="hint">Loading source sections…</p></div></section>
+    </aside>
+  </div>
+  <footer>Local lexical RAG · No uploads or external document access · Metadata-only Progress telemetry</footer>
+</main>
+<script>
+  const $ = selector => document.querySelector(selector);
+  let sections = [];
+  let busy = false;
+  let preview = null, lastTurn = null, followUp = false, sourceId = null;
+  let requestVersion = 0, controller = null;
+  function showSource(section) {
+    preview = section; $('#scope-source').hidden = false;
+    $('#source-document').textContent = section.title;
+    $('#source-heading').textContent = section.heading;
+    $('#source-excerpt').textContent = section.excerpt;
+    $('#source-id').textContent = section.sourceId;
+    document.querySelectorAll('.section-button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sourceId === section.sourceId)));
+  }
+  function sourceButton(section, className) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = className; button.disabled = busy;
+    button.textContent = section.heading; button.dataset.sourceId = section.sourceId;
+    button.setAttribute('aria-label', `Read ${section.title}: ${section.heading}`);
+    if (className === 'section-button') button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      showSource(section);
+      if (window.innerWidth < 680) $('#source-panel').scrollIntoView({ block: 'nearest' });
+    });
+    return button;
+  }
+  function updateContext() {
+    $('#follow-up-context').hidden = !followUp;
+    $('#follow-up-label').textContent = followUp ? `Following up on: ${lastTurn.question}` : '';
+    $('#scope-context').hidden = !sourceId;
+    $('#scope-label').textContent = sourceId ? `Only this section: ${sections.find(section => section.sourceId === sourceId)?.heading || sourceId}` : '';
+    $('#ask').textContent = followUp ? 'Ask follow-up →' : 'Find an answer →';
+  }
+  function setBusy(value) {
+    busy = value;
+    document.querySelectorAll('#ask, #question, #follow-up, #clear-follow-up, #scope-source, #clear-scope, [data-question], .section-button, .citation').forEach(element => element.disabled = value);
+    $('#answer-panel').setAttribute('aria-busy', String(value));
+    $('#progress').hidden = !value;
+  }
+  function newQuestion() {
+    requestVersion++; controller?.abort(); controller = null; setBusy(false);
+    lastTurn = null; followUp = false; sourceId = null; preview = null; updateContext();
+    $('#question').value = ''; $('#result').hidden = true; $('#error').hidden = true; $('#empty').hidden = false;
+    $('#answer').textContent = ''; $('#submitted-question').textContent = ''; $('#citations').replaceChildren(); $('#trace').textContent = '';
+    $('#answer-status').textContent = 'Ready to explore'; $('#scope-source').hidden = true;
+    $('#source-document').textContent = 'Select a source'; $('#source-heading').textContent = 'Look a little closer';
+    $('#source-excerpt').textContent = 'Choose a section from the library or an answer\'s source buttons to read the exact bundled excerpt.';
+    $('#source-id').textContent = '';
+    document.querySelectorAll('.section-button').forEach(button => button.setAttribute('aria-pressed', 'false'));
+    $('#question').focus();
+  }
+  async function loadLibrary() {
+    try {
+      const [healthResponse, docsResponse] = await Promise.all([fetch('/api/health'), fetch('/api/documents')]);
+      if (!healthResponse.ok || !docsResponse.ok) throw new Error();
+      const health = await healthResponse.json(); sections = await docsResponse.json();
+      $('#health-dot').className = `dot ${health.status === 'ready' ? 'ready' : 'degraded'}`;
+      $('#health-text').textContent = `${health.status} · ${health.documentsLoaded} documents · ${health.sectionsLoaded} sections · tracing ${health.tracingEnabled ? 'on' : 'off'}`;
+      $('#library-count').textContent = `${health.documentsLoaded} DOCS`;
+      $('#library').replaceChildren();
+      const groups = new Map();
+      sections.forEach(section => {
+        if (!groups.has(section.documentId)) {
+          const details = document.createElement('details'); details.open = true;
+          const summary = document.createElement('summary'); summary.textContent = section.title;
+          details.append(summary); groups.set(section.documentId, details); $('#library').append(details);
+        }
+        groups.get(section.documentId).append(sourceButton(section, 'section-button'));
+      });
+      if (!sections.length) $('#library').textContent = 'No bundled sections were found. Check the docs folder.';
+    } catch {
+      $('#health-dot').className = 'dot error'; $('#health-text').textContent = 'Local document service unavailable';
+      $('#library').textContent = 'Could not load the library. Refresh when the local app is running.';
+    }
+  }
+  $('#ask-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const question = $('#question').value.trim();
+    if (!question || busy) return;
+    const request = { question, previousTurn: followUp ? { ...lastTurn } : null, sourceId };
+    const scope = sections.find(section => section.sourceId === sourceId);
+    const version = ++requestVersion;
+    controller = new AbortController();
+    setBusy(true);
+    $('#empty').hidden = true; $('#error').hidden = true; $('#result').hidden = true; $('#progress').hidden = false;
+    $('#answer-status').textContent = 'Reading';
+    try {
+      const response = await fetch('/api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request), signal: AbortSignal.any([controller.signal, AbortSignal.timeout(50000)]) });
+      const result = await response.json();
+      if (version !== requestVersion) return;
+      if (!response.ok) {
+        $('#error').textContent = `Could not complete this lookup: ${result.error || 'request_failed'}.${result.traceId ? ` Trace: ${result.traceId}` : ''}`;
+        $('#error').hidden = false; $('#answer-status').textContent = 'Try again'; return;
+      }
+      $('#submitted-question').textContent = `Answering: ${question}${request.previousTurn ? `\nFollow-up to: ${request.previousTurn.question}` : ''}\nScope: ${scope ? `${scope.title} · ${scope.heading}` : 'all bundled documents'}`;
+      $('#answer').textContent = result.answer; $('#result').hidden = false;
+      lastTurn = { question, answer: result.answer }; followUp = false; updateContext();
+      $('#answer-status').textContent = result.status === 'not_found' ? 'No matching information' : `${result.citations.length} sources read`;
+      $('#citations').replaceChildren(...result.citations.map(section => sourceButton(section, 'citation')));
+      $('#citations').hidden = result.citations.length === 0;
+      const ran = (result.toolCalls || []).join(', ');
+      $('#trace').textContent = `trace ${result.traceId}` + (ran ? ` · tools: ${ran}` : '');
+      if (result.citations.length) showSource(result.citations[0]);
+    } catch {
+      if (version !== requestVersion) return;
+      $('#error').textContent = 'The local service did not respond in time. Check that it is running and try again.';
+      $('#error').hidden = false; $('#answer-status').textContent = 'Service unavailable';
+    } finally {
+      if (version === requestVersion) { controller = null; setBusy(false); $('#question').focus(); }
+    }
+  });
+  $('#new-question').addEventListener('click', newQuestion);
+  $('#follow-up').addEventListener('click', () => {
+    if (busy || !lastTurn) return;
+    followUp = true; updateContext(); $('#question').value = ''; $('#question').focus();
+  });
+  $('#clear-follow-up').addEventListener('click', () => { followUp = false; updateContext(); });
+  $('#scope-source').addEventListener('click', () => {
+    if (busy || !preview) return;
+    sourceId = preview.sourceId; followUp = false; updateContext(); $('#question').value = ''; $('#question').focus();
+  });
+  $('#clear-scope').addEventListener('click', () => { sourceId = null; updateContext(); });
+  document.querySelectorAll('[data-question]').forEach(button => button.addEventListener('click', () => {
+    newQuestion();
+    $('#question').value = button.dataset.question; $('#question').focus();
+  }));
+  loadLibrary();
+</script>
+</body>
+</html>

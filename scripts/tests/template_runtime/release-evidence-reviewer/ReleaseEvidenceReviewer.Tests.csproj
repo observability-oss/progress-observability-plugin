@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../skills/build-template-agent/assets/release-evidence-reviewer/ReleaseEvidenceReviewer.csproj" />
+    <None Include="../../../../skills/build-template-agent/assets/release-evidence-reviewer/docs/**/*.md" Link="docs/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/assets/release-evidence-reviewer/appsettings.json" Link="smoke-appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/templates.json" Link="templates.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

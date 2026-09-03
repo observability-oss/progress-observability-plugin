@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../skills/build-template-agent/assets/operations-data-analyst/OperationsDataAnalyst.csproj" />
+    <None Include="../../../../skills/build-template-agent/assets/operations-data-analyst/data/operations.csv" Link="fixture.csv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../../skills/build-template-agent/templates.json" Link="templates.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

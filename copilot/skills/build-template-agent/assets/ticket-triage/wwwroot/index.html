@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket Triage · Mock support inbox</title>
+  <style>
+    :root { color-scheme: light; --ink:#232c36; --muted:#69747d; --line:#e0e5e1; --green:#24694e; --soft:#edf5ee; --amber:#825b18; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:#f6f7f2; font:15px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:wait; opacity:.65; }
+    button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #8ebba5; outline-offset:3px; }
+    header { padding:28px 38px 24px; border-bottom:1px solid var(--line); background:#fcfcf8; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:750; }
+    .mark { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; color:white; background:var(--green); font-size:17px; }
+    .topline { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border:1px solid var(--line); border-radius:999px; font-size:11px; letter-spacing:.04em; font-weight:750; white-space:nowrap; }
+    .pill.green { background:var(--soft); color:var(--green); border-color:#c9dfd1; }
+    .pill.amber { background:#fff5dc; color:var(--amber); border-color:#efdaad; }
+    h1 { margin:25px 0 5px; font-size:clamp(26px,3.5vw,38px); line-height:1.2; letter-spacing:-.045em; font-weight:680; }
+    .subtitle { margin:0; color:var(--muted); max-width:780px; }
+    main { max-width:1440px; margin:0 auto; display:grid; grid-template-columns:330px minmax(0,1fr); align-items:start; }
+    aside { padding:25px 20px 32px 26px; }
+    .section-label { font-size:11px; letter-spacing:.1em; text-transform:uppercase; font-weight:800; color:var(--muted); }
+    .inbox-heading { display:flex; justify-content:space-between; align-items:center; margin:0 0 14px; }
+    #filter { width:100%; padding:11px 12px; color:var(--ink); border:1px solid #d7ded8; border-radius:9px; background:#fff; }
+    #ticket-list { list-style:none; margin:15px 0 0; padding:0; display:grid; gap:6px; }
+    .ticket { width:100%; display:block; padding:14px 13px; border:1px solid transparent; border-radius:10px; background:transparent; text-align:left; color:var(--ink); }
+    .ticket:hover { background:#eef1eb; }
+    .ticket[aria-pressed="true"] { border-color:#b7d1be; background:#e8f1e8; }
+    .ticket-id { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; }
+    .ticket-title { display:block; margin:5px 0 7px; font-size:14px; font-weight:650; line-height:1.35; }
+    .ticket-type { color:var(--muted); font-size:12px; }
+    .workspace { min-height:640px; border-left:1px solid var(--line); padding:28px 32px 40px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:15px; padding:24px; }
+    .detail-head { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+    h2 { font-size:23px; line-height:1.3; letter-spacing:-.025em; margin:12px 0 12px; }
+    #detail-description { margin:0; color:#56636d; max-width:800px; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .facts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:23px 0 0; padding-top:18px; border-top:1px solid #edf0ec; }
+    .facts dt { color:var(--muted); font-size:11px; font-weight:700; margin-bottom:5px; }
+    .facts dd { margin:0; font-size:13px; overflow-wrap:anywhere; }
+    .missing { color:var(--amber); }
+    .action-row { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:20px 0; }
+    .action-note { font-size:12px; color:var(--muted); margin:0; max-width:350px; }
+    #triage { padding:11px 17px; border:1px solid var(--green); border-radius:9px; background:var(--green); color:white; font-weight:700; white-space:nowrap; }
+    #result { border-top:3px solid #99bea5; }
+    #result[data-status="needs_information"] { border-top-color:#d8b772; }
+    .result-heading { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+    .result-heading h2 { margin:0; font-size:18px; }
+    .decision { display:flex; flex-wrap:wrap; gap:32px; margin:20px 0; }
+    .decision span { display:block; font-size:12px; color:var(--muted); }
+    .decision strong { display:block; margin-top:3px; font-size:23px; font-weight:650; }
+    #answer { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; color:#465650; margin:17px 0; }
+    .evidence-list { padding:0; margin:10px 0 18px; list-style:none; font-size:13px; }
+    .evidence-list li { display:flex; justify-content:space-between; align-items:start; gap:12px; padding:7px 0; border-bottom:1px solid #edf0ec; }
+    .evidence-list small { color:var(--muted); font-size:11px; overflow-wrap:anywhere; text-align:right; }
+    #missing-fields { background:#fff8e8; border-radius:8px; padding:13px 16px; margin:17px 0; font-size:13px; }
+    #missing-fields ul { padding-left:20px; margin:6px 0 0; }
+    .scenario-panel { margin:17px 0; padding:16px; border:1px solid #efdaad; border-radius:10px; background:#fffaf0; }
+    .scenario-panel p,.question-panel p { margin:5px 0 12px; color:var(--muted); font-size:12px; }
+    .scenario-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+    .scenario-fields label { display:block; font-size:12px; font-weight:650; }
+    .scenario-fields select { display:block; width:100%; margin-top:5px; padding:9px; border:1px solid #d7c69d; border-radius:7px; background:#fff; color:var(--ink); }
+    .secondary { padding:9px 13px; border:1px solid #bad0c0; border-radius:8px; background:#eff6ef; color:var(--green); font-weight:700; font-size:13px; }
+    #scenario-values { padding-left:18px; font-size:12px; }
+    .question-panel { margin-top:18px; }
+    .question-panel label { display:block; font-weight:700; }
+    .question-row { display:flex; gap:10px; }
+    #question { min-width:0; flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:#fff; }
+    #answered-question { font-size:12px; color:var(--muted); overflow-wrap:anywhere; margin-top:16px; }
+    #policy-refs { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+    .source { padding:4px 8px; border-radius:5px; background:#f0f4ef; font:11px ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .trace { border-top:1px solid #edf0ec; margin-top:19px; padding-top:12px; color:var(--muted); font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .empty { padding:35px 20px; text-align:center; color:var(--muted); }
+    .empty strong { display:block; color:#58685f; font-size:16px; margin-bottom:6px; }
+    .notice { margin:0 0 16px; padding:12px 15px; border:1px solid #e5c3b9; border-radius:9px; background:#fff2ed; color:#873d29; overflow-wrap:anywhere; }
+    footer { padding:15px 24px; color:var(--muted); font-size:11px; border-top:1px solid var(--line); text-align:center; }
+    [hidden] { display:none !important; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media(max-width:980px) { header { padding:24px; } main { grid-template-columns:280px minmax(0,1fr); } aside { padding:22px 15px; } .workspace { padding:24px 20px; } .facts { grid-template-columns:repeat(2,minmax(0,1fr)); } .card { padding:19px; } .action-row { align-items:start; flex-direction:column; } }
+    @media(max-width:650px) { header { padding:20px; } .topline { align-items:start; } .topline .meta { justify-content:flex-end; } main { display:block; } aside { padding:20px; border-bottom:1px solid var(--line); } #ticket-list { max-height:245px; overflow:auto; } .workspace { min-height:0; padding:22px 16px; border-left:0; } h1 { margin-top:22px; } .subtitle { font-size:14px; } .evidence-list li { flex-direction:column; gap:3px; } .evidence-list small { text-align:left; } .scenario-fields { grid-template-columns:1fr; } .question-row { flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topline"><div class="brand"><span class="mark" aria-hidden="true">↗</span> Ticket Triage</div><div class="meta"><span class="pill green">MOCK INBOX</span><span class="pill">JSON + MARKDOWN</span></div></div>
+    <h1>A clear next step for every ticket.</h1>
+    <p class="subtitle">Inspect the intake. Check the policy. Get a grounded queue and priority suggestion—with the evidence beside it.</p>
+  </header>
+  <main>
+    <aside aria-label="Mock support inbox">
+      <div class="inbox-heading"><span class="section-label">Support inbox</span><span id="count" class="pill">Loading</span></div>
+      <label class="sr-only" for="filter">Filter mock tickets by ID or title</label>
+      <input id="filter" type="search" placeholder="Find a ticket…" autocomplete="off" maxlength="160">
+      <ul id="ticket-list"></ul>
+      <p id="inbox-state" class="empty" role="status">Loading mock tickets…</p>
+    </aside>
+    <section class="workspace" aria-label="Ticket detail and recommendation">
+      <p id="error" class="notice" role="alert" hidden></p>
+      <div id="no-selection" class="card empty"><strong>Select a ticket</strong>Its documented intake facts will appear here.</div>
+      <div id="selected-ticket" hidden>
+        <article class="card" aria-labelledby="detail-title">
+          <div class="detail-head"><span id="detail-id" class="section-label"></span><span class="pill">BUNDLED SAMPLE</span></div>
+          <h2 id="detail-title"></h2><p id="detail-description"></p>
+          <dl id="facts" class="facts"></dl>
+        </article>
+        <div class="action-row"><p class="action-note">A read-only suggestion for human review. Nothing is assigned, changed, or sent.</p><button id="triage" type="button">Suggest triage <span aria-hidden="true">↗</span></button></div>
+        <section id="result" class="card" aria-label="Triage recommendation" aria-busy="false">
+          <div id="result-placeholder" class="empty"><strong>Evidence first. Recommendation second.</strong>Choose “Suggest triage” to review this ticket against the local policy.</div>
+          <div id="result-content" hidden>
+            <div class="result-heading"><h2>Suggested next step</h2><span id="result-status" class="pill green"></span></div>
+            <div class="decision"><div><span>Suggested queue</span><strong id="queue"></strong></div><div><span>Suggested priority</span><strong id="priority"></strong></div></div>
+            <div id="missing-fields" hidden><strong>More information needed</strong><ul id="missing-list"></ul></div>
+            <div id="scenario-summary" class="scenario-panel" hidden><strong>Temporary scenario · not saved</strong><p>The bundled ticket is unchanged. These supplied values apply only to this review:</p><ul id="scenario-values"></ul><button id="reset-scenario" class="secondary" type="button">Clear scenario · use bundled ticket</button></div>
+            <form id="scenario-form" class="scenario-panel" hidden><strong>Try the missing intake facts</strong><p>Choose only values you know. Re-evaluation is a temporary scenario; it does not edit the ticket.</p><div id="scenario-fields" class="scenario-fields"></div><button id="reevaluate" class="secondary" type="submit">Re-evaluate</button></form>
+            <p id="answered-question" hidden></p>
+            <p id="answer"></p>
+            <div class="section-label">Documented evidence</div><ul id="evidence" class="evidence-list"></ul>
+            <div class="section-label">Policy references</div><div id="policy-refs"></div>
+            <div id="trace" class="trace"></div>
+          </div>
+        </section>
+        <form id="question-form" class="card question-panel"><label for="question">Ask about this ticket</label><p>For example: “Why P1?” Each question uses this ticket and its current temporary scenario only.</p><div class="question-row"><input id="question" maxlength="1000" placeholder="Why does this priority apply?" required autocomplete="off"><button id="ask" class="secondary" type="submit">Ask</button></div></form>
+      </div>
+      <p id="live-status" class="sr-only" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <footer>Seven fictional tickets · Local deterministic routing rules · No Jira, Slack, or external ticket actions · <span id="telemetry">Checking trace setup…</span></footer>
+  <script>
+    const $ = id => document.getElementById(id);
+    let tickets = [], selected = null, controller = null, revision = 0, lastReply = null, scenario = {};
+    const labels = { issueType:'Issue type', environment:'Environment', impact:'Customer impact', workaroundAvailable:'Workaround' };
+    const choices = { issueType:[['outage','Outage'],['defect','Defect'],['howto','How-to question']], environment:[['production','Production'],['test','Test']], impact:[['multiple_customers','Multiple customers'],['single_customer','Single customer']], workaroundAvailable:[['true','Available'],['false','Not available']] };
+    const friendly = value => value === null || value === undefined ? 'Not provided' : value === true || value === 'true' ? 'Available' : value === false || value === 'false' ? 'Not available' : String(value).replaceAll('_',' ');
+    function element(tag, text, className) { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; }
+    function renderInbox() {
+      const query = $('filter').value.trim().toLowerCase();
+      const visible = tickets.filter(ticket => (ticket.id + ' ' + ticket.title).toLowerCase().includes(query));
+      $('ticket-list').replaceChildren();
+      $('count').textContent = String(tickets.length);
+      $('inbox-state').hidden = visible.length > 0;
+      $('inbox-state').textContent = tickets.length ? 'No tickets match your filter.' : 'No mock tickets are available.';
+      for (const ticket of visible) {
+        const item = document.createElement('li');
+        const button = element('button', '', 'ticket'); button.type = 'button';
+        button.setAttribute('aria-pressed', String(selected?.id === ticket.id));
+        button.append(element('span', ticket.id, 'ticket-id'), element('span', ticket.title, 'ticket-title'), element('span', friendly(ticket.issueType), 'ticket-type'));
+        button.addEventListener('click', () => selectTicket(ticket)); item.append(button); $('ticket-list').append(item);
+      }
+    }
+    function selectTicket(ticket) {
+      revision++; controller?.abort(); selected = ticket; lastReply = null; scenario = {}; $('question').value = '';
+      $('error').hidden = true; $('no-selection').hidden = true; $('selected-ticket').hidden = false;
+      $('detail-id').textContent = ticket.id; $('detail-title').textContent = ticket.title; $('detail-description').textContent = ticket.description;
+      $('facts').replaceChildren();
+      for (const [key,label] of Object.entries(labels)) {
+        const group = document.createElement('div'); const value = element('dd', friendly(ticket[key]));
+        if (ticket[key] === null || ticket[key] === undefined) value.className = 'missing';
+        group.append(element('dt',label), value); $('facts').append(group);
+      }
+      $('result-content').hidden = true; $('result-placeholder').hidden = false;
+      $('result-placeholder').replaceChildren(element('strong','Evidence first. Recommendation second.'), element('span','Choose “Suggest triage” to review this ticket against the local policy.'));
+      $('result').removeAttribute('data-status'); $('result').setAttribute('aria-busy','false');
+      setBusy(false);
+      $('live-status').textContent = `Selected ${ticket.id}.`;
+      renderInbox();
+    }
+    function renderRecommendation(reply) {
+      const decision = reply.recommendation;
+      $('result').dataset.status = decision.status; $('result-placeholder').hidden = true; $('result-content').hidden = false;
+      $('result-status').textContent = decision.status === 'proposed' ? 'SUGGESTION ONLY' : decision.status === 'needs_information' ? 'NEEDS INFORMATION' : 'NOT FOUND';
+      $('result-status').className = 'pill ' + (decision.status === 'proposed' ? 'green' : 'amber');
+      $('queue').textContent = decision.suggestedQueue ?? 'Not proposed'; $('priority').textContent = decision.suggestedPriority ?? 'Not proposed';
+      $('answer').textContent = reply.answer; $('missing-fields').hidden = !decision.missingFields.length;
+      $('answered-question').hidden = !reply.question;
+      $('answered-question').textContent = reply.question ? `Answer to: ${reply.question}` : '';
+      $('missing-list').replaceChildren(...decision.missingFields.map(field => element('li',labels[field] ?? field)));
+      $('evidence').replaceChildren(...decision.evidence.map(fact => { const row = document.createElement('li'); row.append(element('span',`${labels[fact.field] ?? fact.field}: ${friendly(fact.value)}`), element('small',fact.source)); return row; }));
+      if (!decision.evidence.length) $('evidence').append(element('li','No matching ticket evidence.'));
+      $('policy-refs').replaceChildren(...decision.policyRefs.map(source => element('span',source,'source')));
+      if (!decision.policyRefs.length) $('policy-refs').append(element('span','No policy decision was made.'));
+      $('trace').textContent = `trace ${reply.traceId} · tools: ${reply.toolsUsed.join(', ')}`;
+      $('scenario-summary').hidden = !reply.scenario.active;
+      $('scenario-values').replaceChildren(...reply.scenario.suppliedFields.map(fact => element('li',`${labels[fact.field]}: bundled ${friendly(selected[fact.field])} → scenario ${friendly(fact.value)} (${fact.source})`)));
+      $('scenario-form').hidden = decision.missingFields.length === 0;
+      $('scenario-fields').replaceChildren();
+      for (const field of decision.missingFields) {
+        const label = element('label', labels[field]); const select = document.createElement('select');
+        select.id = `scenario-${field}`; select.dataset.field = field;
+        select.append(element('option','Not supplied yet')); select.firstChild.value = '';
+        for (const [value,text] of choices[field]) { const option = element('option',text); option.value = value; select.append(option); }
+        label.append(select); $('scenario-fields').append(label);
+      }
+      $('live-status').textContent = `Triage complete: ${decision.status.replaceAll('_',' ')}.`;
+    }
+    function setBusy(busy) {
+      $('result').setAttribute('aria-busy',String(busy));
+      for (const id of ['triage','ask','question','reevaluate','reset-scenario']) $(id).disabled = busy;
+      $('scenario-fields').querySelectorAll('select').forEach(select => select.disabled = busy);
+      $('triage').textContent = busy ? 'Reviewing…' : 'Suggest triage ↗';
+    }
+    $('filter').addEventListener('input',renderInbox);
+    async function review(question = null, requestedScenario = scenario) {
+      if (!selected) return;
+      const ownRevision = ++revision; controller?.abort(); const requestController = new AbortController(); controller = requestController;
+      const timeout = setTimeout(() => requestController.abort(), 48000);
+      $('error').hidden = true; $('result-placeholder').hidden = false;
+      $('result-placeholder').textContent = lastReply ? 'Reviewing… The previous result remains below until this request completes.' : 'Reading the ticket and checking the triage policy…';
+      setBusy(true);
+      $('live-status').textContent = 'Reviewing the selected mock ticket.';
+      try {
+        const response = await fetch('/api/triage',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticketId:selected.id, question, scenario:requestedScenario}), signal:requestController.signal });
+        const reply = await response.json(); if (ownRevision !== revision) return;
+        if (!response.ok) {
+          const allowed = ['agent_run_failed','grounded_recommendation_required','answer_too_long','tool_call_limit_exceeded','ticket_outside_selected_scope','question_too_long','scenario_requires_known_ticket','scenario_fields_invalid','scenario_field_or_value_invalid','scenario_only_missing_fields_allowed'];
+          const reason = allowed.includes(reply.error) ? reply.error : 'request_failed';
+          throw new Error(reply.error === 'agent_deadline_exceeded' ? 'The review timed out. Please try again.' : `The review could not complete (${reason}). No ticket was changed.${reply.traceId ? ' Trace: ' + reply.traceId : ''}`);
+        }
+        scenario = { ...requestedScenario }; lastReply = reply; renderRecommendation(reply);
+      } catch (error) {
+        if (ownRevision !== revision) return;
+        $('error').textContent = error.name === 'AbortError' ? 'The review timed out. No ticket was changed. Please try again.' : error.message;
+        $('error').hidden = false; $('result-placeholder').hidden = !!lastReply;
+        if (!lastReply) $('result-placeholder').textContent = 'No recommendation is available. You can retry the review.';
+        $('live-status').textContent = 'Review failed. No ticket was changed.';
+      } finally {
+        clearTimeout(timeout);
+        if (ownRevision === revision) setBusy(false);
+      }
+    }
+    $('triage').addEventListener('click', () => review());
+    $('question-form').addEventListener('submit', event => { event.preventDefault(); const question = $('question').value.trim(); if (question) review(question); });
+    $('scenario-form').addEventListener('submit', event => {
+      event.preventDefault(); const proposed = { ...scenario }; let added = false;
+      $('scenario-fields').querySelectorAll('select').forEach(select => { if (select.value) { proposed[select.dataset.field] = select.dataset.field === 'workaroundAvailable' ? select.value === 'true' : select.value; added = true; } });
+      if (!added) { $('error').textContent = 'Choose at least one missing intake value to try a temporary scenario.'; $('error').hidden = false; return; }
+      review(null, proposed);
+    });
+    $('reset-scenario').addEventListener('click', () => { const ticket = selected; selectTicket(ticket); review(); });
+    async function load() {
+      try {
+        const response = await fetch('/api/tickets'); if (!response.ok) throw new Error('The mock inbox could not load. Reload the page to try again.');
+        const result = await response.json(); tickets = result.tickets; renderInbox(); if (tickets.length) selectTicket(tickets[0]);
+      } catch { $('count').textContent = 'Unavailable'; $('inbox-state').textContent = 'The mock inbox could not load. Reload the page to try again.'; }
+      try {
+        const response = await fetch('/api/health'); if (!response.ok) throw new Error(); const health = await response.json();
+        $('telemetry').textContent = health.tracingEnabled ? 'Metadata-only tracing enabled' : 'Tracing not configured';
+      } catch { $('telemetry').textContent = 'Trace setup unavailable'; }
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,4 +1,7 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 return TemplateCopier.Run(args);
 
@@ -13,38 +16,69 @@ static class TemplateCopier
     {
         try
         {
-            var targetArgument = ParseTarget(args);
+            var catalog = ReadCatalog();
+            if (args.SequenceEqual(["--list"]))
+            {
+                Console.WriteLine(JsonSerializer.Serialize(catalog, TemplateJsonContext.Default.TemplateArray));
+                return 0;
+            }
+            var (templateId, targetArgument) = ParseArguments(args);
+            var template = catalog.SingleOrDefault(item => item.Id == templateId)
+                ?? throw new ArgumentException($"Unknown template '{templateId}'. Use --list for available templates.");
             var source = Path.GetFullPath(Path.Combine(
                 Path.GetDirectoryName(CurrentFile())!,
-                "..", "assets", "release-evidence-reviewer"));
+                "..", "assets", template.Id));
+            if (!File.Exists(Path.Combine(source, template.Project)))
+                throw new ArgumentException($"Template project is missing: {template.Project}");
             var target = CopyTemplate(source, targetArgument);
             Console.WriteLine(target);
             return 0;
         }
         catch (Exception error) when (error is ArgumentException
                                       or IOException
-                                      or UnauthorizedAccessException)
+                                      or UnauthorizedAccessException
+                                      or JsonException)
         {
             Console.Error.WriteLine($"copy-template: {error.Message}");
             return 2;
         }
     }
 
-    private static string ParseTarget(string[] args)
+    private static Template[] ReadCatalog()
     {
-        if (args.Length == 0)
+        var path = Path.Combine(Path.GetDirectoryName(CurrentFile())!, "..", "templates.json");
+        var catalog = JsonSerializer.Deserialize(File.ReadAllText(path), TemplateJsonContext.Default.TemplateArray);
+        if (catalog is not { Length: > 0 } ||
+            catalog.Any(item => item is null ||
+                !Regex.IsMatch(item.Id ?? "", "^[a-z0-9]+(-[a-z0-9]+)*$") ||
+                string.IsNullOrWhiteSpace(item.Name) ||
+                !Regex.IsMatch(item.Project ?? "", "^[A-Za-z][A-Za-z0-9]*[.]csproj$") ||
+                item.SmokeCases is not { Length: 3 } ||
+                item.SmokeCases.Any(id => !Regex.IsMatch(id ?? "", "^[a-z0-9]+(-[a-z0-9]+)*$")) ||
+                item.SmokeCases.Distinct(StringComparer.Ordinal).Count() != 3) ||
+            catalog.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != catalog.Length)
         {
-            return "release-evidence-reviewer";
+            throw new ArgumentException("Invalid template catalog.");
         }
+        return catalog;
+    }
 
-        if (args.Length == 2 && args[0] == "--target" &&
-            !string.IsNullOrWhiteSpace(args[1]))
+    private static (string TemplateId, string Target) ParseArguments(string[] args)
+    {
+        var templateId = "release-evidence-reviewer";
+        string? target = null;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < args.Length; index += 2)
         {
-            return args[1];
+            if (index + 1 >= args.Length ||
+                args[index] is not ("--template" or "--target") ||
+                !seen.Add(args[index]) || string.IsNullOrWhiteSpace(args[index + 1]) ||
+                args[index + 1].StartsWith("--", StringComparison.Ordinal))
+                throw new ArgumentException("Usage: dotnet run --file copy-template.cs -- [--template <id>] [--target <directory>] | --list");
+            if (args[index] == "--template") templateId = args[index + 1];
+            else target = args[index + 1];
         }
-
-        throw new ArgumentException(
-            "Usage: dotnet run --file copy-template.cs -- [--target <directory>]");
+        return (templateId, target ?? templateId);
     }
 
     private static string CopyTemplate(string source, string targetArgument)
@@ -196,4 +230,11 @@ static class TemplateCopier
     }
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;
+
 }
+
+internal sealed record Template(string Id, string Name, string Project, string[] SmokeCases);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(Template[]))]
+internal partial class TemplateJsonContext : JsonSerializerContext;
