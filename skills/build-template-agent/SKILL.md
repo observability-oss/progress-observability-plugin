@@ -10,8 +10,9 @@ Copy the selected finished asset without generating or customizing source.
 This workflow writes one new project folder. GitHub Copilot in agent mode is
 the default customer execution surface. It makes no MCP calls.
 
-Use [templates.json](templates.json) for the exact IDs, project filenames, and
-three smoke-case IDs. A platform handoff supplies the selected template ID:
+Use the bundled `templates.json` in this skill directory for the exact IDs,
+project filenames, and three smoke-case IDs. A platform handoff supplies the
+selected template ID:
 
 | ID | Data and experience |
 |---|---|

@@ -76,7 +76,8 @@ public sealed class AgentRuntime(IChatClient chatClient, DocumentStore store, st
             var source = request.SourceId is null ? null : store.Read(request.SourceId);
             var input = JsonSerializer.Serialize(new
             {
-                question = request.Question, previousTurn = request.PreviousTurn,
+                question = request.Question,
+                previousTurn = request.PreviousTurn,
                 sourceScope = source is null ? null : new { source.SourceId, source.Title, source.Heading },
             }, JsonSerializerOptions.Web);
             var answer = new StringBuilder();

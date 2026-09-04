@@ -89,8 +89,7 @@ class BuilderConfigContractTests(unittest.TestCase):
                 self.assertNotIn("PublicListenUrl", program)
                 self.assertIn("--urls http://127.0.0.1:0", instructions)
                 self.assertIn("Now listening on:", instructions)
-                self.assertIn("--urls http://127.0.0.1:0", command)
-                self.assertIn("Now listening on:", command)
+                self.assertIn(f"Use the `{name}` skill", command)
 
     def test_every_template_keeps_secret_and_ui_runtime_contract(self) -> None:
         for item in TEMPLATES:

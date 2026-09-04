@@ -47,6 +47,57 @@ internal static class RuntimeFlowTests
         {
             Check(error.TraceId.Length == 32, "failed call retains its own trace ID");
         }
+
+        client.Fail = false;
+        client.Answer = new string('x', 8_001);
+        try
+        {
+            await runtime.RunAsync("Bound the answer", "chat");
+            throw new InvalidOperationException("Runtime accepted an oversized answer.");
+        }
+        catch (AgentRunException error)
+        {
+            Check(error.InnerException?.Message == "agent_response_too_long",
+                "streamed answers stop at the fixed character ceiling");
+        }
+
+        client.Answer = "unreachable";
+        client.Delay = true;
+        var shortRuntime = new AgentRuntime(
+            client.AsAIAgent(instructions: AgentRuntime.ResponsePolicy),
+            "runtime-test",
+            TimeSpan.FromMilliseconds(100));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            await shortRuntime.RunAsync("Time out", "chat");
+            throw new InvalidOperationException("Runtime ignored its internal deadline.");
+        }
+        catch (AgentRunException)
+        {
+            Check(watch.Elapsed < TimeSpan.FromSeconds(5), "internal runtime deadline is bounded");
+        }
+
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        try
+        {
+            await runtime.RunAsync("Caller cancelled", "chat", cancelled.Token);
+            throw new InvalidOperationException("Runtime ignored caller cancellation.");
+        }
+        catch (OperationCanceledException)
+        {
+            assertions++;
+        }
+        try
+        {
+            _ = new AgentRuntime(client.AsAIAgent(), "runtime-test", TimeSpan.FromSeconds(46));
+            throw new InvalidOperationException("Runtime accepted a deadline above the fixed maximum.");
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            assertions++;
+        }
         return assertions;
 
         void Check(bool condition, string label)
@@ -77,6 +128,7 @@ internal static class RuntimeFlowTests
         public List<ChatMessage[]> Requests { get; } = [];
         public string Answer { get; set; } = "test answer";
         public bool Fail { get; set; }
+        public bool Delay { get; set; }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> messages, ChatOptions? options = null,
@@ -85,6 +137,7 @@ internal static class RuntimeFlowTests
             cancellationToken.ThrowIfCancellationRequested();
             Requests.Add(messages.ToArray());
             if (Fail) throw new InvalidOperationException("model failure for test");
+            if (Delay) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             await Task.CompletedTask;
             yield return new ChatResponseUpdate(ChatRole.Assistant, Answer) { MessageId = "test-message" };
         }

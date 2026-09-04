@@ -176,12 +176,21 @@ internal static class TelemetryTests
             Requests.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
             var first = Requests.Count == 1;
             object delta = first
-                ? new { role = "assistant", tool_calls = new[] { new { index = 0, id = Private + "_CALL_ID", type = "function",
-                    function = new { name = "ExploreMetrics", arguments = "{\"metric\":\"errors\",\"grouping\":\"service\"}" } } } }
+                ? new
+                {
+                    role = "assistant",
+                    tool_calls = new[] { new { index = 0, id = Private + "_CALL_ID", type = "function",
+                    function = new { name = "ExploreMetrics", arguments = "{\"metric\":\"errors\",\"grouping\":\"service\"}" } } }
+                }
                 : new { role = "assistant", content = Private + "_ANSWER Checkout contributes the most errors." };
             string Chunk(object[] choices, object? usage = null) => "data: " + JsonSerializer.Serialize(new
             {
-                id = Private + "_RESPONSE_ID", @object = "chat.completion.chunk", created = 0, model = "offline-response-model", choices, usage,
+                id = Private + "_RESPONSE_ID",
+                @object = "chat.completion.chunk",
+                created = 0,
+                model = "offline-response-model",
+                choices,
+                usage,
             }) + "\n\n";
             var events = Chunk([new { index = 0, delta, finish_reason = (string?)null }])
                 + Chunk([new { index = 0, delta = new { }, finish_reason = first ? "tool_calls" : "stop" }])
@@ -203,7 +212,7 @@ internal static class TelemetryTests
         }
         public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
             CancellationToken cancellationToken = default) => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, Private))
-                { ModelId = "offline-model", Usage = new() { InputTokenCount = 4 } });
+            { ModelId = "offline-model", Usage = new() { InputTokenCount = 4 } });
         public object? GetService(Type type, object? key = null) => key is null && type.IsInstanceOfType(this) ? this : null;
         public void Dispose() { }
     }

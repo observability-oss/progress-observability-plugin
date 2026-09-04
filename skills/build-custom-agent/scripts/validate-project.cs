@@ -18,6 +18,8 @@ static class ProjectValidator
         "ChatHistory.cs",
         "CustomAgent.csproj",
         "KnowledgeBase.cs",
+        "MetadataOnlyChatClient.cs",
+        "MetadataOnlyTool.cs",
         "Program.cs",
         "README.md",
         "SmokeRunner.cs",
@@ -37,8 +39,9 @@ static class ProjectValidator
         ("process execution", @"\bSystem\s*\.\s*Diagnostics\s*\.\s*Process\b|\bnew\s+Process\s*\(|\bProcess\s*\.\s*Start\b|\bProcessStartInfo\b"),
         ("direct filesystem access", @"\bSystem\s*\.\s*IO\b|\b(?:File|Directory)\s*\.|\b(?:FileInfo|DirectoryInfo|FileStream|StreamWriter|StreamReader)\b"),
         ("environment or secret access", @"\bEnvironment\s*\.|\b(?:ConnectionString|ApiKey|Password|Credential)\b"),
-        ("reflection or native code", @"\bDllImport\b|\bSystem\s*\.\s*Reflection\b|\bAssembly\s*\.\s*Load\b"),
+        ("reflection or native code", @"\bDllImport\b|\bSystem\s*\.\s*Reflection\b|\bAssembly\s*\.\s*Load\b|\bType\s*\.\s*GetType\b|\b(?:Activator|Marshal|NativeLibrary)\s*\."),
         ("additional model client", @"\b(?:AzureOpenAIClient|OpenAIClient|IChatClient)\b"),
+        ("alias or unsafe syntax", @"\busing\s+(?:static\b|[A-Za-z_][A-Za-z0-9_]*\s*=)|\bextern\s+alias\b|\bglobal\s*::|\bunsafe\b|\bstackalloc\b"),
     ];
 
     public static int Run(string[] args)
@@ -229,10 +232,11 @@ static class ProjectValidator
             var code = File.ReadAllText(Path.Combine(target, relative));
             var codeWithoutComments = StripComments(code);
             ValidateLocalSourceReferences(codeWithoutComments, relative, files);
+            var executableCode = MaskNonCode(code);
             foreach (var (label, pattern) in ForbiddenCodePatterns)
             {
                 if (Regex.IsMatch(
-                        codeWithoutComments,
+                        executableCode,
                         pattern,
                         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 {
@@ -304,7 +308,7 @@ static class ProjectValidator
         using var assetDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(asset, "appsettings.json")));
         var root = targetDocument.RootElement;
         ValidateJsonSourceReferences(root, files);
-        RequireObjectProperties(root, "root", "Urls", "AzureOpenAI", "Agent", "Smoke");
+        RequireObjectProperties(root, "root", "Urls", "AzureOpenAI", "Content", "Agent", "Smoke");
 
         var expectedUrls = RequireString(assetDocument.RootElement, "Urls", 200);
         if (!string.Equals(RequireString(root, "Urls", 200), expectedUrls, StringComparison.Ordinal))
@@ -316,6 +320,8 @@ static class ProjectValidator
             RequireObject(assetDocument.RootElement, "AzureOpenAI"), "Deployment", 100);
         if (!string.Equals(RequireString(azure, "Deployment", 100), expectedDeployment, StringComparison.Ordinal))
             throw new InvalidDataException("AzureOpenAI:Deployment is fixed in this MVP.");
+
+        ValidateContentSources(root, files);
 
         var agent = RequireObject(root, "Agent");
         RequireObjectProperties(
@@ -365,6 +371,35 @@ static class ProjectValidator
             ValidateSmokeMarkers(expectedIds[index], markers);
         }
         if (smokeBaseline is not null) ValidateSmokeBaseline(target, smoke, smokeBaseline);
+    }
+
+    private static void ValidateContentSources(
+        JsonElement root,
+        IReadOnlyDictionary<string, string> files)
+    {
+        var content = RequireObject(root, "Content");
+        RequireObjectProperties(content, "Content", "Sources");
+        var configured = RequireObject(content, "Sources");
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in configured.EnumerateObject())
+        {
+            if (!declared.Add(property.Name) || !IsSupportedContent(property.Name) ||
+                !files.ContainsKey(property.Name))
+            {
+                throw new InvalidDataException(
+                    $"Content:Sources contains an unknown, duplicate, or unsupported path: {property.Name}");
+            }
+            if (property.Value.ValueKind != JsonValueKind.String ||
+                property.Value.GetString() is not ("mock" or "supplied"))
+            {
+                throw new InvalidDataException(
+                    $"Content source '{property.Name}' must have provenance 'mock' or 'supplied'.");
+            }
+        }
+
+        var actual = files.Keys.Where(IsSupportedContent).ToHashSet(StringComparer.Ordinal);
+        if (declared.Count is < 1 or > MaxContentFiles || !declared.SetEquals(actual))
+            throw new InvalidDataException("Content:Sources must declare every local content file exactly once.");
     }
 
     private static void ValidateSmokeBaseline(string target, JsonElement smoke, string baselineArgument)
@@ -455,10 +490,17 @@ static class ProjectValidator
         return values.Select(value => value.GetString()!.Trim()).ToArray();
     }
 
-    private static string StripComments(string source)
+    private static string StripComments(string source) => MaskSource(source, maskLiterals: false);
+
+    private static string MaskNonCode(string source) => MaskSource(source, maskLiterals: true);
+
+    // This is a defense-in-depth lexical lint, not a sandbox for arbitrary C#.
+    // It keeps line structure stable while excluding prose from API-name checks.
+    private static string MaskSource(string source, bool maskLiterals)
     {
         var result = source.ToCharArray();
         var state = LexicalState.Code;
+        var rawDelimiterLength = 0;
         for (var index = 0; index < source.Length; index++)
         {
             var current = source[index];
@@ -476,13 +518,22 @@ static class ProjectValidator
                     state = LexicalState.BlockComment;
                     break;
                 case LexicalState.Code when current == '@' && next == '"':
+                    if (maskLiterals) result[index] = result[index + 1] = ' ';
                     index++;
                     state = LexicalState.VerbatimString;
                     break;
+                case LexicalState.Code when current == '"' && CountRun(source, index, '"') >= 3:
+                    rawDelimiterLength = CountRun(source, index, '"');
+                    if (maskLiterals) Mask(result, index, rawDelimiterLength);
+                    index += rawDelimiterLength - 1;
+                    state = LexicalState.RawString;
+                    break;
                 case LexicalState.Code when current == '"':
+                    if (maskLiterals) result[index] = ' ';
                     state = LexicalState.String;
                     break;
                 case LexicalState.Code when current == '\'':
+                    if (maskLiterals) result[index] = ' ';
                     state = LexicalState.Character;
                     break;
                 case LexicalState.LineComment:
@@ -499,20 +550,60 @@ static class ProjectValidator
                     }
                     break;
                 case LexicalState.String:
-                    if (current == '\\') index++;
+                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
+                    if (current == '\\' && index + 1 < source.Length)
+                    {
+                        index++;
+                        if (maskLiterals && source[index] is not ('\r' or '\n')) result[index] = ' ';
+                    }
                     else if (current == '"') state = LexicalState.Code;
                     break;
                 case LexicalState.VerbatimString:
-                    if (current == '"' && next == '"') index++;
+                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
+                    if (current == '"' && next == '"')
+                    {
+                        index++;
+                        if (maskLiterals) result[index] = ' ';
+                    }
                     else if (current == '"') state = LexicalState.Code;
                     break;
                 case LexicalState.Character:
-                    if (current == '\\') index++;
+                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
+                    if (current == '\\' && index + 1 < source.Length)
+                    {
+                        index++;
+                        if (maskLiterals && source[index] is not ('\r' or '\n')) result[index] = ' ';
+                    }
                     else if (current == '\'') state = LexicalState.Code;
+                    break;
+                case LexicalState.RawString:
+                    var quoteRun = current == '"' ? CountRun(source, index, '"') : 0;
+                    if (quoteRun >= rawDelimiterLength)
+                    {
+                        if (maskLiterals) Mask(result, index, quoteRun);
+                        index += quoteRun - 1;
+                        state = LexicalState.Code;
+                    }
+                    else if (maskLiterals && current is not ('\r' or '\n'))
+                    {
+                        result[index] = ' ';
+                    }
                     break;
             }
         }
         return new string(result);
+
+        static int CountRun(string text, int start, char value)
+        {
+            var count = 0;
+            while (start + count < text.Length && text[start + count] == value) count++;
+            return count;
+        }
+
+        static void Mask(char[] text, int start, int length)
+        {
+            for (var offset = 0; offset < length; offset++) text[start + offset] = ' ';
+        }
     }
 
     private static void RejectSymlinkPathComponents(string path, string label)
@@ -577,6 +668,6 @@ static class ProjectValidator
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;
 
-    private enum LexicalState { Code, LineComment, BlockComment, String, VerbatimString, Character }
+    private enum LexicalState { Code, LineComment, BlockComment, String, VerbatimString, RawString, Character }
     private sealed record ContentSummary(int Count, long TotalBytes);
 }

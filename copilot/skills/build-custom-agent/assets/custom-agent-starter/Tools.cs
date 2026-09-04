@@ -8,7 +8,7 @@ namespace CustomAgent;
 /// </summary>
 public sealed class AssistantTools(KnowledgeBase knowledgeBase)
 {
-    [Description("Search local Markdown, text, JSON, and CSV prototype content. Results identify their source and whether they are simulated.")]
+    [Description("Search bundled Markdown, text, JSON, and CSV prototype content. Results identify the source and whether it is mock or supplied.")]
     public string SearchLocalContent(
         [Description("The question or keywords to find in local prototype content.")] string query)
         => knowledgeBase.Search(query);
@@ -18,8 +18,8 @@ public sealed class AssistantTools(KnowledgeBase knowledgeBase)
         [Description("The source label returned by SearchLocalContent.")] string source)
         => knowledgeBase.Read(source);
 
-    [Description("Look up a record only in synthetic local JSON or CSV data. This never contacts or updates a live system.")]
+    [Description("Look up a record only in bundled JSON or CSV data. Results identify whether the source is mock or supplied; this never contacts or updates a live system.")]
     public string LookupLocalRecord(
-        [Description("A record identifier or keywords to find in synthetic local data.")] string query)
+        [Description("A record identifier or keywords to find in bundled structured data.")] string query)
         => knowledgeBase.SearchData(query);
 }

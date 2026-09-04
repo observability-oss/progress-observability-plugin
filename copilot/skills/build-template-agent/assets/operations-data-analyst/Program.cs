@@ -13,7 +13,9 @@ public static class Program
         var smokeMode = args.Contains("--smoke", StringComparer.Ordinal);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            Args = args, ContentRootPath = AppContext.BaseDirectory, WebRootPath = "wwwroot",
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory,
+            WebRootPath = "wwwroot",
         });
         builder.Configuration.AddUserSecrets<AgentMarker>(optional: true).AddEnvironmentVariables();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
@@ -33,7 +35,10 @@ public static class Program
         if (tracingEnabled)
             ObservabilityTracer.Initialize(new ObservabilityOptions
             {
-                AppName = appName, ApiKey = observabilityKey!, RecordInputs = false, RecordOutputs = false,
+                AppName = appName,
+                ApiKey = observabilityKey!,
+                RecordInputs = false,
+                RecordOutputs = false,
                 AdditionalAttributes = new Dictionary<string, object> { ["agent.template.id"] = "operations-data-analyst" },
             });
         else Console.Error.WriteLine("Progress Observability tracing is disabled: Progress:Observability:ApiKey is not configured.");
@@ -62,16 +67,18 @@ public static class Program
             app.UseStaticFiles();
             app.MapGet("/api/health", () => Results.Ok(new
             {
-                status = "ready", templateId = "operations-data-analyst", rowsLoaded = metrics.RowCount,
-                dataSource = metrics.SourcePath, dataFingerprint = metrics.Fingerprint,
-                datasetStart = metrics.Start, datasetEnd = metrics.End, services = metrics.Services,
-                syntheticData = true, tracingEnabled, telemetryContentCaptureEnabled = false,
+                status = "ready",
+                templateId = "operations-data-analyst",
+                rowsLoaded = metrics.RowCount,
+                dataSource = metrics.SourcePath,
+                dataFingerprint = metrics.Fingerprint,
+                datasetStart = metrics.Start,
+                datasetEnd = metrics.End,
+                services = metrics.Services,
+                syntheticData = true,
+                tracingEnabled,
+                telemetryContentCaptureEnabled = false,
             }));
-            app.MapGet("/api/data", (string? service, string? start, string? end) =>
-            {
-                var result = metrics.Dashboard(service, start, end);
-                return result.Status == "invalid" ? Results.BadRequest(result) : Results.Ok(result);
-            });
             app.MapPost("/api/analyze", async (AnalysisRequest? request, CancellationToken cancellationToken) =>
             {
                 if (request is null) return Results.BadRequest(new { error = "question_required" });

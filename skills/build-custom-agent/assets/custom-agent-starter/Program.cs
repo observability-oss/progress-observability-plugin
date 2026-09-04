@@ -71,18 +71,38 @@ public static class Program
 
         try
         {
-            var knowledgeBase = new KnowledgeBase("docs", "data");
+            var knowledgeBase = new KnowledgeBase(
+                AppContext.BaseDirectory,
+                builder.Configuration.GetSection("Content:Sources"));
             var azureClient = string.IsNullOrWhiteSpace(azureKey)
                 ? new AzureOpenAIClient(azureEndpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(azureEndpoint, new AzureKeyCredential(azureKey));
 
-            IChatClient chatClient = azureClient.GetChatClient(deployment).AsIChatClient();
-            if (tracingEnabled) chatClient = chatClient.AddObservability();
-
-            var agent = chatClient.AsAIAgent(
-                instructions: definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
-                name: definition.ServiceSlug,
-                tools: definition.CreateTools(knowledgeBase));
+            IChatClient providerClient = azureClient.GetChatClient(deployment).AsIChatClient();
+            IChatClient tracedClient = tracingEnabled
+                ? new MetadataOnlyChatClient(providerClient, deployment, definition.ServiceSlug)
+                : providerClient;
+            var boundedClient = new FunctionInvokingChatClient(tracedClient)
+            {
+                MaximumIterationsPerRequest = 3,
+                MaximumConsecutiveErrorsPerRequest = 0,
+                AllowConcurrentInvocation = false,
+                IncludeDetailedErrors = false,
+            };
+            var agent = boundedClient.AsAIAgent(new ChatClientAgentOptions
+            {
+                Name = definition.ServiceSlug,
+                UseProvidedChatClientAsIs = true,
+                ChatOptions = new ChatOptions
+                {
+                    Instructions = definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
+                    Tools = MetadataOnlyTool.Wrap(
+                        definition.ServiceSlug,
+                        definition.CreateTools(knowledgeBase)),
+                    MaxOutputTokens = 800,
+                    AllowMultipleToolCalls = false,
+                },
+            });
             var runtime = new AgentRuntime(agent, definition.ServiceSlug);
 
             if (smokeMode)

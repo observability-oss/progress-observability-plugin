@@ -16,14 +16,78 @@ public sealed class KnowledgeBase
         new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ContentChunk> _chunks = [];
 
-    public KnowledgeBase(string docsFolder, string dataFolder)
+    public KnowledgeBase(string contentRoot, IConfigurationSection sourceConfiguration)
     {
-        LoadFolder(docsFolder, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".md", ".txt" }, false);
-        LoadFolder(dataFolder, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".json", ".csv" }, true);
-        if (_sources.Count > MaxFiles)
-            throw new InvalidOperationException($"Local content may contain at most {MaxFiles} files.");
-        if (_sources.Values.Sum(source => source.Size) > MaxTotalBytes)
-            throw new InvalidOperationException("Local content exceeds the 5 MiB total limit.");
+        var root = Path.GetFullPath(contentRoot);
+        var declared = ReadDeclaredSources(sourceConfiguration);
+        var loaded = new HashSet<string>(StringComparer.Ordinal);
+        var totalBytes = 0L;
+
+        LoadFolder(root, "docs", new HashSet<string>(StringComparer.Ordinal) { ".md", ".txt" }, false);
+        LoadFolder(root, "data", new HashSet<string>(StringComparer.Ordinal) { ".json", ".csv" }, true);
+
+        if (_sources.Count == 0)
+            throw new InvalidOperationException("At least one declared local content source is required.");
+        var unmatched = declared.Keys
+            .Where(label => !loaded.Contains(label))
+            .Order(StringComparer.Ordinal)
+            .FirstOrDefault();
+        if (unmatched is not null)
+            throw new InvalidOperationException($"Declared local content source was not loaded: {unmatched}");
+
+        void LoadFolder(
+            string baseDirectory,
+            string folder,
+            HashSet<string> allowedExtensions,
+            bool isStructuredData)
+        {
+            var directory = Path.Combine(baseDirectory, folder);
+            if (!Directory.Exists(directory)) return;
+            if (File.GetAttributes(directory).HasFlag(FileAttributes.ReparsePoint))
+                throw new InvalidOperationException($"Local content directory must not be a link: {folder}");
+
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
+                IgnoreInaccessible = false,
+            };
+            foreach (var path in Directory.EnumerateFiles(directory, "*", options)
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                if (!allowedExtensions.Contains(Path.GetExtension(path))) continue;
+                var relative = Path.GetRelativePath(directory, path).Replace('\\', '/');
+                if (relative.Split('/').Any(segment => segment.StartsWith(".", StringComparison.Ordinal)))
+                    continue;
+
+                var label = $"{folder}/{relative}";
+                if (!declared.TryGetValue(label, out var provenance))
+                    throw new InvalidOperationException($"Local content source is missing provenance: {label}");
+
+                var info = new FileInfo(path);
+                if (info.Length > MaxFileBytes)
+                    throw new InvalidOperationException($"Local content file '{label}' exceeds the 1 MiB limit.");
+                if (_sources.Count >= MaxFiles)
+                    throw new InvalidOperationException($"Local content may contain at most {MaxFiles} files.");
+                if (info.Length > MaxTotalBytes - totalBytes)
+                    throw new InvalidOperationException("Local content exceeds the 5 MiB total limit.");
+
+                totalBytes += info.Length;
+                var content = File.ReadAllText(path);
+                var source = new SourceDocument(label, content, provenance);
+                _sources.Add(label, source);
+                loaded.Add(label);
+                foreach (var chunk in SplitIntoChunks(content))
+                {
+                    _chunks.Add(new ContentChunk(
+                        label,
+                        chunk.Section,
+                        chunk.Content,
+                        provenance,
+                        isStructuredData));
+                }
+            }
+        }
     }
 
     public int SourceCount => _sources.Count;
@@ -32,7 +96,7 @@ public sealed class KnowledgeBase
         => SearchChunks(query, _chunks, "local_content", topK);
 
     public string SearchData(string query, int topK = 3)
-        => SearchChunks(query, _chunks.Where(chunk => chunk.IsSyntheticData), "simulated_data", topK);
+        => SearchChunks(query, _chunks.Where(chunk => chunk.IsStructuredData), "structured_data", topK);
 
     public string Read(string sourceLabel)
     {
@@ -43,53 +107,48 @@ public sealed class KnowledgeBase
         if (source is null)
             return "status=not_found; reason=local_source_missing";
 
-        var mode = source.IsSyntheticData ? "simulated" : "local_prototype";
         var content = source.Content.Length <= MaxReadCharacters
             ? source.Content
             : source.Content[..MaxReadCharacters] + "\n[truncated]";
-        // Keep original headings with the full document so the agent can verify
-        // exact citations and surrounding qualifications after a search.
-        return $"status=found; mode={mode}; source={source.Label}; section=full_document; " +
-               $"content_complete={source.Content.Length <= MaxReadCharacters}\n{content}";
+        return $"status=found; provenance={ProvenanceLabel(source.Provenance)}; source={source.Label}; " +
+               $"section=full_document; content_complete={source.Content.Length <= MaxReadCharacters}\n{content}";
     }
 
-    private void LoadFolder(string folder, HashSet<string> allowedExtensions, bool isSyntheticData)
+    private static Dictionary<string, SourceProvenance> ReadDeclaredSources(
+        IConfigurationSection configuration)
     {
-        var directory = ResolveContentDirectory(folder);
-        if (!Directory.Exists(directory)) return;
-
-        var options = new EnumerationOptions
+        var result = new Dictionary<string, SourceProvenance>(StringComparer.Ordinal);
+        foreach (var item in configuration.GetChildren())
         {
-            RecurseSubdirectories = true,
-            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
-            IgnoreInaccessible = false,
-        };
-        foreach (var path in Directory.EnumerateFiles(directory, "*", options)
-                     .OrderBy(value => value, StringComparer.Ordinal))
-        {
-            if (!allowedExtensions.Contains(Path.GetExtension(path))) continue;
-            var relative = Path.GetRelativePath(directory, path).Replace('\\', '/');
-            if (relative.Split('/').Any(segment => segment.StartsWith(".", StringComparison.Ordinal)))
-                continue;
-
-            var info = new FileInfo(path);
-            if (info.Length > MaxFileBytes)
-                throw new InvalidOperationException($"Local content file '{relative}' exceeds the 1 MiB limit.");
-
-            var label = $"{folder}/{relative}";
-            var content = File.ReadAllText(path);
-            var source = new SourceDocument(label, content, info.Length, isSyntheticData);
-            _sources.Add(label, source);
-            foreach (var chunk in SplitIntoChunks(content))
-                _chunks.Add(new ContentChunk(label, chunk.Section, chunk.Content, isSyntheticData));
+            var label = item.Key;
+            if (!IsValidSourceLabel(label) || !result.TryAdd(label, ParseProvenance(item.Value, label)))
+                throw new InvalidOperationException($"Invalid or duplicate local content source declaration: {label}");
         }
+        if (result.Count is < 1 or > MaxFiles)
+            throw new InvalidOperationException($"Content:Sources must declare 1 to {MaxFiles} local files.");
+        return result;
     }
 
-    private static string ResolveContentDirectory(string folder)
+    private static SourceProvenance ParseProvenance(string? value, string label) => value switch
     {
-        var outputPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, folder));
-        if (Directory.Exists(outputPath)) return outputPath;
-        return Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), folder));
+        "mock" => SourceProvenance.Mock,
+        "supplied" => SourceProvenance.Supplied,
+        _ => throw new InvalidOperationException(
+            $"Content source '{label}' must have provenance 'mock' or 'supplied'."),
+    };
+
+    private static bool IsValidSourceLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label) || label != label.Trim() || label.Contains('\\') ||
+            Path.IsPathRooted(label) || label.Split('/').Any(segment =>
+                segment.Length == 0 || segment is "." or ".." || segment.StartsWith(".", StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(label);
+        return label.StartsWith("docs/", StringComparison.Ordinal) && extension is ".md" or ".txt" ||
+               label.StartsWith("data/", StringComparison.Ordinal) && extension is ".json" or ".csv";
     }
 
     private static IEnumerable<SectionChunk> SplitIntoChunks(string content)
@@ -118,8 +177,11 @@ public sealed class KnowledgeBase
     {
         var paragraph = string.Join('\n', lines).Trim();
         for (var offset = 0; offset < paragraph.Length; offset += MaxChunkCharacters)
-            yield return new SectionChunk(section, paragraph.Substring(
-                offset, Math.Min(MaxChunkCharacters, paragraph.Length - offset)));
+        {
+            yield return new SectionChunk(
+                section,
+                paragraph.Substring(offset, Math.Min(MaxChunkCharacters, paragraph.Length - offset)));
+        }
     }
 
     private static string SearchChunks(
@@ -150,10 +212,8 @@ public sealed class KnowledgeBase
             return $"status=not_found; reason=no_matching_{emptyReason}";
 
         return string.Join("\n\n", hits.Select(hit =>
-        {
-            var mode = hit.Chunk.IsSyntheticData ? "simulated" : "local_prototype";
-            return $"status=found; mode={mode}; source={hit.Chunk.Source}; section={hit.Chunk.Section}\n{hit.Chunk.Content}";
-        }));
+            $"status=found; provenance={ProvenanceLabel(hit.Chunk.Provenance)}; " +
+            $"source={hit.Chunk.Source}; section={hit.Chunk.Section}\n{hit.Chunk.Content}"));
     }
 
     private static string[] QueryTerms(string query)
@@ -173,7 +233,19 @@ public sealed class KnowledgeBase
     private static string NormalizeLabel(string value)
         => value.Trim().Replace('\\', '/').TrimStart('.', '/');
 
-    private sealed record SourceDocument(string Label, string Content, long Size, bool IsSyntheticData);
+    private static string ProvenanceLabel(SourceProvenance provenance)
+        => provenance == SourceProvenance.Mock ? "mock" : "supplied";
+
+    private enum SourceProvenance { Mock, Supplied }
+    private sealed record SourceDocument(
+        string Label,
+        string Content,
+        SourceProvenance Provenance);
     private sealed record SectionChunk(string Section, string Content);
-    private sealed record ContentChunk(string Source, string Section, string Content, bool IsSyntheticData);
+    private sealed record ContentChunk(
+        string Source,
+        string Section,
+        string Content,
+        SourceProvenance Provenance,
+        bool IsStructuredData);
 }

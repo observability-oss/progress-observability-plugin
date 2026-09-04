@@ -89,7 +89,8 @@ internal static class PrivacyTests
     {
         public int Calls { get; private set; }
         private static ChatResponse Tool(string name, string argument, string value) => new(new ChatMessage(ChatRole.Assistant,
-            [new FunctionCallContent("synthetic-" + name, name, new Dictionary<string, object?> { [argument] = value })])) { FinishReason = ChatFinishReason.ToolCalls };
+            [new FunctionCallContent("synthetic-" + name, name, new Dictionary<string, object?> { [argument] = value })]))
+        { FinishReason = ChatFinishReason.ToolCalls };
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             Calls++;

@@ -1,12 +1,12 @@
 # Progress Observability MCP — shared contract
 
 > This summary was derived from a verbatim production `tools/list` capture for
-> both key scopes. In the full plugin checkout, that empirical source is the
-> repo-level `references/mcp-schema.json` file.
+> both key scopes. The empirical source is the repo-level
+> [`references/mcp-schema.json`](https://github.com/observability-oss/progress-observability-plugin/blob/main/references/mcp-schema.json).
 
-Every skill in this plugin reads data through the `progress-observability` MCP
-server. This file is the single source of truth for the tools, their limits, and
-the safety rules. Skills reference it instead of restating it.
+Platform-reading skills use the `progress-observability` MCP server. This file
+is the single source of truth for its tools, limits, and safety rules; skills
+that read platform data reference it instead of restating it.
 
 <!-- copilot:start -->
 Endpoint: `https://mcp.observability.progress.com/mcp` — **remote, read-only**.

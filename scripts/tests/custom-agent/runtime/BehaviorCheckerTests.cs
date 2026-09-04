@@ -101,10 +101,12 @@ internal static class BehaviorCheckerTests
         }))
         using (var client = new HttpClient(handler))
         {
-            var options = Options(checks) with { Deadline = DateTimeOffset.UtcNow.AddMilliseconds(100) };
+            // Leave enough time for cold/JIT-heavy CI to dispatch the request; the
+            // handler then proves the shared deadline beats its 60-second timeout.
+            var options = Options(checks) with { Deadline = DateTimeOffset.UtcNow.AddSeconds(1) };
             var watch = Stopwatch.StartNew();
             var report = await BehaviorChecker.CheckAsync(client, options);
-            Check(report.Results[0].Error == "deadline" && watch.Elapsed < TimeSpan.FromSeconds(3), "remaining deadline wins over 60-second request timeout");
+            Check(report.Results[0].Error == "deadline" && watch.Elapsed < TimeSpan.FromSeconds(10), "remaining deadline wins over 60-second request timeout");
             Check(report.DeadlineUtc.EqualsExact(options.Deadline), "incomplete report keeps original deadline");
             Check(report.RemainingSeconds == 0, "deadline cancellation has no remaining time");
             Check(handler.Requests.Count == 1 && report.Results.Skip(1).All(result => result.Status == "untested"), "deadline prevents remaining requests");

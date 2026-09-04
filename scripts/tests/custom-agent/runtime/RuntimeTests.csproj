@@ -7,7 +7,7 @@
     <DefineConstants>$(DefineConstants);BEHAVIOR_CHECK_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../assets/custom-agent-starter/CustomAgent.csproj" />
-    <Compile Include="../../scripts/check-behavior.cs" Link="BehaviorChecker.cs" />
+    <ProjectReference Include="../../../../skills/build-custom-agent/assets/custom-agent-starter/CustomAgent.csproj" />
+    <Compile Include="../../../../skills/build-custom-agent/scripts/check-behavior.cs" Link="BehaviorChecker.cs" />
   </ItemGroup>
 </Project>

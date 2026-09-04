@@ -27,8 +27,13 @@ public sealed class SmokeRunner(AgentRuntime runtime, IConfiguration configurati
                 var reply = await runtime.RunAsync(prompt, item.Id, cancellationToken);
                 var ok = item.Check(reply) && reply.TraceId.Length == 32;
                 passed &= ok;
-                results.Add(new { caseId = item.Id, status = ok ? "pass" : "fail", traceId = reply.TraceId,
-                    reason = ok ? "expected_behavior_observed" : "grounding_or_result_mismatch" });
+                results.Add(new
+                {
+                    caseId = item.Id,
+                    status = ok ? "pass" : "fail",
+                    traceId = reply.TraceId,
+                    reason = ok ? "expected_behavior_observed" : "grounding_or_result_mismatch"
+                });
             }
             catch (AgentRunException ex)
             {

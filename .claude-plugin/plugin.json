@@ -1,7 +1,7 @@
 {
   "name": "progress-observability",
   "version": "1.2.0",
-  "description": "Observe, debug, cost-manage, and evaluate AI systems from the Progress Observability Platform: run a finished .NET 10 agent template, build a bounded custom prototype or integration plan, instrument or scaffold agents, verify traces, triage failures, report cost and coverage, and generate research-grounded LLM-as-a-Judge evals over MCP.",
+  "description": "Build or instrument AI agents locally, then use Progress Observability platform data to verify traces, triage failures, report cost and coverage, and generate research-grounded LLM-as-a-Judge evals over MCP.",
   "author": {
     "name": "observability-oss"
   },

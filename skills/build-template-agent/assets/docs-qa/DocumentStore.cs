@@ -56,12 +56,12 @@ public sealed class DocumentStore
         var terms = Tokenize(query);
         if (terms.Count == 0) return [];
         return _sections.Values.Where(section => sourceId is null || section.SourceId == sourceId).Select(section => new
-            {
-                Section = section,
-                Score = Tokenize(section.Heading).Intersect(terms).Count() * 3 +
+        {
+            Section = section,
+            Score = Tokenize(section.Heading).Intersect(terms).Count() * 3 +
                         Tokenize(section.Title).Intersect(terms).Count() * 2 +
                         Tokenize(section.Excerpt).Intersect(terms).Count(),
-            })
+        })
             .Where(hit => hit.Score > 0)
             .OrderByDescending(hit => hit.Score)
             .ThenBy(hit => hit.Section.SourceId, StringComparer.Ordinal)

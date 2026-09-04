@@ -31,8 +31,11 @@ internal static class BehaviorChecker
             var options = Parse(args);
             using var client = new HttpClient(new HttpClientHandler
             {
-                AllowAutoRedirect = false, UseProxy = false, UseCookies = false,
-            }) { Timeout = Timeout.InfiniteTimeSpan };
+                AllowAutoRedirect = false,
+                UseProxy = false,
+                UseCookies = false,
+            })
+            { Timeout = Timeout.InfiniteTimeSpan };
             var report = await CheckAsync(client, options);
             Console.WriteLine("BEHAVIOR_REPORT=" + JsonSerializer.Serialize(report, BehaviorJson.Default.Report));
             return report.Status == "completed" ? 0 : 1;
@@ -109,7 +112,8 @@ internal static class BehaviorChecker
                 continue;
             }
             var timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            using var cancellation = new CancellationTokenSource(remaining < timeout ? remaining : timeout);
+            var deadlineLimitsRequest = remaining <= timeout;
+            using var cancellation = new CancellationTokenSource(deadlineLimitsRequest ? remaining : timeout);
             Turn[] history = i == 1 ? [new(options.Checks.Task, results[0].Answer!)] : [];
             try
             {
@@ -136,7 +140,7 @@ internal static class BehaviorChecker
             }
             catch (OperationCanceledException)
             {
-                results.Add(new(names[i], "incomplete", Error: DateTimeOffset.UtcNow >= options.Deadline ? "deadline" : "timeout"));
+                results.Add(new(names[i], "incomplete", Error: deadlineLimitsRequest ? "deadline" : "timeout"));
             }
             catch (JsonException)
             {

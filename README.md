@@ -196,9 +196,9 @@ filenames and each template's three smoke cases. Default destination:
 For a platform-to-IDE handoff, supply the selected ID explicitly, for example:
 `Use build-template-agent with template "ticket-triage".`
 
-See the [initial validation report](./planning/prebuilt-template-validation.md)
-and [interaction upgrade report](./planning/prebuilt-template-ux-validation.md)
-for CLI sessions, browser checks, regression coverage, and verification boundaries.
+The catalog and each copied project's README define the maintained template
+contract. Packaging and credential-free runtime coverage live under
+[`scripts/tests`](./scripts/tests/).
 
 ### Optional custom-prototype review
 
@@ -216,7 +216,8 @@ The [optional phase](./skills/build-custom-agent/references/try-and-refine.md)
 is isolated from the starter/runtime. Maintainers can disable it globally by
 changing the single default in `skills/build-custom-agent/SKILL.md`. To remove
 it, remove that skill's preference paragraph and optional-phase section, this
-note, the reference and `scripts/check-behavior.cs` (and its developer test wiring),
+note, the reference and `scripts/check-behavior.cs` (and its maintainer coverage
+under `scripts/tests/custom-agent/`),
 then regenerate the Copilot bundle with
 `python3 scripts/build_copilot.py`. No app code or required checks depend on it.
 

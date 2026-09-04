@@ -22,6 +22,12 @@ var fixtureFiles = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "do
 var fixtureHashes = fixtureFiles.Select(path => SHA256.HashData(File.ReadAllBytes(path))).ToArray();
 var knowledge = new KnowledgeBase("docs");
 Check(knowledge.DocumentCount == 3, "three bundled documents loaded");
+Check(fixtureFiles.All(path => File.ReadAllText(path).Contains("Fictional fixture:", StringComparison.Ordinal)),
+    "every bundled document labels its fictional synthetic fixture data");
+Check(knowledge.TryRead("project-orion", out var orionFixture) &&
+    orionFixture.Contains("Rollback owner: Release Engineering on-call", StringComparison.Ordinal) &&
+    !orionFixture.Contains("Mina Shah", StringComparison.Ordinal),
+    "ready fixture uses an explicit non-person rollback-owner role");
 var tools = new AssistantTools(knowledge);
 Check(tools.CheckReleaseReadiness("Atlas").Contains("status=Blocked"), "Atlas remains blocked");
 Check(tools.ReviewedProject == "Atlas" && tools.ToolsUsed.SequenceEqual(["CheckReleaseReadiness"]), "project context comes from actual lookup");

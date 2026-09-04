@@ -83,7 +83,7 @@ internal static class RuntimeTests
             parallel[0].TraceId != parallel[1].TraceId && parallel[0].Evidence.Count == 1 && parallel[1].Evidence.Count == 1,
             "concurrent runs isolate service scope, tool evidence and trace");
 
-        using var smokeClient = new AnalystClient { IncludeOutliers = true };
+        using var smokeClient = new AnalystClient { IncludeOutliers = true, SemanticSmokeAnswers = true };
         using var output = new StringWriter();
         var original = Console.Out;
         int smokeCode;
@@ -101,6 +101,14 @@ internal static class RuntimeTests
         Check(smokeClient.Requests == 6 && smokeClient.NonStreamingRequests == 0, "three smoke cases each use exactly two model calls");
         Check(cases.Select(item => item.GetProperty("caseId").GetString()).Order().SequenceEqual(expectedIds), "smoke IDs remain canonical");
         Check(cases.All(item => item.GetProperty("tools").EnumerateArray().Single().GetString() == "ExploreMetrics"), "smoke reports the actual agent tool rather than internal helpers");
+        using var mismatchedSmokeClient = new AnalystClient { IncludeOutliers = true };
+        try
+        {
+            Console.SetOut(TextWriter.Null);
+            Check(await new SmokeRunner(Workflow(mismatchedSmokeClient)).RunAsync() == 1,
+                "numeric smoke rejects generic prose even when its typed tool evidence is correct");
+        }
+        finally { Console.SetOut(original); }
         return count;
     }
 }
@@ -113,6 +121,7 @@ internal sealed class AnalystClient : IChatClient
     public string Mode { get; set; } = "normal";
     public string Answer { get; set; } = "The synthetic metrics show the selected values. The chart shows the relevant comparison.";
     public bool IncludeOutliers { get; set; }
+    public bool SemanticSmokeAnswers { get; set; }
     public Func<JsonElement, Dictionary<string, object?>>? Plan { get; set; }
     public List<string?> TraceIds { get; } = [];
     public List<int?> OutputLimits { get; } = [];
@@ -144,11 +153,17 @@ internal sealed class AnalystClient : IChatClient
         }
         else
         {
-            var answer = Mode == "large-answer" ? new string('x', 6001) : Answer;
+            var answer = Mode == "large-answer" ? new string('x', 6001) : SemanticSmokeAnswers ? SmokeAnswer(json.RootElement) : Answer;
             yield return new(ChatRole.Assistant, answer[..(answer.Length / 2)]) { MessageId = "answer" };
             yield return new(ChatRole.Assistant, answer[(answer.Length / 2)..]) { MessageId = "answer" };
         }
     }
+    private static string SmokeAnswer(JsonElement context) =>
+        context.GetProperty("currentView").GetProperty("start").GetString() == "2026-09-01"
+            ? "No matching data exists for this selection."
+            : context.GetProperty("currentView").GetProperty("grouping").GetString() == "period"
+                ? "The after period has a 10% error rate."
+                : "The selection has a 0.99% error rate.";
     public object? GetService(Type serviceType, object? serviceKey = null) => serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
     public void Dispose() { }
 }
