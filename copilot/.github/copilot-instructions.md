@@ -585,13 +585,23 @@ Do not ask domain/design questions or route to the custom builder.
    dotnet run --project <target>/<catalog-project> --no-build -- --urls http://127.0.0.1:0
    ```
 
-   Keep that process running and wait for its own standard
-   `Now listening on: http://127.0.0.1:<port>` line. Verify `/api/health` only
-   at that exact URL. Never guess, scan, or reuse a default or nearby port. If
-   the process exits or never prints the listening line, the health gate fails.
-   Use the execution tool's background/session support; do not restart a healthy
-   process just to detach it. Keep any necessary launch log beside the requested
-   target, never in a shared `/tmp` filename.
+   Keep that process running and actively read its own standard
+   `Now listening on: http://127.0.0.1:<port>` line. In GitHub Copilot CLI,
+   launch `bash` with `mode: "async"` and `detach: true`, leaving stdout and
+   stderr attached to that session. When the launch returns a shell ID,
+   immediately call `read_bash` with the returned shell ID in the same turn
+   unless the URL is already present. Use short bounded reads for at most 30
+   seconds total and stop if the process exits. Do not wait for the server
+   command to complete, because a healthy server remains running, and do not
+   end the turn with a passive "Waiting..." status. On other hosts, use the
+   persistent-process mechanism and actively poll its output with the same
+   deadline; if its output is not readable, use one combined launch log beside
+   the requested target, never a shared `/tmp` filename.
+
+   Verify `/api/health` only at the exact reported URL. Never guess, scan, or
+   reuse a default or nearby port. A process exit or missing listening line at
+   the deadline fails the health gate. Never start a replacement because an
+   output read was incomplete, and never restart an already healthy process.
    Require HTTP 200 with `status=ready` from `/api/health` and HTTP 200 from `/`;
    a degraded health response is not a pass. Read HTTP results directly without
    creating health-check files (for example, `curl --fail --silent --show-error
@@ -746,12 +756,23 @@ Start the built app persistently on an OS-assigned loopback port:
 dotnet run --project <target>/CustomAgent.csproj --no-build -- --urls http://127.0.0.1:0
 ```
 
-In CLI use detached async `bash` and retain its process ID; otherwise use the
-host's persistent-process mechanism and disclose if it cannot outlive the
-session. Read this process's own `Now listening on: http://127.0.0.1:<port>`
-line and health-check only that process at `<url>/api/health`. Never guess or scan
-ports. An exited process,
-missing listen line, or failed health is a failed gate. Finally validate again:
+In GitHub Copilot CLI, launch `bash` with `mode: "async"` and `detach: true`,
+leaving stdout and stderr attached to that session. When the launch returns a
+shell ID, immediately call `read_bash` with the returned shell ID in the same
+turn unless the URL is already present. Use short bounded reads for at most 30
+seconds total and stop if the process exits. Do not wait for the server command
+to complete, because a healthy server remains running, and do not end the turn
+with a passive "Waiting..." status. On other hosts, use the persistent-process
+mechanism and actively poll its output with the same deadline; if its output is
+not readable, use one combined launch log beside the requested target, never a
+shared `/tmp` filename, and disclose if the process cannot outlive the session.
+
+Read only this process's own
+`Now listening on: http://127.0.0.1:<port>` line and health-check that exact
+process at `<url>/api/health`. Never guess or scan ports. A process exit,
+missing listen line at the deadline, or failed health is a failed gate. Never
+start a replacement because an output read was incomplete, and never restart
+an already healthy process. Finally validate again:
 
 ```bash
 dotnet run --file <skill-directory>/scripts/validate-project.cs -- --target <target> --smoke-baseline <snapshot>
