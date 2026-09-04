@@ -11,7 +11,7 @@
     button,input,select { font:inherit; }
     button { cursor:pointer; }
     button:disabled { cursor:wait; opacity:.65; }
-    button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #8ebba5; outline-offset:3px; }
+    button:focus-visible,input:focus-visible,select:focus-visible,.question-grounding a:focus-visible { outline:3px solid #8ebba5; outline-offset:3px; }
     header { padding:28px 38px 24px; border-bottom:1px solid var(--line); background:#fcfcf8; }
     .brand { display:flex; align-items:center; gap:10px; font-weight:750; }
     .mark { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; color:white; background:var(--green); font-size:17px; }
@@ -53,14 +53,15 @@
     .decision { display:flex; flex-wrap:wrap; gap:32px; margin:20px 0; }
     .decision span { display:block; font-size:12px; color:var(--muted); }
     .decision strong { display:block; margin-top:3px; font-size:23px; font-weight:650; }
-    #answer { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; color:#465650; margin:17px 0; }
+    #recommendation-answer,#question-answer { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; color:#465650; }
+    #recommendation-answer { margin:17px 0; }
     .evidence-list { padding:0; margin:10px 0 18px; list-style:none; font-size:13px; }
     .evidence-list li { display:flex; justify-content:space-between; align-items:start; gap:12px; padding:7px 0; border-bottom:1px solid #edf0ec; }
     .evidence-list small { color:var(--muted); font-size:11px; overflow-wrap:anywhere; text-align:right; }
     #missing-fields { background:#fff8e8; border-radius:8px; padding:13px 16px; margin:17px 0; font-size:13px; }
     #missing-fields ul { padding-left:20px; margin:6px 0 0; }
     .scenario-panel { margin:17px 0; padding:16px; border:1px solid #efdaad; border-radius:10px; background:#fffaf0; }
-    .scenario-panel p,.question-panel p { margin:5px 0 12px; color:var(--muted); font-size:12px; }
+    .scenario-panel p,#question-hint { margin:5px 0 12px; color:var(--muted); font-size:12px; }
     .scenario-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
     .scenario-fields label { display:block; font-size:12px; font-weight:650; }
     .scenario-fields select { display:block; width:100%; margin-top:5px; padding:9px; border:1px solid #d7c69d; border-radius:7px; background:#fff; color:var(--ink); }
@@ -70,7 +71,16 @@
     .question-panel label { display:block; font-weight:700; }
     .question-row { display:flex; gap:10px; }
     #question { min-width:0; flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:#fff; }
-    #answered-question { font-size:12px; color:var(--muted); overflow-wrap:anywhere; margin-top:16px; }
+    .question-progress { margin:15px 0 0; padding:11px 13px; border-radius:8px; background:var(--soft); color:var(--green); font-size:13px; }
+    .question-error { margin:15px 0 0; padding:11px 13px; border:1px solid #e5c3b9; border-radius:8px; background:#fff2ed; color:#873d29; font-size:13px; overflow-wrap:anywhere; }
+    .question-response { margin-top:17px; padding:16px; border:1px solid #c9dfd1; border-radius:10px; background:#f7faf7; scroll-margin:18px; }
+    .question-response:focus { outline:3px solid #8ebba5; outline-offset:3px; }
+    .question-response-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+    .question-response-heading h3 { margin:0; font-size:15px; }
+    #answered-question { font-size:12px; color:var(--muted); overflow-wrap:anywhere; margin:5px 0 0; }
+    #question-answer { margin:12px 0 0; }
+    .question-grounding { display:flex; flex-wrap:wrap; gap:5px 8px; margin:12px 0 0; color:var(--muted); font-size:12px; }
+    .question-grounding a { color:var(--green); font-weight:650; text-underline-offset:2px; }
     #policy-refs { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
     .source { padding:4px 8px; border-radius:5px; background:#f0f4ef; font:11px ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
     .trace { border-top:1px solid #edf0ec; margin-top:19px; padding-top:12px; color:var(--muted); font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
@@ -116,14 +126,25 @@
             <div id="missing-fields" hidden><strong>More information needed</strong><ul id="missing-list"></ul></div>
             <div id="scenario-summary" class="scenario-panel" hidden><strong>Temporary scenario · not saved</strong><p>The bundled ticket is unchanged. These supplied values apply only to this review:</p><ul id="scenario-values"></ul><button id="reset-scenario" class="secondary" type="button">Clear scenario · use bundled ticket</button></div>
             <form id="scenario-form" class="scenario-panel" hidden><strong>Try the missing intake facts</strong><p>Choose only values you know. Re-evaluation is a temporary scenario; it does not edit the ticket.</p><div id="scenario-fields" class="scenario-fields"></div><button id="reevaluate" class="secondary" type="submit">Re-evaluate</button></form>
-            <p id="answered-question" hidden></p>
-            <p id="answer"></p>
+            <p id="recommendation-answer" hidden></p>
             <div class="section-label">Documented evidence</div><ul id="evidence" class="evidence-list"></ul>
             <div class="section-label">Policy references</div><div id="policy-refs"></div>
             <div id="trace" class="trace"></div>
           </div>
         </section>
-        <form id="question-form" class="card question-panel"><label for="question">Ask about this ticket</label><p>For example: “Why P1?” Each question uses this ticket and its current temporary scenario only.</p><div class="question-row"><input id="question" maxlength="1000" placeholder="Why does this priority apply?" required autocomplete="off"><button id="ask" class="secondary" type="submit">Ask</button></div></form>
+        <form id="question-form" class="card question-panel" aria-busy="false">
+          <label id="question-label" for="question">Ask about this ticket</label>
+          <p id="question-hint">For example: “Why P1?” Each question uses this ticket and its current temporary scenario only.</p>
+          <div class="question-row"><input id="question" maxlength="1000" placeholder="Why does this priority apply?" required autocomplete="off" aria-describedby="question-hint"><button id="ask" class="secondary" type="submit">Ask</button></div>
+          <p id="question-progress" class="question-progress" role="status" hidden></p>
+          <p id="question-error" class="question-error" role="alert" hidden></p>
+          <section id="question-response" class="question-response" aria-labelledby="question-response-title" aria-describedby="answered-question question-answer question-grounding-copy" tabindex="-1" hidden>
+            <div class="question-response-heading"><h3 id="question-response-title">Answer to your question</h3><span class="pill green">ANSWERED</span></div>
+            <p id="answered-question"></p>
+            <p id="question-answer"></p>
+            <p class="question-grounding"><span id="question-grounding-copy"></span><a href="#result">View triage evidence <span aria-hidden="true">↑</span></a></p>
+          </section>
+        </form>
       </div>
       <p id="live-status" class="sr-only" role="status" aria-live="polite"></p>
     </section>
@@ -135,7 +156,15 @@
     const labels = { issueType:'Issue type', environment:'Environment', impact:'Customer impact', workaroundAvailable:'Workaround' };
     const choices = { issueType:[['outage','Outage'],['defect','Defect'],['howto','How-to question']], environment:[['production','Production'],['test','Test']], impact:[['multiple_customers','Multiple customers'],['single_customer','Single customer']], workaroundAvailable:[['true','Available'],['false','Not available']] };
     const friendly = value => value === null || value === undefined ? 'Not provided' : value === true || value === 'true' ? 'Available' : value === false || value === 'false' ? 'Not available' : String(value).replaceAll('_',' ');
+    const sameScenario = (left, right) => Object.keys({ ...left, ...right }).every(key => left[key] === right[key]);
     function element(tag, text, className) { const node = document.createElement(tag); node.textContent = text; if (className) node.className = className; return node; }
+    function clearQuestionResponse(clearInput = true) {
+      if (clearInput) $('question').value = '';
+      $('question').placeholder = 'Why does this priority apply?';
+      $('question-progress').hidden = true; $('question-progress').textContent = '';
+      $('question-error').hidden = true; $('question-error').textContent = '';
+      $('question-response').hidden = true; $('answered-question').textContent = ''; $('question-answer').textContent = ''; $('question-grounding-copy').textContent = '';
+    }
     function renderInbox() {
       const query = $('filter').value.trim().toLowerCase();
       const visible = tickets.filter(ticket => (ticket.id + ' ' + ticket.title).toLowerCase().includes(query));
@@ -151,10 +180,11 @@
         button.addEventListener('click', () => selectTicket(ticket)); item.append(button); $('ticket-list').append(item);
       }
     }
-    function selectTicket(ticket) {
-      revision++; controller?.abort(); selected = ticket; lastReply = null; scenario = {}; $('question').value = '';
+    function selectTicket(ticket, preserveQuestionDraft = false) {
+      revision++; controller?.abort(); selected = ticket; lastReply = null; scenario = {}; clearQuestionResponse(!preserveQuestionDraft);
       $('error').hidden = true; $('no-selection').hidden = true; $('selected-ticket').hidden = false;
       $('detail-id').textContent = ticket.id; $('detail-title').textContent = ticket.title; $('detail-description').textContent = ticket.description;
+      $('question-label').textContent = `Ask about ${ticket.id}`;
       $('facts').replaceChildren();
       for (const [key,label] of Object.entries(labels)) {
         const group = document.createElement('div'); const value = element('dd', friendly(ticket[key]));
@@ -163,10 +193,24 @@
       }
       $('result-content').hidden = true; $('result-placeholder').hidden = false;
       $('result-placeholder').replaceChildren(element('strong','Evidence first. Recommendation second.'), element('span','Choose “Suggest triage” to review this ticket against the local policy.'));
+      $('recommendation-answer').hidden = true; $('recommendation-answer').textContent = '';
       $('result').removeAttribute('data-status'); $('result').setAttribute('aria-busy','false');
       setBusy(false);
       $('live-status').textContent = `Selected ${ticket.id}.`;
       renderInbox();
+    }
+    function renderQuestionAnswer(reply) {
+      const evidenceCount = reply.recommendation.evidence.length, policyCount = reply.recommendation.policyRefs.length;
+      const grounding = [];
+      if (evidenceCount) grounding.push(`${evidenceCount} documented ticket ${evidenceCount === 1 ? 'fact' : 'facts'}`);
+      if (policyCount) grounding.push(`${policyCount} policy ${policyCount === 1 ? 'reference' : 'references'}`);
+      $('answered-question').textContent = `You asked: “${reply.question}”`;
+      $('question-answer').textContent = reply.answer;
+      $('question-grounding-copy').textContent = grounding.length ? `Grounded in ${grounding.join(' and ')}.` : 'No supporting ticket evidence was returned.';
+      $('question-error').hidden = true; $('question-response').hidden = false;
+      $('question').value = ''; $('question').placeholder = 'Ask another question about this ticket…';
+      $('question-response').scrollIntoView({ block:'nearest' });
+      $('question-response').focus({ preventScroll:true });
     }
     function renderRecommendation(reply) {
       const decision = reply.recommendation;
@@ -174,9 +218,9 @@
       $('result-status').textContent = decision.status === 'proposed' ? 'SUGGESTION ONLY' : decision.status === 'needs_information' ? 'NEEDS INFORMATION' : 'NOT FOUND';
       $('result-status').className = 'pill ' + (decision.status === 'proposed' ? 'green' : 'amber');
       $('queue').textContent = decision.suggestedQueue ?? 'Not proposed'; $('priority').textContent = decision.suggestedPriority ?? 'Not proposed';
-      $('answer').textContent = reply.answer; $('missing-fields').hidden = !decision.missingFields.length;
-      $('answered-question').hidden = !reply.question;
-      $('answered-question').textContent = reply.question ? `Answer to: ${reply.question}` : '';
+      $('missing-fields').hidden = !decision.missingFields.length;
+      if (reply.question) renderQuestionAnswer(reply);
+      else { $('recommendation-answer').textContent = reply.answer; $('recommendation-answer').hidden = false; }
       $('missing-list').replaceChildren(...decision.missingFields.map(field => element('li',labels[field] ?? field)));
       $('evidence').replaceChildren(...decision.evidence.map(fact => { const row = document.createElement('li'); row.append(element('span',`${labels[fact.field] ?? fact.field}: ${friendly(fact.value)}`), element('small',fact.source)); return row; }));
       if (!decision.evidence.length) $('evidence').append(element('li','No matching ticket evidence.'));
@@ -194,38 +238,57 @@
         for (const [value,text] of choices[field]) { const option = element('option',text); option.value = value; select.append(option); }
         label.append(select); $('scenario-fields').append(label);
       }
-      $('live-status').textContent = `Triage complete: ${decision.status.replaceAll('_',' ')}.`;
+      $('live-status').textContent = reply.question ? `Answer ready for ${reply.recommendation.ticketId}.` : `Triage complete: ${decision.status.replaceAll('_',' ')}.`;
     }
-    function setBusy(busy) {
+    function setBusy(busy, activity = null) {
       $('result').setAttribute('aria-busy',String(busy));
+      $('question-form').setAttribute('aria-busy',String(busy && activity === 'question'));
       for (const id of ['triage','ask','question','reevaluate','reset-scenario']) $(id).disabled = busy;
       $('scenario-fields').querySelectorAll('select').forEach(select => select.disabled = busy);
-      $('triage').textContent = busy ? 'Reviewing…' : 'Suggest triage ↗';
+      $('triage').textContent = busy && activity !== 'question' ? 'Reviewing…' : 'Suggest triage ↗';
+      $('ask').textContent = busy && activity === 'question' ? 'Answering…' : 'Ask';
+      $('question-progress').hidden = !(busy && activity === 'question');
     }
     $('filter').addEventListener('input',renderInbox);
     async function review(question = null, requestedScenario = scenario) {
       if (!selected) return;
+      const answering = question !== null;
       const ownRevision = ++revision; controller?.abort(); const requestController = new AbortController(); controller = requestController;
       const timeout = setTimeout(() => requestController.abort(), 48000);
-      $('error').hidden = true; $('result-placeholder').hidden = false;
-      $('result-placeholder').textContent = lastReply ? 'Reviewing… The previous result remains below until this request completes.' : 'Reading the ticket and checking the triage policy…';
-      setBusy(true);
-      $('live-status').textContent = 'Reviewing the selected mock ticket.';
+      $('error').hidden = true; $('question-error').hidden = true;
+      if (answering) {
+        $('question-response').hidden = true;
+        $('question-progress').textContent = `Finding an answer to “${question}”…`;
+      } else {
+        $('result-placeholder').hidden = false;
+        $('result-placeholder').textContent = lastReply ? 'Reviewing… The previous result remains below until this request completes.' : 'Reading the ticket and checking the triage policy…';
+      }
+      setBusy(true, answering ? 'question' : 'triage');
+      $('live-status').textContent = answering ? `Finding an answer about ${selected.id}.` : 'Reviewing the selected mock ticket.';
       try {
         const response = await fetch('/api/triage',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticketId:selected.id, question, scenario:requestedScenario}), signal:requestController.signal });
         const reply = await response.json(); if (ownRevision !== revision) return;
         if (!response.ok) {
           const allowed = ['agent_run_failed','grounded_recommendation_required','answer_too_long','tool_call_limit_exceeded','ticket_outside_selected_scope','question_too_long','scenario_requires_known_ticket','scenario_fields_invalid','scenario_field_or_value_invalid','scenario_only_missing_fields_allowed'];
           const reason = allowed.includes(reply.error) ? reply.error : 'request_failed';
-          throw new Error(reply.error === 'agent_deadline_exceeded' ? 'The review timed out. Please try again.' : `The review could not complete (${reason}). No ticket was changed.${reply.traceId ? ' Trace: ' + reply.traceId : ''}`);
+          const task = answering ? 'answer' : 'review';
+          throw new Error(reply.error === 'agent_deadline_exceeded' ? `The ${task} timed out. Please try again.` : `The ${task} could not complete (${reason}). No ticket was changed.${reply.traceId ? ' Trace: ' + reply.traceId : ''}`);
         }
-        scenario = { ...requestedScenario }; lastReply = reply; renderRecommendation(reply);
+        const scenarioChanged = !sameScenario(scenario, requestedScenario);
+        scenario = { ...requestedScenario };
+        if (scenarioChanged) clearQuestionResponse(false);
+        lastReply = reply; renderRecommendation(reply);
       } catch (error) {
         if (ownRevision !== revision) return;
-        $('error').textContent = error.name === 'AbortError' ? 'The review timed out. No ticket was changed. Please try again.' : error.message;
-        $('error').hidden = false; $('result-placeholder').hidden = !!lastReply;
-        if (!lastReply) $('result-placeholder').textContent = 'No recommendation is available. You can retry the review.';
-        $('live-status').textContent = 'Review failed. No ticket was changed.';
+        const message = error.name === 'AbortError' ? `The ${answering ? 'answer' : 'review'} timed out. No ticket was changed. Please try again.` : error.message;
+        if (answering) {
+          $('question-error').textContent = message; $('question-error').hidden = false;
+          $('live-status').textContent = 'The question could not be answered. No ticket was changed.';
+        } else {
+          $('error').textContent = message; $('error').hidden = false; $('result-placeholder').hidden = !!lastReply;
+          if (!lastReply) $('result-placeholder').textContent = 'No recommendation is available. You can retry the review.';
+          $('live-status').textContent = 'Review failed. No ticket was changed.';
+        }
       } finally {
         clearTimeout(timeout);
         if (ownRevision === revision) setBusy(false);
@@ -239,7 +302,7 @@
       if (!added) { $('error').textContent = 'Choose at least one missing intake value to try a temporary scenario.'; $('error').hidden = false; return; }
       review(null, proposed);
     });
-    $('reset-scenario').addEventListener('click', () => { const ticket = selected; selectTicket(ticket); review(); });
+    $('reset-scenario').addEventListener('click', () => { const ticket = selected; selectTicket(ticket, true); review(); });
     async function load() {
       try {
         const response = await fetch('/api/tickets'); if (!response.ok) throw new Error('The mock inbox could not load. Reload the page to try again.');
