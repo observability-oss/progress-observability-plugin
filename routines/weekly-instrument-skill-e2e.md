@@ -459,13 +459,18 @@ re-run it on each 3.x bump — when it passes, drop the 1.x paragraph from
 `references/typescript.md` and add the `ts/existing-otel` fixture. (3)
 **Collector: workflow root spans misclassified as `llm_call`** — a span
 tagged `traceloop.span.kind=workflow` with `gen_ai.provider.name` and no
-model is stored as `llm_call` against model `unknown`, so every agentic root
-(LangChain `RunnableSequence`, Genkit `generate`) counts as a phantom LLM
-call. Fix implemented in the collector's `agentclarityprocessor`, pending
-merge as of 6 Sep. CI cannot see it — `--expect` matches names, not kinds —
-so when it merges, note in the report that LLM-call counts on the platform
-drop for framework fixtures and that this is the fix landing, not a
-regression.
+model was stored as `llm_call` against model `unknown`, so every agentic
+root (LangChain `RunnableSequence`, Genkit `generate`) counted as a phantom
+LLM call. Reported fixed in the collector's `agentclarityprocessor` on
+6 Sep; **not yet confirmed on the platform** — the environment that made
+the report cannot read spans back. Confirm it once, in the first run with
+MCP access: for service `ins-test-ts-langchain-ci` in the run window, the
+`workflow RunnableSequence` observation must carry kind `workflow`, not
+`llm_call`, and no observation for that service may show model `unknown`.
+CI cannot see this — `--expect` matches names, not kinds. Expect LLM-call
+counts on the platform to be lower than in August for framework fixtures;
+that is the fix, not a regression. Once confirmed, move this item to the
+fixed list.
 
 One unreported **and never verified by execution**: a no-arg
 `.AddObservability()` appears to throw when no key is reachable, which is why the
