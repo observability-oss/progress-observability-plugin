@@ -211,7 +211,11 @@ the same name there is no ordering criterion: .NET providers coexist, measured
 
 Pass requires: `Initialize()`/`AddObservability()`/`Shutdown()` added with the
 optional-tracing gates, **`UseOpenTelemetry()` kept**, the app's provider and
-spans untouched. A diff that removes `UseOpenTelemetry()` is a FAIL even though
+spans untouched, **and the app's `OpenTelemetry` / `OpenTelemetry.Exporter.*`
+references raised to 1.17.0** — SDK 1.4.0 depends on OpenTelemetry >= 1.17.0
+and the fixture pins 1.15.3, so a diff that adds the package without the bump
+does not restore (`NU1605` package downgrade; caught by the first e2e run on
+the 1.4.0 pin, 6 Sep). A diff that removes `UseOpenTelemetry()` is a FAIL even though
 it makes span counts look cleaner - removing the app's own telemetry is the
 user's call, and the skill's report must declare the two-layer overlap instead.
 Do not fail the fixture for doubled chat spans (`chat` + `gen_ai.chat`) - that
