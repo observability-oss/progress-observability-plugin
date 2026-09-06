@@ -301,10 +301,7 @@ blockInstruments: new Set([ObservabilityInstruments.OPENAI]),   // VERTEXAI for 
 
 With the block: four spans, one model record. `@genkit-ai/googleai` uses
 `@google/generative-ai`, which nothing instruments, so it has no double and
-needs no block. The `generate` wrapper span carries a provider name and no
-model, which the collector currently files as an `llm_call` against model
-`unknown`; expect one phantom LLM call per `generate` until the collector
-fix ships.
+needs no block.
 
 ## Structure without a framework — spans with no LLM call
 
