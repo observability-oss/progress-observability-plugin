@@ -8,11 +8,7 @@ package over this file where they disagree.
 pip install progress-observability  # requires Python >= 3.10
 ```
 
-**Do not add `httpx` any more.** Releases before 1.5.0 needed it declared
-alongside the SDK because `traceloop-sdk` imported it without declaring it;
-1.5.0 declares `httpx>=0.23.0` itself (verified: clean venv, the SDK alone,
-import succeeds). A project pinned below 1.5.0 gets the pin bumped, not an
-extra dependency.
+**Do not add `httpx`.** The SDK declares `httpx>=0.23.0` itself.
 
 Match the project's manager: `uv add` · `poetry add` · `pipenv install`.
 Current published version:
