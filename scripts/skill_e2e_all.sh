@@ -129,7 +129,18 @@ run_lang() {
             fixtures=$(printf '%s\n' "${TS_FIXTURES[@]}") ;;
     dotnet) command -v dotnet  >/dev/null || { echo "SKIP dotnet: no dotnet sdk"; return; }
             fixtures=$(printf '%s\n' "${NET_FIXTURES[@]}") ;;
+    *)      echo "ERROR: unknown language '$lang' (python | ts | dotnet)" >&2; exit 2 ;;
   esac
+
+  # Everything after the language is a fixture filter. A name that matches
+  # nothing used to skip every fixture silently and print PASS 0 FAIL 0 - a
+  # run that looks clean and tested nothing. Refuse it instead.
+  local known; known=$(echo "$fixtures" | cut -d'|' -f1 | tr '\n' ' ')
+  local w
+  for w in "${want[@]+"${want[@]}"}"; do
+    echo "$fixtures" | cut -d'|' -f1 | grep -qx -- "$w" || {
+      echo "ERROR: no fixture named '$w' for $lang. Known: $known" >&2; exit 2; }
+  done
 
   echo ""
   echo "=============================================================="
