@@ -641,16 +641,15 @@ Scan the repo and report what you found, then the diff you intend to make,
   *agent* builder is Progress wiring itself — leave it. Progress spans land
   in their own trace by design; see `references/dotnet.md`.
 
-  **TypeScript (measured, 3.1.0).** Same rule as Python — the app's
-  `provider.register()` first, then `instrument()` — and in that order both
-  the app's exporter and Progress receive every span on OpenTelemetry 2.x.
-  Init first and the telemetry splits: global-tracer spans reach Progress
-  only, `provider.getTracer()` spans reach the app only. **On OpenTelemetry
-  1.x the recommended order attaches and then silently exports nothing to
-  Progress** (a serializer mismatch, visible only with `debug: true`; reported
-  Sep 2026) — check the app's `@opentelemetry/*` major before declaring
-  success. Grep for `NodeTracerProvider` / `NodeSDK` / `.register(`. Details
-  and the Genkit case in `references/typescript.md`.
+  **TypeScript (measured).** The app's `provider.register()` first, then
+  `instrument()`: on OpenTelemetry 2.x both the app's exporter and Progress
+  receive every span. Init first and the telemetry splits — global-tracer
+  spans reach Progress only, `provider.getTracer()` spans reach the app only.
+  **On OpenTelemetry 1.x the recommended order attaches and then silently
+  exports nothing to Progress** (a serializer mismatch, visible only with
+  `debug: true`), so check the app's `@opentelemetry/*` major before
+  declaring success. Grep for `NodeTracerProvider` / `NodeSDK` /
+  `.register(`. Details and the Genkit case in `references/typescript.md`.
 - **Scope** — a monorepo, several services, or more than one agent needs a
   "which one?" question before you touch anything. Don't pick for the user.
 - **Config style** — dotenv, user secrets, plain env — instrumentation config
@@ -717,8 +716,8 @@ Rules that hold across all three:
   `llama_index.core` by name, so those stay declared. Say in your report that
   you added it and why; gate table in `references/python.md`.
 - **TypeScript + LangChain: `@langchain/core` declared is a REQUIRED edit.**
-  On 3.x the hierarchy patch keys off `@langchain/core` appearing in the app's
-  own `package.json`; an app that declares only `@langchain/openai` gets a lone
+  The hierarchy patch keys off `@langchain/core` appearing in the app's own
+  `package.json`; an app that declares only `@langchain/openai` gets a lone
   `chat` span per call and no chain structure, silently (measured). Add it
   alongside, never in place of, what the app already declares.
 - **Never ask the user to paste a key into the chat.** Reference the env var
