@@ -205,13 +205,20 @@ run_lang() {
                # the platform will actually see it.
                if [ "$f" = existing-otel ]; then export OTEL_SERVICE_NAME="$svc"; fi
                "$VENV/bin/python" "agents/$f/app.py") >>"$RUNLOG" 2>&1 || ok=0 ;;
-      ts)     (cd "$repo/agents/$f" && npm install --silent >"$RUNLOG" 2>&1) || ok=0
+      ts)     (cd "$repo/agents/$f" && npm install --no-audit --no-fund >"$RUNLOG" 2>&1) || ok=0
               (cd "$repo/agents/$f" && OBSERVABILITY_APP_NAME="$svc" npm start >>"$RUNLOG" 2>&1) || ok=0 ;;
       dotnet) (cd "$repo" && OBSERVABILITY_APP_NAME="$svc" dotnet run --project "agents/$f" >"$RUNLOG" 2>&1) || ok=0 ;;
     esac
     if [ "$ok" -ne 1 ]; then
-      # surface the actual error rather than "did not run"
-      record "$lang" "$f" "FAIL  app: $(grep -m1 -E "Error|error:|Exception|Traceback|No module|error CS" "$RUNLOG" 2>/dev/null | cut -c1-160)"
+      # Surface the actual error rather than "did not run". npm >= 10 reports as
+      # "npm error ..." (lowercase, no colon), so match that too - and if nothing
+      # matches, show the log's last lines: a blank reason is the one outcome
+      # that tells the reader nothing. Observed: four ts fixtures all reporting
+      # "FAIL app:" with no text, because npm install had failed silently.
+      why=$(grep -m1 -E "npm (error|ERR!)|Error|error:|Exception|Traceback|No module|error CS" "$RUNLOG" 2>/dev/null)
+      [ -n "$why" ] || why=$(grep -v '^[[:space:]]*$' "$RUNLOG" 2>/dev/null | tail -2 | tr '\n' ' ')
+      [ -n "$why" ] || why="(no output - see $LOGDIR/run-$lang-$f.log)"
+      record "$lang" "$f" "FAIL  app: $(echo "$why" | cut -c1-160)"
       ((FAIL++)); (cd "$repo" && git reset -q --hard "$base_sha"); continue
     fi
 
