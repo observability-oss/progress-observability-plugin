@@ -641,10 +641,16 @@ Scan the repo and report what you found, then the diff you intend to make,
   *agent* builder is Progress wiring itself — leave it. Progress spans land
   in their own trace by design; see `references/dotnet.md`.
 
-  **TypeScript: not measured here.** Don't carry the Python behavior across;
-  if you hit an app with existing OTel, say the interaction is unverified
-  rather than guessing, and check the traces on both sides before declaring
-  success.
+  **TypeScript (measured, 3.1.0).** Same rule as Python — the app's
+  `provider.register()` first, then `instrument()` — and in that order both
+  the app's exporter and Progress receive every span on OpenTelemetry 2.x.
+  Init first and the telemetry splits: global-tracer spans reach Progress
+  only, `provider.getTracer()` spans reach the app only. **On OpenTelemetry
+  1.x the recommended order attaches and then silently exports nothing to
+  Progress** (a serializer mismatch, visible only with `debug: true`; reported
+  Sep 2026) — check the app's `@opentelemetry/*` major before declaring
+  success. Grep for `NodeTracerProvider` / `NodeSDK` / `.register(`. Details
+  and the Genkit case in `references/typescript.md`.
 - **Scope** — a monorepo, several services, or more than one agent needs a
   "which one?" question before you touch anything. Don't pick for the user.
 - **Config style** — dotenv, user secrets, plain env — instrumentation config
@@ -662,8 +668,10 @@ Pydantic AI, Semantic Kernel and Google ADK are the common ones — say so
 plainly and offer the decorator / manual-span fallback from the reference.
 Never imply auto-instrumentation covers a framework it doesn't. **LangGraph is
 supported** in Python (it rides the LangChain instrumentor and produces full
-graph topology); it is *not* supported in the JS SDK. Check the language
-reference rather than assuming either way.
+graph topology); it is *not* supported in the JS SDK. **Genkit is supported
+in the JS SDK from 3.1.0**, with an ordering rule (init before the first flow)
+and a double-count to block — see the reference. Check the language reference
+rather than assuming either way.
 
 ### 2 · Wire — follow the language reference exactly
 
@@ -708,10 +716,11 @@ Rules that hold across all three:
   `-core` package, never in place of it** — the app imports `langchain_core` /
   `llama_index.core` by name, so those stay declared. Say in your report that
   you added it and why; gate table in `references/python.md`.
-- **Python: declare `httpx` alongside the SDK.** `traceloop-sdk` imports it
-  without declaring it, so importing `progress.observability` dies with
-  `ModuleNotFoundError: No module named 'httpx'` in a project with no other
-  source. Most LLM SDKs provide it transitively; add it every time regardless.
+- **TypeScript + LangChain: `@langchain/core` declared is a REQUIRED edit.**
+  On 3.x the hierarchy patch keys off `@langchain/core` appearing in the app's
+  own `package.json`; an app that declares only `@langchain/openai` gets a lone
+  `chat` span per call and no chain structure, silently (measured). Add it
+  alongside, never in place of, what the app already declares.
 - **Never ask the user to paste a key into the chat.** Reference the env var
   or config entry by name and let them set it themselves, in their own shell,
   `.env`, or secret store. Read config to detect what exists; never echo a

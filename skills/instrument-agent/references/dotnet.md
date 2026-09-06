@@ -1,7 +1,9 @@
 # .NET — `Progress.Observability.Instrumentation`
 
-Verified against `Progress.Observability.Instrumentation` 1.2.2 on NuGet, as
-wired (and proven to build and trace) in
+Written against `Progress.Observability.Instrumentation` 1.4.0 on NuGet — the
+fixture repo pins 1.4.0 and CI builds and traces it weekly. The wiring below
+was measured on 1.2.2; 1.4.0 is verified by that CI only (no local .NET
+toolchain on 6 Sep 2026). It is wired (and proven to build and trace) in
 [`observability-oss/dotnet-agent-starter`](https://github.com/observability-oss/dotnet-agent-starter)
 — that repo is the canonical example; when in doubt, read its `Program.cs`
 rather than reconstructing.

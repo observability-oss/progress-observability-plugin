@@ -48,7 +48,8 @@ PYTHON
 - Observability.instrument() placed BEFORE the framework import, not merely
   before a client call - every framework fixture builds its objects at module
   scope, so import order is the whole test. Moved imports carry noqa: E402.
-- httpx declared in requirements (traceloop-sdk imports it without declaring it).
+- No httpx line in requirements: progress-observability 1.5.0 declares it. A
+  diff that adds httpx is following a stale reference - note it, do not fail it.
 - No decorators added to auto-instrumented frameworks.
 - META PACKAGE (langchain, llamaindex only): traceloop gates the instrumentor on
   a distribution name. langchain-core alone does NOT enable it, nor does
@@ -64,6 +65,12 @@ PYTHON
 TYPESCRIPT
 - ESM ("type": "module") needs the register/hooks import first, or a bootstrap
   entry; LangChain must be imported dynamically after init.
+- No `instruments` option on a plain-provider app: since @progress/observability
+  3.x the default init detects installed provider SDKs. Adding the allow-list
+  narrows coverage for nothing - FAIL it on openai/commonjs.
+- LANGCHAIN: @langchain/core must be declared in the fixture's own package.json
+  (the 3.x hierarchy patch keys off that declaration). Missing it yields a lone
+  chat span per call and no chain structure, silently - FAIL.
 - await Observability.shutdown() before exit.
 
 DOTNET

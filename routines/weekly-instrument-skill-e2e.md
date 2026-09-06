@@ -71,17 +71,33 @@ these; only the diff can.
   agent-level
 
 Baseline criteria: init/bootstrap ordering, env-based keys,
-decorators/wrappers/`AddObservability` placement, `httpx` for Python, dynamic
-langchain imports for TS ESM, `.AddObservability()` between `AsIChatClient()`
-and `AsAIAgent()` for dotnet-agent, app logic untouched.
+decorators/wrappers/`AddObservability` placement, dynamic langchain imports
+for TS ESM, `@langchain/core` declared for TS langchain,
+`.AddObservability()` between `AsIChatClient()` and `AsAIAgent()` for
+dotnet-agent, app logic untouched.
 
 Ruled 10 Aug: Python init goes **before the framework imports even for
 LangChain** — "before clients are constructed" is not sufficient. A
 python/langchain diff with init after the `langchain_core` imports is a
 FAIL, not an open question; the skill text now says so. The two exceptions
-(own-provider, Haystack) are unchanged. Score `instruments` padding the same
-way: a ts/openai diff naming `AZURE_OPENAI` alongside `OPENAI` on a
-plain-OpenAI app is a FAIL against the allow-list rule as now written.
+(own-provider, Haystack) are unchanged.
+
+Ruled 6 Sep, on `@progress/observability` 3.1.0 and `progress-observability`
+1.5.0 (both measured against a local OTLP sink):
+
+- **TS: `instruments` is no longer part of a correct diff.** The 3.x default
+  init detects installed provider SDKs, so ts/openai and ts/commonjs with no
+  `instruments` emit `chat <model>`; `expected/` dropped the option. A diff
+  that adds it — `OPENAI` alone or padded — is a FAIL: it narrows what the
+  default already covers and copies a 2.1.2 workaround.
+- **TS langchain: `@langchain/core` must be declared** in the fixture's
+  `package.json`. The 3.x hierarchy patch keys off that declaration; with
+  only `@langchain/openai` declared the run yields a lone `chat` span and no
+  chain, silently. The fixture already declares it — a diff that removes it,
+  or that would leave an app without it, is a FAIL.
+- **Python: no `httpx` line.** 1.5.0 declares `httpx>=0.23.0`; `expected/`
+  and the skill dropped the workaround. A diff that still adds it is following
+  a stale reference — note it, don't fail it.
 
 ### Module-scope frameworks
 
@@ -89,8 +105,8 @@ langgraph, crewai, openai-agents, llamaindex, agno, mcp each build their objects
 at **module scope** (compiled graph, module-level `Agent`/`Crew`/`Task`, global
 `Settings.llm`, decorator-registered MCP tools). The pass criterion is that
 `Observability.instrument()` lands **before the framework import** — not merely
-before a client call — with `noqa: E402` on the moved imports, `httpx` declared,
-no unnecessary decorators added, and app logic untouched.
+before a client call — with `noqa: E402` on the moved imports, no unnecessary
+decorators added, and app logic untouched.
 
 ### Haystack is the one exception to init-before-import
 
@@ -119,8 +135,8 @@ has already copied it once.
 
 What it actually tests: the dependency file keeps `google-genai` (the legacy
 `google-generativeai` distribution satisfies no instrumentor and is a FAIL if
-substituted), `progress-observability` and `httpx` are added, and `shutdown()`
-runs in a `finally`.
+substituted), `progress-observability` is added, and `shutdown()` runs in a
+`finally`.
 
 ### commonjs tests flush timing
 
@@ -156,12 +172,23 @@ becomes the only check again.
 before doing any work. Pass requires `Observability.instrument()` **after** the
 app's `trace.set_tracer_provider(...)`, never before it.
 
-Measured 1 Aug against 1.4.3 / traceloop-sdk 0.59.2. App provider first, then
-init: Progress attaches to the app's provider, the global provider object is
-unchanged, and both exporters receive every span. Init first: traceloop already
-owns a provider, so the app's `set_tracer_provider()` is a no-op — one
-`Overriding of current TracerProvider is not allowed` warning, and the app's
-exporter receives nothing for the rest of the process.
+Measured 1 Aug against 1.4.3 / traceloop-sdk 0.59.2, re-measured 6 Sep on
+1.5.0 / 0.62.3 with the same result. App provider first, then init: Progress
+attaches to the app's provider, the global provider object is unchanged, and
+both exporters receive every span. Init first: traceloop already owns a
+provider, so the app's `set_tracer_provider()` is a no-op — one `Overriding of
+current TracerProvider is not allowed` warning, and the app's exporter
+receives nothing for the rest of the process.
+
+**TypeScript has the same shape now, and no fixture yet.** Measured 6 Sep on
+3.1.0: app `provider.register()` then `instrument()` gives both exporters
+every span on OpenTelemetry 2.x; `instrument()` first splits the telemetry
+(global-tracer spans to Progress only, `provider.getTracer()` spans to the app
+only). On OpenTelemetry 1.x the recommended order attaches and then every
+Progress export throws inside `otlp-transformer` — reported, see step 3. A
+`ts/existing-otel` fixture and CI job (two-sided like the Python one, plus a
+1.x variant) is the follow-up once that fix ships; until then the skill text
+carries the guidance and nothing exercises it.
 
 **The wrong order is invisible platform-side.** Progress spans arrive either
 way; it is the app's own telemetry that dies. Score this fixture on the init's
@@ -344,7 +371,11 @@ all three skip silently.
 `github-actions[bot]` on `sync/canonical-skills` and have been merging within a
 minute of creation with their `pull_request` checks in `action_required`, i.e.
 `drift` and `check-copilot-instructions` never ran. The PR body promises a human
-reads the diff and nothing enforces that. Flag if still true.
+reads the diff and nothing enforces that. Flag if still true. Checked 6 Sep:
+the scheduled `sync` job itself is healthy — every daily run since #36
+(10 Aug) concluded `success` with "Already in sync", and the plugin copy
+matched canonical byte-for-byte. A stale local branch is not drift; compare
+against `origin/main` before reporting either repo as behind.
 
 `actions_list` on these workflows can return a payload too large to read — parse
 the saved tool-result file with python rather than retrying. On failure pull the
@@ -368,14 +399,18 @@ workflow missing.
   `@traceloop/node-server-sdk` dep
 - **api.nuget.org** — `Progress.Observability.Instrumentation` latest
 
-Compare against **both** the "Verified against" line in the plugin's
-`skills/instrument-agent/references/*.md` **and** the `metadata.verified-against`
-block in `SKILL.md`'s frontmatter — they must agree with each other as well as
-with the registries. Report newer releases as drift needing re-verification.
-`progress-observability` pins `traceloop-sdk` exactly, so no upstream fix reaches
-users without a new Progress release.
+Compare against **both** the version line at the top of each of the plugin's
+`skills/instrument-agent/references/*.md` ("Verified against" / "Written
+against") **and** the `metadata.verified-against` block in `SKILL.md`'s
+frontmatter — they must agree with each other as well as with the registries.
+Report newer releases as drift needing re-verification. `progress-observability`
+pins `traceloop-sdk` exactly, so no upstream fix reaches users without a new
+Progress release. As of 6 Sep the three lines read 1.5.0 / 3.1.0 / 1.4.0; the
+fixture pins (`expected/*/package.json` `^3.1.0`, `expected/*/*.csproj`
+`1.4.0`) moved with them, so a green fixture run is what verifies the .NET
+number — it was bumped without a local build.
 
-Five upstream bugs we work around — re-check each on a relevant bump, since a fix
+Four upstream bugs we work around — re-check each on a relevant bump, since a fix
 means we can simplify:
 
 1. the Haystack gate looking for `haystack` rather than `haystack-ai`
@@ -386,19 +421,49 @@ means we can simplify:
    normal rule
 4. whether the LangChain/LlamaIndex gates still require the meta package — if
    they accept `-core`, criteria (a) and (b) can be relaxed
-5. the Node SDK's LangChain takeover — it resolves the consumer's
-   `@langchain/core`, which npm hoists to top level as a transitive dep of the
-   SDK itself, so it fires in projects with no LangChain and disables the
-   provider instrumentors unless `OPENAI`/`AZURE_OPENAI` is named in
-   `instruments`. If a release past 2.1.2 fixes this, the whole `instruments`
-   workaround in `references/typescript.md` becomes optional.
+Closed 6 Sep — the Node SDK's LangChain takeover (transitive `@langchain/core`
+disabling the provider instrumentors unless named in `instruments`) is gone
+in 3.x: the default init detects provider packages, and the LangChain patch
+keys off `@langchain/core` being *declared* in the consumer's `package.json`.
+`instruments` is optional again; the new declared-dependency rule replaced
+the workaround in `references/typescript.md`. On each 3.x bump, re-run the
+two checks that closed it: a plain-`openai` app with no `instruments` emits
+`chat <model>`, and a chain with `@langchain/core` declared emits
+`workflow RunnableSequence`.
 
-Three Progress bugs to re-check on a version bump. Two reported:
-`progress-observability` is unimportable after a clean install because
-`traceloop-sdk` imports `httpx` without declaring it; and
-`ModelFixProcessor._apply_attribute_fixes` throws on every google-genai span,
-logging an empty message because the handler formats `{e}` with no exception
-type. One unreported **and never verified by execution**: a no-arg
+Progress bugs to re-check on a version bump.
+
+Fixed, confirm they stay fixed: `progress-observability` < 1.5.0 was
+unimportable on a clean install (`traceloop-sdk` imported `httpx` without
+declaring it) — 1.5.0 declares `httpx>=0.23.0`, verified 6 Sep, workaround
+lines removed from `expected/` and the skill. Node < 3.0 needed `instruments`
+(above).
+
+Open, reported: (1) `ModelFixProcessor._apply_attribute_fixes` throws on every
+google-genai span, logging an empty message because the handler formats `{e}`
+with no exception type — not re-checked on 1.5.0. (2) **Node 3.1.0, app owns
+a TracerProvider on OpenTelemetry 1.x** (`@opentelemetry/sdk-trace-node`
+1.30.1 measured, and Genkit's bundled `NodeSDK`): with the app's provider
+registered first — the recommended order — the SDK attaches its OTLP
+processor, then every export throws `TypeError: Cannot read properties of
+undefined (reading 'name')` in `@opentelemetry/otlp-transformer`, because the
+processor is built from the SDK's own 2.x exporter and reads
+`span.instrumentationScope`, which a 1.x span calls `instrumentationLibrary`.
+The app's exporter is fine, Progress receives nothing, and the only evidence
+is under `debug: true`. Reported 6 Sep. The 1.x check lives in the reference;
+re-run it on each 3.x bump — when it passes, drop the 1.x paragraph from
+`references/typescript.md` and add the `ts/existing-otel` fixture. (3)
+**Collector: workflow root spans misclassified as `llm_call`** — a span
+tagged `traceloop.span.kind=workflow` with `gen_ai.provider.name` and no
+model is stored as `llm_call` against model `unknown`, so every agentic root
+(LangChain `RunnableSequence`, Genkit `generate`) counts as a phantom LLM
+call. Fix implemented in the collector's `agentclarityprocessor`, pending
+merge as of 6 Sep. CI cannot see it — `--expect` matches names, not kinds —
+so when it merges, note in the report that LLM-call counts on the platform
+drop for framework fixtures and that this is the fix landing, not a
+regression.
+
+One unreported **and never verified by execution**: a no-arg
 `.AddObservability()` appears to throw when no key is reachable, which is why the
 .NET optional-tracing pattern gates the attach — if a release makes that a no-op,
 criterion (c)'s .NET clause can be simplified.
