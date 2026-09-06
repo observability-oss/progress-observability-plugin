@@ -348,11 +348,14 @@ backend too, that is one line on their existing builder:
 .AddSource("Progress.Observability.AgentMonitoring")
 ```
 
-**The package floors OpenTelemetry at 1.15.3.** An app pinned lower fails
-`dotnet add package` with
-`NU1605: Detected package downgrade: OpenTelemetry`. The fix is raising the
-app's `OpenTelemetry` reference to `>= 1.15.3` — say so rather than leaving
-the restore error to explain itself.
+**The package floors OpenTelemetry at 1.17.0** (1.4.0; it was 1.15.3 on
+1.2.2). An app pinned lower fails restore with
+`NU1605: Detected package downgrade: OpenTelemetry from 1.17.0 to 1.15.3`
+— measured 6 Sep 2026 on the existing-otel fixture, the one job that went
+red on the 1.4.0 bump. The fix is part of the wiring, not a follow-up:
+raise the app's `OpenTelemetry` **and** its `OpenTelemetry.Exporter.*`
+references to `1.17.0` in the same diff that adds the package, and say so
+in the report rather than leaving the restore error to explain itself.
 
 ## Verified against the platform
 
