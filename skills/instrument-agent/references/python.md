@@ -1,19 +1,18 @@
 # Python — `progress-observability`
 
-Verified against `progress-observability` 1.4.3 on PyPI (wraps
-`traceloop-sdk`; OpenTelemetry underneath). Prefer the published package over
-this file where they disagree.
+Verified against `progress-observability` 1.5.0 on PyPI (wraps
+`traceloop-sdk` 0.62.3; OpenTelemetry underneath). Prefer the published
+package over this file where they disagree.
 
 ```bash
-pip install progress-observability httpx  # requires Python >= 3.10
+pip install progress-observability  # requires Python >= 3.10
 ```
 
-`httpx` is not a typo: `traceloop-sdk` imports it at module scope without
-declaring it, so in a project with no other source of httpx,
-`from progress.observability import Observability` raises
-`ModuleNotFoundError: No module named 'httpx'` (verified on a clean install).
-Declare it every time — most LLM SDKs pull httpx in transitively, which is the
-only reason this isn't universally fatal.
+**Do not add `httpx` any more.** Releases before 1.5.0 needed it declared
+alongside the SDK because `traceloop-sdk` imported it without declaring it;
+1.5.0 declares `httpx>=0.23.0` itself (verified: clean venv, the SDK alone,
+import succeeds). A project pinned below 1.5.0 gets the pin bumped, not an
+extra dependency.
 
 Match the project's manager: `uv add` · `poetry add` · `pipenv install`.
 Current published version:

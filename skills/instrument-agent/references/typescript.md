@@ -1,8 +1,10 @@
 # TypeScript / JavaScript — `@progress/observability`
 
-Verified against `@progress/observability` 2.1.2 on npm (wraps
-`@traceloop/node-server-sdk`; OpenTelemetry underneath). Prefer the published
-package over this file where they disagree.
+Verified against `@progress/observability` 3.1.0 on npm (wraps
+`@traceloop/node-server-sdk` 0.27.0; OpenTelemetry 2.x underneath). Prefer the
+published package over this file where they disagree. 3.x changed the init
+defaults: the `instruments` workaround that 2.1.2 needed is gone, and a
+LangChain rule took its place — see *`instruments` is optional again*.
 
 ```bash
 npm install @progress/observability
@@ -62,47 +64,48 @@ service arrives under a name nobody chose.
 is documentation rather than mechanism. It also means a value in the
 environment silently beats an explicit `appName`.
 
-### Then add `instruments` — required for direct provider SDKs
+### `instruments` is optional again (3.x) — but LangChain must be *declared*
 
-**The 2.1.2 default init instruments LangChain and nothing else.** An app
-calling `openai`, `@anthropic-ai/sdk`, `@google/genai`, Bedrock or Cohere
-directly emits **zero spans** — no error, clean shutdown. Name what the app
-uses:
+**The 3.x default init detects the provider SDKs the app has installed and
+instruments them.** Measured on 3.1.0: a plain `openai` app with no
+`instruments` option emits `chat <model>` spans, ESM and CommonJS alike. The
+2.1.2 rule — name every provider or get zero spans — no longer applies; do
+not add `instruments` to a plain-provider app.
 
-```typescript
-import { Observability, ObservabilityInstruments } from '@progress/observability';
+Detection resolves each package from the SDK's own location, so it finds
+whatever is installed at the consumer level: `openai`, `@anthropic-ai/sdk`,
+`cohere-ai`, `@aws-sdk/client-bedrock-runtime`, `@google-cloud/vertexai`,
+`@google-cloud/aiplatform`, `@google/genai`, `together-ai`,
+`@modelcontextprotocol/sdk`, `llamaindex` (+ `@llamaindex/openai`),
+`@pinecone-database/pinecone`, `chromadb`, `@qdrant/js-client-rest`.
+Anything outside that table is left to traceloop's import-hook path, which is
+not measured here — if such an app shows no spans, run once with
+`debug: true` and look for `Detected consumer provider:`.
 
-await Observability.instrument({
-  appName: process.env.OBSERVABILITY_APP_NAME ?? 'my-app',
-  apiKey,
-  instruments: new Set([ObservabilityInstruments.OPENAI]),   // every provider in use
-});
-```
+**LangChain: `@langchain/core` must be declared in the app's own
+`package.json`.** The hierarchy patch now keys off that declaration — read
+from the `package.json` in `process.cwd()` — not off whether the module
+resolves. Measured on 3.1.0, same chain both ways:
 
-Rules for the set, all measured:
+- `@langchain/core` declared → `workflow RunnableSequence` →
+  `workflow ChatPromptTemplate` / `workflow StrOutputParser` + `chat <model>`.
+- only `@langchain/openai` declared (core arrives transitively) → the single
+  `chat <model>` span and **nothing else**, no error. The debug line is
+  `@langchain/core not found in consumer package.json — treating as absent`.
 
-- It is an **allow-list** — anything omitted is off. Include every provider
-  *and* framework the app uses, and no others: a plain-OpenAI app gets
-  `OPENAI` alone, not `AZURE_OPENAI` "just in case" — the list documents
-  what the app is, and padding it misstates that.
-- App uses LangChain → `LANGCHAIN` must be in the set. `{OPENAI}` alone
-  silently drops the Progress hierarchy patch; `{OPENAI, LANGCHAIN}` keeps
-  both.
-- LangChain-only app → **omit `instruments` entirely**. The default enables
-  exactly that path; adding raw provider instrumentation on top double-counts
-  each LLM call.
-- Re-check this section against any release past 2.1.2 — it is a workaround,
-  not intended API; once fixed, `instruments` is optional again.
+So for a LangChain app, adding `@langchain/core` to `dependencies` when it is
+missing is a **required edit** — the JS counterpart of the Python meta-package
+rule — and in a monorepo the process must start from the directory that holds
+that `package.json`.
 
-**Why it happens.** The SDK looks for the app's own `@langchain/core`; finding
-one, it takes over LangChain tracing and — unless `OPENAI` or `AZURE_OPENAI`
-is named in `instruments` — disables the provider instrumentors to avoid
-double-counting, narrowing the run to LangChain alone. The lookup succeeds
-even when nothing in `package.json` mentions LangChain, because
-`@langchain/core` arrives as a transitive dependency of the SDK and npm hoists
-it to top level. Besides naming the provider, `blockInstruments` with
-`ObservabilityInstruments.LANGCHAIN` also clears it, by stopping the takeover
-before the provider instrumentors are disabled.
+`instruments` / `blockInstruments` still exist and still mean what they did:
+
+- `instruments` is an **allow-list** — pass it and anything omitted is off,
+  LangChain included. Only pass it when the app genuinely needs narrowing.
+- `blockInstruments` is the tool for **double counting**: a framework that
+  reports its own model calls *and* drives an instrumented provider SDK
+  records each call twice. Genkit on `@genkit-ai/compat-oai` is the measured
+  case (see *Genkit*); block the provider, keep the framework.
 
 Run with `tsx bootstrap.ts` (or node with a TS loader). Alternative without a
 bootstrap file: hooks import at the very top of the entry point, instrumented
@@ -125,7 +128,7 @@ not patched; bootstrap: patched.
 
 ```typescript
 // bootstrap.ts — `npm start` runs this, not the app
-import { Observability, ObservabilityInstruments } from '@progress/observability';
+import { Observability } from '@progress/observability';
 
 const apiKey = process.env.OBSERVABILITY_API_KEY;
 if (!apiKey) throw new Error('OBSERVABILITY_API_KEY is not set');
@@ -133,7 +136,6 @@ if (!apiKey) throw new Error('OBSERVABILITY_API_KEY is not set');
 Observability.instrument({
   appName: process.env.OBSERVABILITY_APP_NAME ?? 'my-app',
   apiKey,
-  instruments: new Set([ObservabilityInstruments.OPENAI]),   // required — see "Then add instruments"
 });
 
 // flush on beforeExit — require() returns before a floating main() finishes
@@ -199,12 +201,14 @@ Useful `instrument()` options: `traceContent: false`, `additionalTags: […]`,
 
 ## What auto-instruments
 
-`ObservabilityInstruments` (from the package's types, v2.1.2): OPENAI,
+`ObservabilityInstruments` (from the package's types, v3.1.0): OPENAI,
 ANTHROPIC, COHERE, BEDROCK, **AZURE_OPENAI**, VERTEXAI, SAGEMAKER, OLLAMA,
 GROQ, MISTRAL, TOGETHER, REPLICATE, ALEPHALPHA, GOOGLE_GENERATIVEAI,
 TRANSFORMERS, WATSONX, LANGCHAIN, LLAMA_INDEX, CREW, HAYSTACK, OPENAI_AGENTS,
 MCP, PINECONE, CHROMA, WEAVIATE, QDRANT, MILVUS, LANCEDB, MARQO, REDIS, MYSQL,
-REQUESTS, URLLIB.
+REQUESTS, URLLIB, plus TASK and WORKFLOW (3.x; span kinds for the decorators,
+not instrumentors). Genkit is not a member and needs no flag — 3.1.0 enriches
+its spans through an always-on processor; see *Genkit* below.
 
 **For Google, check which SDK the app imports.** `GOOGLE_GENERATIVEAI` hooks
 **`@google/genai`** (≥1.0 <2.0), the unified SDK. `VERTEXAI` covers
@@ -222,7 +226,93 @@ whether it speaks the OpenAI API.
 **Not auto-instrumented: LangGraph.js, Mastra, the Vercel AI SDK.**
 LangGraph.js does **not** ride the LangChain instrumentor — a LangGraph app
 gets no graph structure from it. Say so plainly, then offer
-`wrapFunctionWithSpan` or the decorators below for structure.
+`wrapFunctionWithSpan` or the decorators below for structure. Genkit is the
+exception among the frameworks — covered from 3.1.0 through its own
+OpenTelemetry spans, with an ordering rule; see *Genkit*.
+
+## The app already sets up OpenTelemetry — its provider first, then `instrument()`
+
+Grep for `NodeTracerProvider`, `NodeSDK`, `.register(`, or an
+`@opentelemetry/sdk-*` dependency before writing anything. When the app owns a
+`TracerProvider`, the order of the two inits decides who receives what.
+Measured on 3.1.0 with `@opentelemetry/sdk-trace-node` 2.11 — an in-memory
+exporter on the app side, an OTLP sink on ours, one `openai` call plus one
+span from the global tracer and one from `provider.getTracer()`:
+
+| Order | App's exporter | Progress |
+|---|---|---|
+| app `provider.register()` → `instrument()` | every span | every span |
+| `instrument()` → app `provider.register()` | only `provider.getTracer()` spans | only global-tracer spans (the provider SDK's included) |
+
+**Register the app's provider first, then call `instrument()`.** The SDK
+detects the existing global provider, logs `A TracerProvider was already
+registered before instrument() was called …`, and pushes its own OTLP
+processor onto the app's provider — the app's exporter, Progress and the
+enrichment processors all sit in one pipeline. Batched and unbatched both
+flush on `Observability.shutdown()`; the app's own `provider.shutdown()`
+flushes Progress as well, since our processor is in its list.
+
+The other order is a documented limitation, not something to work around: the
+app's later `register()` is refused by the OTel API (`Attempted duplicate
+registration`), so its instance tracer and the global tracer diverge and the
+telemetry splits down the middle. Move the init instead.
+
+**Apps on OpenTelemetry 1.x: the recommended order silently sends nothing to
+Progress.** Measured on `@opentelemetry/sdk-trace-node` 1.30.1: the attach
+succeeds and the warning above prints, but the processor the SDK pushes is
+built from its own 2.x exporter, whose serializer reads
+`span.instrumentationScope` — a 1.x span only has `instrumentationLibrary` —
+so every export throws `TypeError: Cannot read properties of undefined
+(reading 'name')` inside `@opentelemetry/otlp-transformer` and is dropped.
+The app's exporter is unaffected, and the error is visible **only** with
+`debug: true`. Reported 6 Sep 2026. Until it is fixed: upgrade the app's
+`@opentelemetry/*` to 2.x if that is on the table; otherwise say so plainly
+and offer the trade — `instrument()` first keeps Progress fed (global-tracer
+spans, the provider SDK's included) at the cost of the split above. Never
+report an OTel-1.x app as wired on the strength of the attach warning.
+
+Whether `appName` survives the attach (in Python it does not — spans carry the
+app's resource) is not measured; confirm the service name in verify.
+
+## Genkit (3.1.0+)
+
+Genkit emits its own OpenTelemetry spans (`genkit:type`,
+`genkit:metadata:subtype` = `flow` / `tool` / `model`), and 3.1.0 adds a
+`GenkitSpanProcessor` that maps them onto what the platform reads: a flow
+becomes kind `workflow`, a tool kind `tool`, and a model span gains
+`gen_ai.request.model` / `gen_ai.response.model`, `gen_ai.provider.name`
+(from the `plugin/model` name), `gen_ai.usage.*` tokens and the input/output
+messages. No enum member, no flag — always on. Span names stay Genkit's
+(`supportFlow`, `lookupOrder`), not the `workflow <name>` form traceloop uses.
+
+**Call `instrument()` before the first flow runs.** Genkit starts its own
+`NodeSDK` lazily, on the first span, and that SDK is OpenTelemetry 1.x — so a
+flow that runs first puts you in the 1.x attach case above and Progress
+receives nothing. Init first and Genkit's later registration is refused
+(silently — Genkit swallows it), its spans go through the global tracer into
+our provider, and everything arrives. Measured on genkit 1.41 with
+`@genkit-ai/compat-oai`, one flow calling one tool and one model:
+`supportFlow` (workflow), `lookupOrder` (tool), `generate`, and the model span
+with provider, model and token counts. In this order the Genkit dev UI
+(`genkit start`) receives no traces — say so if the user relies on it.
+
+**Watch for the double count.** `@genkit-ai/compat-oai` drives the `openai`
+package underneath and `@genkit-ai/vertexai` drives `@google-cloud/vertexai` —
+both instrumented providers — so each model call is recorded twice: once as
+Genkit's model span, once as the provider's `chat <model>`. Block the provider
+and keep Genkit's:
+
+```typescript
+blockInstruments: new Set([ObservabilityInstruments.OPENAI]),   // VERTEXAI for the vertexai plugin
+```
+
+Measured: with the block, four spans and one model record.
+`@genkit-ai/googleai` uses `@google/generative-ai`, which nothing instruments,
+so it has no double and needs no block — Genkit's model span is the only
+record. The `generate` wrapper span carries a provider name but no model —
+the shape the collector currently misfiles as an `llm_call` against model
+`unknown` (collector fix pending merge, Sep 2026) — so expect one phantom
+LLM call per `generate` until that lands.
 
 ## Structure without a framework — spans with no LLM call
 
@@ -327,9 +417,18 @@ mean the callback wiring didn't attach (rule 2 above).
 1. **ESM app, no hooks import**, or **LangChain imported statically before
    init** — rules 1 and 2; the two that produce "it ran but there are no
    spans".
-2. **Direct provider SDK, no spans at all** — `instruments` was omitted; see
-   the `instruments` section. The single most likely cause of "OpenAI app,
-   clean run, nothing on the platform".
+2. **Direct provider SDK, no spans at all** — on 2.1.2 this meant `instruments`
+   was omitted; on 3.x it means detection missed the package. Run once with
+   `debug: true`: `Detected consumer provider: openai` should appear.
+   `No recognized AI provider packages detected` means the package does not
+   resolve from the SDK's location — fix the install or layout, don't add
+   `instruments`.
 3. **Wrong key type** — `acm_…` (MCP, read) in place of `ac_p_…` (Integration).
 4. **Missing or non-awaiting shutdown** — spans dropped on exit; see *Flush on
    exit*.
+5. **LangChain app, a lone `chat` span per call** — `@langchain/core` is not in
+   the app's `package.json`; see the LangChain rule under *`instruments` is
+   optional again*.
+6. **App owns a TracerProvider on OpenTelemetry 1.x, Progress empty** — the
+   attach-export bug under *The app already sets up OpenTelemetry*; visible
+   only under `debug: true`.
