@@ -178,11 +178,22 @@ Two settings commonly shipped with corporate mirrors are worth knowing about:
 - **`ignore-scripts=true`** — harmless here. Neither `@progress/observability`
   nor `@github/copilot` has an install script; Copilot's platform binary ships
   as an `optionalDependencies` entry, which npm resolves normally.
-- **`min-release-age=<days>`** — also harmless, but it makes resolution
-  *silently* pick an older version, and the fixtures carry `^` ranges with no
-  lockfiles. Two machines can then install different trees from the same
-  fixture. If you are chasing a result you cannot reproduce, check the installed
-  versions before anything else.
+- **`min-release-age=<days>`** — makes resolution *silently* pick an older
+  version, and the fixtures carry `^` ranges with no lockfiles. Two machines
+  can then install different trees from the same fixture. If you are chasing
+  a result you cannot reproduce, check the installed versions before anything
+  else. It bites harder right after an SDK release: when the `^` floor is
+  younger than the policy, nothing satisfies it and every TS fixture fails with
+  `npm error code ETARGET` while `npm view @progress/observability versions`
+  still lists the version (view reads metadata; install applies the policy).
+  Run the harness with the check off for that shell:
+
+  ```bash
+  NPM_CONFIG_MIN_RELEASE_AGE=0 ./scripts/skill_e2e_all.sh ts
+  ```
+
+  CI on public npm has no such policy, which is why a fixture can be green
+  there and `ETARGET` locally for a week.
 
 ### Requirements
 
