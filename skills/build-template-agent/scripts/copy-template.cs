@@ -97,14 +97,15 @@ static class TemplateCopier
             throw new ArgumentException($"Target parent does not exist: {parent}");
         }
 
-        if (IsLink(target))
-        {
-            throw new ArgumentException($"Target must not be a symlink: {targetArgument}");
-        }
-
         var comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
+        if (target.Equals(Path.GetFullPath(Directory.GetCurrentDirectory()), comparison))
+        {
+            throw new ArgumentException($"Target must not be the current working directory: {targetArgument}");
+        }
+        RejectSymlinkPathComponents(target, "Target");
+
         var sourcePrefix = source.TrimEnd(Path.DirectorySeparatorChar) +
                            Path.DirectorySeparatorChar;
         if (target.Equals(source, comparison) || target.StartsWith(sourcePrefix, comparison))
@@ -143,6 +144,7 @@ static class TemplateCopier
                     $"Target appeared during copy; refusing to overwrite it: {targetArgument}");
             }
 
+            RejectSymlinkPathComponents(target, "Target");
             Directory.Move(staging, target);
             return target;
         }
@@ -227,6 +229,50 @@ static class TemplateCopier
         {
             return false;
         }
+    }
+
+    private static void RejectSymlinkPathComponents(string path, string label)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var inspectionBase = InspectionBase(fullPath);
+        var current = inspectionBase;
+        foreach (var segment in Path.GetRelativePath(inspectionBase, fullPath).Split(
+                     Path.DirectorySeparatorChar,
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (IsLink(current))
+                throw new ArgumentException($"{label} path must not contain symlinks: {path}");
+            if (!File.Exists(current) && !Directory.Exists(current)) break;
+        }
+    }
+
+    private static string InspectionBase(string fullPath)
+    {
+        var candidates = new List<string>
+        {
+            Path.GetFullPath(Directory.GetCurrentDirectory()),
+            Path.GetFullPath(Path.GetTempPath()),
+        };
+        if (!OperatingSystem.IsWindows() && Directory.Exists("/tmp"))
+            candidates.Add("/tmp");
+
+        return candidates
+                   .Distinct(StringComparer.Ordinal)
+                   .Where(candidate => IsWithin(candidate, fullPath))
+                   .OrderByDescending(candidate => candidate.Length)
+                   .FirstOrDefault()
+               ?? Path.GetPathRoot(fullPath)
+               ?? throw new ArgumentException($"Path has no filesystem root: {fullPath}");
+    }
+
+    private static bool IsWithin(string directory, string path)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var prefix = directory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return path.Equals(directory, comparison) || path.StartsWith(prefix, comparison);
     }
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;

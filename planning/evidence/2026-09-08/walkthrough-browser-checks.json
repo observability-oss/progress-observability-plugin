@@ -1,0 +1,81 @@
+{
+  "checks": 88,
+  "layout": [
+    {
+      "tab": "tour",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "tab": "files",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "tab": "language",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "tab": "trace",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "tab": "quiz",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "tab": "tour",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "tab": "files",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "tab": "language",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "tab": "trace",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "tab": "quiz",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "tab": "tour",
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "tab": "files",
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "tab": "language",
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "tab": "trace",
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "tab": "quiz",
+      "width": 390,
+      "scroll": 390
+    }
+  ],
+  "errors": []
+}

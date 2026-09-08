@@ -1,3 +1,5 @@
+> Preserved development history from `d2516e3`. File layouts, TODOs and test counts below are historical. Start with the [current handoff](./agent-builder-handoff-2026-09-08.md) and [planning index](./README.md).
+
 # Build Custom Agent MVP
 
 Branch: `build-custom-agent`, stacked on `build-template-agent` in the same

@@ -117,7 +117,8 @@ internal static class TelemetryTests
             var first = ++_calls == 1;
             ChatResponse response = first
                 ? new(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call-1", "CheckReleaseReadiness",
-                    new Dictionary<string, object?> { ["projectName"] = "Atlas" })])) { FinishReason = ChatFinishReason.ToolCalls }
+                    new Dictionary<string, object?> { ["projectName"] = "Atlas" })]))
+                { FinishReason = ChatFinishReason.ToolCalls }
                 : new(new ChatMessage(ChatRole.Assistant, Private + "_ANSWER Atlas is blocked.")) { FinishReason = ChatFinishReason.Stop };
             response.ModelId = "offline-response-model";
             response.Usage = new() { InputTokenCount = first ? 11 : 23, OutputTokenCount = first ? 4 : 9 };

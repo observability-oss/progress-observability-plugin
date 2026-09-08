@@ -1,3 +1,5 @@
+> Preserved development history from `d2516e3`. File layouts, TODOs and test counts below are historical. Start with the [current handoff](./agent-builder-handoff-2026-09-08.md) and [planning index](./README.md).
+
 # Prebuilt template validation — 2026-09-03
 
 Historical initial-template checkpoint. The subsequent

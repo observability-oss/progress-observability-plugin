@@ -3,6 +3,7 @@
 !.env.example
 __pycache__/
 *.pyc
+.DS_Store
 
 # .NET build output (recreated by dotnet build)
 bin/

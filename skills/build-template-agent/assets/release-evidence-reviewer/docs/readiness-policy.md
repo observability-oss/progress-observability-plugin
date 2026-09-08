@@ -1,5 +1,7 @@
 # Release readiness policy
 
+> Fictional fixture: This policy and all referenced release evidence are synthetic and provided only for this local demonstration.
+
 A release can be marked **Ready** only when both pieces of release evidence are documented:
 1. Security approval is recorded as **Approved**.
 2. A named rollback owner is assigned.

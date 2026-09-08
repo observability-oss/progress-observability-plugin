@@ -80,6 +80,7 @@ class BuilderConfigContractTests(unittest.TestCase):
                 instructions = (
                     ROOT / "skills" / name / "SKILL.md"
                 ).read_text(encoding="utf-8")
+                normalized_instructions = " ".join(instructions.split())
                 command = (ROOT / "commands" / f"{name}.md").read_text(
                     encoding="utf-8"
                 )
@@ -87,10 +88,30 @@ class BuilderConfigContractTests(unittest.TestCase):
                 self.assertNotIn("Microsoft.Hosting.Lifetime", program)
                 self.assertNotIn("Local UI:", program)
                 self.assertNotIn("PublicListenUrl", program)
-                self.assertIn("--urls http://127.0.0.1:0", instructions)
-                self.assertIn("Now listening on:", instructions)
-                self.assertIn("--urls http://127.0.0.1:0", command)
-                self.assertIn("Now listening on:", command)
+                self.assertIn("--urls http://127.0.0.1:0", normalized_instructions)
+                self.assertIn("Now listening on:", normalized_instructions)
+                self.assertIn('mode: "async"', normalized_instructions)
+                self.assertIn("detach: true", normalized_instructions)
+                self.assertIn("read_bash", normalized_instructions)
+                self.assertIn(
+                    "returned shell ID in the same turn",
+                    normalized_instructions,
+                )
+                self.assertIn("at most 30 seconds total", normalized_instructions)
+                self.assertIn(
+                    "Do not wait for the server command to complete",
+                    normalized_instructions,
+                )
+                self.assertIn(
+                    'do not end the turn with a passive "Waiting..." status',
+                    normalized_instructions,
+                )
+                self.assertIn("stop if the process exits", normalized_instructions)
+                self.assertIn(
+                    "never restart an already healthy process",
+                    normalized_instructions,
+                )
+                self.assertIn(f"Use the `{name}` skill", command)
 
     def test_every_template_keeps_secret_and_ui_runtime_contract(self) -> None:
         for item in TEMPLATES:

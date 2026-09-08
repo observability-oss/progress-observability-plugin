@@ -104,10 +104,10 @@ internal static class ViewWorkflowTests
             "ordinary ranking question changes relevant metric and chart without an Apply gate");
         Check(ranking.Evidence.Single().Result is ExplorationResult rankingEvidence && ReferenceEquals(rankingEvidence.Chart, ranking.Chart),
             "agent synthesis receives the exact selected chart rendered by the UI");
-        Check(ranking.Chart!.Points.Single(point => point.Label == "checkout").Value == 1080m && ranking.ProposedView is null,
+        Check(ranking.Chart!.Points.Single(point => point.Label == "checkout").Value == 1080m,
             "question-driven service bars retain deterministic totals");
         Check(ranking.Evidence.Single().ModelResult is FocusedExplorationResult
-            { SelectedTotal: 1530m, BusiestDays: null, MaxDailyRequests: null, AdditionalMetrics: null },
+        { SelectedTotal: 1530m, BusiestDays: null, MaxDailyRequests: null, AdditionalMetrics: null },
             "errors question supplies only selected metric evidence to the model");
         client.Plan = _ => new() { ["metric"] = "requests", ["grouping"] = "day" };
         var busiest = await workflow.AskAsync(new("Which day had the most requests?", initial));
@@ -123,7 +123,7 @@ internal static class ViewWorkflowTests
             latency.Chart!.Unit == "ms" && latency.Chart.Points.Single(point => point.Label == "2026-08-24").Value == 900m,
             "ordinary latency question focuses checkout and latency with unchanged dates");
         Check(latency.Evidence.Single().ModelResult is FocusedExplorationResult
-            { Peak: { Value: 900m, Labels.Count: 1 }, Lowest: { Value: 200m, Labels.Count: 29 }, MaxDailyRequests: null, BusiestDays: null },
+        { Peak: { Value: 900m, Labels.Count: 1 }, Lowest: { Value: 200m, Labels.Count: 29 }, MaxDailyRequests: null, BusiestDays: null },
             "latency question supplies an authoritative peak and low instead of daily request rankings");
         client.Plan = _ => new() { ["service"] = "auth", ["metric"] = "averageResponseMs", ["grouping"] = "day" };
         var authLatency = await workflow.AskAsync(new("What is the maximum latency for auth?", initial));

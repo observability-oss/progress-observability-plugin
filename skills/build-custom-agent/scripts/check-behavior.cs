@@ -31,8 +31,11 @@ internal static class BehaviorChecker
             var options = Parse(args);
             using var client = new HttpClient(new HttpClientHandler
             {
-                AllowAutoRedirect = false, UseProxy = false, UseCookies = false,
-            }) { Timeout = Timeout.InfiniteTimeSpan };
+                AllowAutoRedirect = false,
+                UseProxy = false,
+                UseCookies = false,
+            })
+            { Timeout = Timeout.InfiniteTimeSpan };
             var report = await CheckAsync(client, options);
             Console.WriteLine("BEHAVIOR_REPORT=" + JsonSerializer.Serialize(report, BehaviorJson.Default.Report));
             return report.Status == "completed" ? 0 : 1;
@@ -93,6 +96,7 @@ internal static class BehaviorChecker
     internal static async Task<Report> CheckAsync(HttpClient client, Options options)
     {
         var results = new List<Result>();
+        var deadlineReached = false;
         var names = new[] { "task", "follow_up", "fresh_chat", "boundary" };
         var prompts = new[] { options.Checks.Task, options.Checks.FollowUp, options.Checks.FollowUp, options.Checks.Boundary };
         for (var i = 0; i < names.Length; i++)
@@ -103,13 +107,14 @@ internal static class BehaviorChecker
                 continue;
             }
             var remaining = options.Deadline - DateTimeOffset.UtcNow;
-            if (remaining <= TimeSpan.Zero)
+            if (deadlineReached || remaining <= TimeSpan.Zero)
             {
                 results.Add(new(names[i], "untested", Error: "deadline"));
                 continue;
             }
             var timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            using var cancellation = new CancellationTokenSource(remaining < timeout ? remaining : timeout);
+            var deadlineLimitsRequest = remaining <= timeout;
+            using var cancellation = new CancellationTokenSource(deadlineLimitsRequest ? remaining : timeout);
             Turn[] history = i == 1 ? [new(options.Checks.Task, results[0].Answer!)] : [];
             try
             {
@@ -136,7 +141,9 @@ internal static class BehaviorChecker
             }
             catch (OperationCanceledException)
             {
-                results.Add(new(names[i], "incomplete", Error: DateTimeOffset.UtcNow >= options.Deadline ? "deadline" : "timeout"));
+                // Timer rounding can cancel just before the wall-clock deadline.
+                deadlineReached = deadlineLimitsRequest;
+                results.Add(new(names[i], "incomplete", Error: deadlineLimitsRequest ? "deadline" : "timeout"));
             }
             catch (JsonException)
             {
@@ -148,7 +155,7 @@ internal static class BehaviorChecker
             }
         }
         // Snapshot at report creation, not a renewed deadline or a guarantee of time remaining later.
-        var remainingSeconds = (long)Math.Max(0, Math.Floor((options.Deadline - DateTimeOffset.UtcNow).TotalSeconds));
+        var remainingSeconds = deadlineReached ? 0 : (long)Math.Max(0, Math.Floor((options.Deadline - DateTimeOffset.UtcNow).TotalSeconds));
         return new Report(results.All(result => result.Status == "completed") ? "completed" : "incomplete", options.Deadline, remainingSeconds, results);
     }
 }

@@ -44,7 +44,7 @@ public sealed class AssistantTools(MetricsStore metrics, ViewRules rules, ViewSp
         if (status is not ("clarify" or "unsupported")) throw new ArgumentException("unsupported_limitation_status");
         Limitation = new(status, status == "clarify"
             ? "Which service, dates or metric would you like to explore?"
-            : "I can explore requests, errors, error rates and response times in the bundled synthetic CSV. Choose a daily trend, service comparison or two date periods.");
+            : "The bundled synthetic CSV contains daily request/error totals and average response times, not individual request latencies or live data. I can show daily trends, service comparisons or two date periods.");
         Evidence = new(nameof(ExplainLimitation), new { status }, Limitation, Limitation);
         return Limitation;
     }

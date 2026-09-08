@@ -120,6 +120,25 @@ class TemplateCatalogTests(unittest.TestCase):
                 self.assertEqual(sentinel.read_text(encoding="utf-8"), "customer content")
                 self.assertEqual(list(target.iterdir()), [sentinel])
 
+    def test_refuses_current_directory_and_symlinked_parent_without_writing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            current = self.run_copier("--target", ".", cwd=root)
+            self.assertNotEqual(current.returncode, 0)
+            self.assertIn("current working directory", current.stderr)
+            self.assertEqual(list(root.iterdir()), [])
+
+            real_parent = root / "real-parent"
+            real_parent.mkdir()
+            linked_parent = root / "linked-parent"
+            linked_parent.symlink_to(real_parent, target_is_directory=True)
+            linked = self.run_copier(
+                "--template", "docs-qa", "--target", str(linked_parent / "copied"), cwd=root
+            )
+            self.assertNotEqual(linked.returncode, 0)
+            self.assertIn("path must not contain symlinks", linked.stderr)
+            self.assertEqual(list(real_parent.iterdir()), [])
+
     def test_rejects_corrupt_catalog_and_missing_or_symlinked_source(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

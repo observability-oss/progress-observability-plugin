@@ -19,11 +19,7 @@ public sealed record DashboardResult(string Status, string? Reason, IReadOnlyLis
 public sealed record ViewSpec(string Service, string Start, string End, string Metric = "errorRatePercent", string Grouping = "day", PeriodComparison? Comparison = null);
 public sealed record AnalysisRequest(string? Question, ViewSpec? View = null, string? LastQuestion = null, ViewSpec? ApprovedView = null);
 public sealed record ComparisonWindows(string BeforeStart, string BeforeEnd, string AfterStart, string AfterEnd);
-public sealed record ViewPatch(string? Service, string? Start, string? End, string? Metric, string? Grouping, ComparisonWindows? Comparison)
-{
-    public static implicit operator ViewPatch(ViewSpec view) => new(view.Service, view.Start, view.End, view.Metric, view.Grouping,
-        view.Comparison is { } p ? new(p.BeforeStart, p.BeforeEnd, p.AfterStart, p.AfterEnd) : null);
-}
+public sealed record ViewPatch(string? Service, string? Start, string? End, string? Metric, string? Grouping, ComparisonWindows? Comparison);
 public sealed record ChartPoint(string Label, decimal? Value);
 public sealed record MetricExtreme(decimal Value, IReadOnlyList<string> Labels);
 public sealed record ChartData(string Title, string Unit, string Kind, IReadOnlyList<ChartPoint> Points);
@@ -31,7 +27,7 @@ public sealed record ChartData(string Title, string Unit, string Kind, IReadOnly
 /// <param name="Explorable">True when the agent tool already returns this exact number, so a click gets a grounded answer.</param>
 public sealed record Highlight(string Key, string Label, decimal? Value, string Unit, string Caption, string? Focus, bool Explorable);
 public sealed record ViewData(ViewSpec View, DashboardResult Dashboard, ChartData Chart, IReadOnlyList<Highlight> Highlights);
-public sealed record AnalysisReply(string Status, string Answer, string TraceId, ViewSpec View, ViewSpec? ProposedView,
+public sealed record AnalysisReply(string Status, string Answer, string TraceId, ViewSpec View,
     DashboardResult? Dashboard, ChartData? Chart, IReadOnlyList<Highlight>? Highlights,
     IReadOnlyList<ToolEvidence> Evidence, string? LastQuestion);
 public sealed record MetricSelection(string Service, string Start, string End);

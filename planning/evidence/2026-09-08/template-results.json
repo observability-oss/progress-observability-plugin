@@ -1,0 +1,94 @@
+[
+  {
+    "label": "release-evidence-reviewer-copy",
+    "exit": 0,
+    "seconds": 0.35,
+    "markers": []
+  },
+  {
+    "label": "release-evidence-reviewer-build",
+    "exit": 0,
+    "seconds": 1.74,
+    "markers": [
+      "    0 Warning(s)",
+      "    0 Error(s)"
+    ]
+  },
+  {
+    "label": "release-evidence-reviewer-smoke",
+    "exit": 0,
+    "seconds": 9.51,
+    "markers": [
+      "SMOKE_REPORT={\"status\":\"pass\",\"cases\":[{\"caseId\":\"policy-markdown\",\"status\":\"pass\",\"traceId\":\"b454ad3e1bd7c117dcc6b658af57a225\",\"reason\":\"expected_behavior_observed\"},{\"caseId\":\"atlas-blocked\",\"status\":\"pass\",\"traceId\":\"ea5e1c6d65e1457dee55b3177ae9b5cf\",\"reason\":\"expected_behavior_observed\"},{\"caseId\":\"unknown-not-found\",\"status\":\"pass\",\"traceId\":\"e7923b19df0ca84b17e8acbb8bde9f7e\",\"reason\":\"expected_behavior_observed\"}]}"
+    ]
+  },
+  {
+    "label": "docs-qa-copy",
+    "exit": 0,
+    "seconds": 0.35,
+    "markers": []
+  },
+  {
+    "label": "docs-qa-build",
+    "exit": 0,
+    "seconds": 4.04,
+    "markers": [
+      "    0 Warning(s)",
+      "    0 Error(s)"
+    ]
+  },
+  {
+    "label": "docs-qa-smoke",
+    "exit": 0,
+    "seconds": 13.02,
+    "markers": [
+      "SMOKE_REPORT={\"status\":\"pass\",\"cases\":[{\"caseId\":\"grounded-answer\",\"status\":\"pass\",\"traceId\":\"b94b9f316ac79d3b6aca67f78066c81e\",\"reason\":\"expected_behavior_observed\"},{\"caseId\":\"two-sources\",\"status\":\"pass\",\"traceId\":\"8c1243d5633dbd58cce012a73f187148\",\"reason\":\"expected_behavior_observed\"},{\"caseId\":\"unknown-not-found\",\"status\":\"pass\",\"traceId\":\"4727637ce29e6f16b4cd0377fbc9b8f4\",\"reason\":\"expected_behavior_observed\"}]}"
+    ]
+  },
+  {
+    "label": "operations-data-analyst-copy",
+    "exit": 0,
+    "seconds": 0.41,
+    "markers": []
+  },
+  {
+    "label": "operations-data-analyst-build",
+    "exit": 0,
+    "seconds": 1.81,
+    "markers": [
+      "    0 Warning(s)",
+      "    0 Error(s)"
+    ]
+  },
+  {
+    "label": "operations-data-analyst-smoke",
+    "exit": 0,
+    "seconds": 12.61,
+    "markers": [
+      "SMOKE_REPORT={\"status\":\"pass\",\"cases\":[{\"caseId\":\"known-aggregate\",\"status\":\"pass\",\"traceId\":\"22db42de606ad1af92e31b10bc938f51\",\"reason\":\"tool_numeric_invariants_observed\",\"tools\":[\"ExploreMetrics\"]},{\"caseId\":\"comparison-spike\",\"status\":\"pass\",\"traceId\":\"06d97b77b237cf21e7bfd5c244a1962a\",\"reason\":\"tool_numeric_invariants_observed\",\"tools\":[\"ExploreMetrics\"]},{\"caseId\":\"empty-selection\",\"status\":\"pass\",\"traceId\":\"0f697f936486be113995fe2d65f02431\",\"reason\":\"tool_numeric_invariants_observed\",\"tools\":[\"ExploreMetrics\"]}]}"
+    ]
+  },
+  {
+    "label": "ticket-triage-copy",
+    "exit": 0,
+    "seconds": 0.4,
+    "markers": []
+  },
+  {
+    "label": "ticket-triage-build",
+    "exit": 0,
+    "seconds": 2.85,
+    "markers": [
+      "    0 Warning(s)",
+      "    0 Error(s)"
+    ]
+  },
+  {
+    "label": "ticket-triage-smoke",
+    "exit": 0,
+    "seconds": 12.03,
+    "markers": [
+      "SMOKE_REPORT={\"status\":\"pass\",\"cases\":[{\"caseId\":\"clear-routing\",\"status\":\"pass\",\"traceId\":\"9867bc0e538469d44697ec8c68c0e626\",\"reason\":\"typed_evidence_and_tools_verified\"},{\"caseId\":\"missing-information\",\"status\":\"pass\",\"traceId\":\"8c8bdc43c3f5a779007c2c8df27bfbcf\",\"reason\":\"typed_evidence_and_tools_verified\"},{\"caseId\":\"unknown-not-found\",\"status\":\"pass\",\"traceId\":\"e6334e7b73aac693fb2d4b0e89f67d2a\",\"reason\":\"typed_evidence_and_tools_verified\"}]}"
+    ]
+  }
+]

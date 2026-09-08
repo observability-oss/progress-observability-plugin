@@ -1,0 +1,108 @@
+[
+  {
+    "label": "copilot-sync",
+    "exit": 0,
+    "seconds": 0.19,
+    "markers": []
+  },
+  {
+    "label": "mcp-sync",
+    "exit": 0,
+    "seconds": 0.07,
+    "markers": []
+  },
+  {
+    "label": "python-tests",
+    "exit": 0,
+    "seconds": 10.1,
+    "markers": [
+      "Ran 15 tests in 9.950s"
+    ]
+  },
+  {
+    "label": "docs-qa-runtime",
+    "exit": 0,
+    "seconds": 2.45,
+    "markers": [
+      "DOCS_QA_TESTS=pass; assertions=96"
+    ]
+  },
+  {
+    "label": "operations-data-analyst-runtime",
+    "exit": 0,
+    "seconds": 7.02,
+    "markers": [
+      "OPERATIONS_RUNTIME_TESTS=pass; assertions=244"
+    ]
+  },
+  {
+    "label": "release-evidence-reviewer-runtime",
+    "exit": 0,
+    "seconds": 2.19,
+    "markers": [
+      "RELEASE_REVIEW_TESTS=pass; assertions=85; no_model_or_ingestion_calls=true"
+    ]
+  },
+  {
+    "label": "ticket-triage-runtime",
+    "exit": 0,
+    "seconds": 3.32,
+    "markers": [
+      "TICKET_TRIAGE_TESTS_OK assertions=130; no_model_or_ingestion_calls=true"
+    ]
+  },
+  {
+    "label": "docs-qa-ui-state",
+    "exit": 0,
+    "seconds": 0.19,
+    "markers": [
+      "DOCS_UI_STATE_TESTS=pass; assertions=21; model_or_network_calls=false"
+    ]
+  },
+  {
+    "label": "operations-data-analyst-ui-state",
+    "exit": 0,
+    "seconds": 0.13,
+    "markers": [
+      "OPERATIONS_UI_STATE_TESTS=pass; assertions=11; model_or_network_calls=false"
+    ]
+  },
+  {
+    "label": "release-evidence-reviewer-ui-state",
+    "exit": 0,
+    "seconds": 0.08,
+    "markers": [
+      "RELEASE_UI_STATE_TESTS=pass; assertions=10; model_or_network_calls=false"
+    ]
+  },
+  {
+    "label": "ticket-triage-ui-state",
+    "exit": 0,
+    "seconds": 0.07,
+    "markers": [
+      "TICKET_TRIAGE_UI_STATE_TESTS=pass; assertions=25; model_or_network_calls=false"
+    ]
+  },
+  {
+    "label": "custom-helpers",
+    "exit": 0,
+    "seconds": 30.74,
+    "markers": [
+      "HELPER_TESTS_OK assertions=89"
+    ]
+  },
+  {
+    "label": "custom-runtime",
+    "exit": 0,
+    "seconds": 5.85,
+    "markers": [
+      "RUNTIME_TESTS_OK assertions=172"
+    ]
+  },
+  {
+    "label": "diff-check",
+    "exit": 0,
+    "seconds": 0.08,
+    "markers": []
+  }
+]

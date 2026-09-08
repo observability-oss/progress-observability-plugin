@@ -9,7 +9,9 @@ on:
       - "skills/**"
       - "scripts/build_copilot.py"
       - "scripts/tests/**"
+      - "commands/build-custom-agent.md"
       - "commands/build-template-agent.md"
+      - "copilot/.github/prompts/build-custom-agent.prompt.md"
       - "copilot/.github/prompts/build-template-agent.prompt.md"
       - "scripts/sync_skill_refs.py"
       - "scripts/copilot-instructions.template.md"
@@ -17,7 +19,6 @@ on:
       - "copilot/skills/build-template-agent/**"
       - "copilot/skills/build-custom-agent/**"
       - ".github/workflows/check-copilot.yml"
-      - "ci/check-copilot.yml"
 
 jobs:
   check:
@@ -53,12 +54,17 @@ jobs:
             node "$script"
           done
       - name: Test the custom-agent helpers
-        run: dotnet run --file skills/build-custom-agent/tests/helper-tests.cs
+        run: dotnet run --file scripts/tests/custom-agent/helper-tests.cs
       - name: Test custom-agent history and retrieval
-        run: dotnet run --project skills/build-custom-agent/tests/runtime/RuntimeTests.csproj
+        run: dotnet run --project scripts/tests/custom-agent/runtime/RuntimeTests.csproj
       - name: Copy, validate, and build the custom-agent starter
         run: |
           custom_agent_target="$RUNNER_TEMP/custom-agent-starter"
           dotnet run --file skills/build-custom-agent/scripts/copy-template.cs -- --target "$custom_agent_target"
           dotnet run --file skills/build-custom-agent/scripts/validate-project.cs -- --target "$custom_agent_target"
           dotnet build "$custom_agent_target/CustomAgent.csproj" --configuration Release
+      - name: Verify .NET whitespace formatting
+        run: |
+          for project in skills/build-template-agent/assets/*/*.csproj skills/build-custom-agent/assets/custom-agent-starter/*.csproj scripts/tests/template_runtime/*/*.csproj scripts/tests/custom-agent/runtime/*.csproj; do
+            dotnet format "$project" whitespace --verify-no-changes --no-restore
+          done

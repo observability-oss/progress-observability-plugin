@@ -1,70 +1,77 @@
 # Custom-agent scope routing
 
-Use this reference after Purpose is available. It distinguishes a truthful
-local prototype from a zero-write integration plan, and when a complex request
-can offer a separately confirmed, reduced-scope mock PoC.
+Use this reference after Purpose is available to choose a truthful local
+prototype or zero-write integration plan, optionally through a separately
+confirmed reduced mock PoC.
 
-## Minimal conversation
+## Normalize and decide
 
 Purpose is actionable when it names a concrete outcome and enough subject,
-input, or action to infer a safe demonstration. If it is only a vague topic or
-role, ask this one optional clarification:
+input, or action for a safe demonstration. For only a vague topic or role, ask
+the one allowed clarification:
 
 > What should the agent mainly do: answer from information, analyze or summarize
 > records, or take actions in another system?
 
-Do not ask another clarification. If the result is still uncertain, offer
-plan/revise and leave missing details unspecified internally rather than inventing
-a scenario. A user-requested `Revise proposed agent` updates the proposal; it is
-not an additional automatic clarification.
+Ask nothing further. If uncertainty remains, offer plan/revise without inventing
+a scenario. A user-selected revision is a separate editing flow, not another
+automatic clarification.
 
-Normalize the result internally before offering an outcome:
+Normalize internally:
 
 ```yaml
 purpose: <required, concise>
 name: <inferred display name>
 service_slug: <lowercase-hyphen slug>
 knowledge:
-  mode: workspace-files | generated-docs | synthetic-records | none
+  mode: workspace-files | generated-docs | mock-records | none
   workspace_sources: [<workspace-relative paths only>]
 actions:
   - name: <at most three>
-    behavior: local-read | local-compute | simulated-read
-external_systems: [<named future adapters>]
-requested_side_effects: [<writes, approvals, or notifications>]
+    behavior: local-read | local-compute | mock-read
+external_systems: [<future adapters>]
+requested_side_effects: [<writes, approvals, notifications>]
 recommended_outcome: local-prototype | plan-only
-reason: <one concise, user-visible sentence>
+reason: <one concise user-visible sentence>
 ```
 
-The local `knowledge` and `actions` fields describe potential prototype tools,
-not the full live goal. For complex requests, keep the original requested
-sources and actions for revisions and planning; leave local fields unset until
-a mock scope is proposed. Never rewrite the original intent to fit these enums.
+Local fields describe a possible prototype, not a rewritten live goal. Preserve
+the original sources/actions for later revision and planning. Include no secrets,
+raw document content, absolute paths, or hidden reasoning.
 
-Do not put credentials, secret values, raw document contents, absolute paths,
-or hidden reasoning in this record.
+Ask internally:
 
-## First response and data-source disclosure
+> Can the core behavior be demonstrated safely and meaningfully without
+> target-business-system credentials, live external calls, or real side
+> effects?
 
-Keep mode labels internal. For a buildable local request, show a short
-**Proposed local prototype** with Purpose, Name, Knowledge, and up to three
-Actions, then invoke the native Build/Revise picker. Do this for initial,
-revised, and simplified mock proposals; a plain-text question is not a picker.
-Do not describe a proposal as an already-created agent.
+Choose a local prototype only when yes. Supplied safe files, generated documents,
+and deterministic mock records are allowed. A named system alone does not force
+plan-only: advisory Jira triage or SharePoint-style Q&A may use disclosed local
+content. Never infer live access or effects the user did not request, and honor
+rejected source types or mocks.
 
-For a complex/live request, compose two to four plain sentences for the native
-question body, not a separate assistant message:
-why the full idea cannot be built safely as this local MVP, why both offered
-paths remain useful, and what a mock slice excludes. For plan/mock, explain that
-the plan guides developers through the full solution while the mock PoC can
-validate only a bounded decision slice. For plan/revise, explain that revision
-can narrow the goal to a safe local prototype. Append a blank line and
-`How would you like to continue?` in that same question body, then call the
-host's interactive question tool with the two structured choices from `SKILL.md`.
-At this point, show neither a plan heading/preview nor
-a Purpose/Name/Knowledge/Actions block. Detailed planning follows plan selection;
-the local-prototype proposal follows selection of the simplified mock option.
-Example Copilot CLI `ask_user` arguments (invoke the tool; do not print this JSON):
+Choose plan-only for essential live data/credentials, real writes or
+notifications, approval or durable multi-step execution, production RAG,
+multi-agent orchestration, deployment, or provider switching. Uncertainty about
+a useful safe slice means no mock offer. Reapply this decision after revisions;
+classification and proposals never authorize a build.
+
+## Present the path choice
+
+A buildable request gets **Proposed local prototype** with Purpose, Name,
+Knowledge, and up to three Actions, followed by the native Build/Revise picker.
+Identify mock versus user-supplied sources, say no live adapter is used, and do
+not imply the agent already exists.
+
+For a complex/live request, put two to four plain sentences only in the native
+question body: why the full goal is outside this MVP, why both paths help, and
+what the mock slice excludes. A plan guides the full developer implementation;
+a mock PoC checks only a bounded decision slice. If no mock fits, explain that
+revision can narrow the scope. Append a blank line and
+`How would you like to continue?`; show neither a plan preview nor four fields.
+Go directly to this question after reading the reference, without a scope-summary
+commentary message. Example CLI `ask_user` arguments (invoke; do not print):
 
 ```json
 {
@@ -73,115 +80,43 @@ Example Copilot CLI `ask_user` arguments (invoke the tool; do not print this JSO
 }
 ```
 
-All of that context must appear inside the question box with the choices, not
-as an earlier chat paragraph or only as a description of one option. When a
-complex request still needs a path choice, reading this reference is not a
-reason to narrate the assessment: go straight to the question call without a
-scope-summary preamble or progress update. Do not
-duplicate or paraphrase the rationale outside the box. Keep choice labels short
-and separate from the question body.
-Use the same interactive selection for build/revise and plan/revise; follow
-`SKILL.md` for the text-only fallback and cancelled questions.
+Keep all rationale in that box, with short structured choice labels. Use the same
+native mechanism for plan/revise and build/revise; follow `SKILL.md` for fallback
+and cancellation. Declining mocks retains plan/revise unless the user explicitly
+requests the plan. A plan selection does not start implementation.
 
-If no mock alternative is appropriate, replace the example's mock explanation
-with the value of revising the scope, and use
-plan/revise instead. Declining mocks does not select a plan: still call the
-native picker unless the user explicitly requests the plan. Do not imply that
-choosing a plan starts implementation.
+For an external-system prototype, prefer concrete disclosure such as `mock Jira
+issues`, not `synthetic data`, and say it will not use even an available adapter,
+connector, or MCP connection. User-supplied safe files are `supplied`, never
+mock. Plan-only creates neither a prototype nor mock dataset.
 
-For an external-system prototype, explicitly tell the user that it will use
-mock data and will not connect to their real system or use an existing adapter,
-connector, or MCP connection, even if already configured. Prefer `mock data`
-or a concrete phrase such as `mock Jira issues` over `synthetic data`.
-For example:
+## Simplified mock PoC
 
-> Proposed local prototype — try the triage flow with mock
-> Jira issues. This build will not connect to your Jira instance or use your
-> existing Jira adapter. `INTEGRATION_PLAN.md` will explain how to connect the
-> real system later as a separate development step.
+Offer `Propose a simplified mock PoC` only when a useful advisory or analytical
+slice fits local content and at most three deterministic read/compute tools. Do
+not offer it when mocks were rejected, only a plan was requested, or no meaningful
+slice fits; do not repeatedly re-offer a declined mock unless the user revises
+that preference.
 
-If the user explicitly supplies safe local files, identify those files as the
-source instead; do not call real local copies mock data. The no-live-adapter
-boundary still applies. If the user chooses the plan-only outcome, explain that
-no prototype or mock dataset will be built and the plan will be returned in chat.
-
-## Decision rule
-
-Ask:
-
-> Can the core behavior be demonstrated safely and meaningfully without
-> target-business-system credentials, live external calls, or real side
-> effects?
-
-Choose `local-prototype` only when the answer is yes. It may use supplied safe
-workspace documents, generated Markdown, or deterministic synthetic records.
-A future external read adapter may be represented by a clearly simulated tool
-when that still demonstrates the core user experience.
-Mentioning Jira, SharePoint, or another system does not by itself require live
-integration. Simple advisory work such as breaking Jira items into actionable
-chunks or answering policy questions goes directly to a disclosed local
-proposal and native Build/Revise picker when live access is not essential.
-Do not infer a live backlog, connection requirement, or real write that the
-user did not request; use supplied local content or clearly labeled mock data.
-Honor rejected data sources, including a no-mock preference.
-
-Recommend `plan-only` for the original goal when live data or credentials are
-essential, a real write or notification is required, the request needs approval
-or durable multi-step execution, or it depends on production RAG, multi-agent
-orchestration, deployment, or provider switching. Assess whether the bounded
-mock alternative below is meaningful; otherwise keep plan/revise. Uncertainty
-about a useful, safe local slice means no mock offer.
-
-Use this rule before every proposal, including after revisions. Never silently
-replace required live behavior with a mock. Use the conditional two-choice
-menu in `SKILL.md`; neither classification nor requesting a proposal permits
-a build.
-
-## Simplified mock PoC for a complex request
-
-Offer `Propose a simplified mock PoC` alongside `Show implementation plan` only
-when a useful part of the idea can be explored with local mock records and at
-most three deterministic read/compute tools in the existing starter. This is
-an advisory or analytical slice, not a simulator of the whole external system.
-Do not offer it if the user has ruled out mocks, asks only for a plan, or no
-meaningful demonstration fits those limits. Do not repeatedly offer a declined
-mock alternative; the user can explicitly revise that preference later.
-An explicit request for the implementation plan selects that outcome directly;
-do not require another confirmation before returning the chat-only plan.
-
-Put the scope-first context above inside the question body, not a plan proposal
-or separate chat message.
-Selecting the mock option only requests a proposal: create no files,
-inspect no credentials, and call no business systems. Show the reduced Purpose,
-Name, Knowledge, and Actions, then invoke the native picker with exactly
-`Build proposed agent` and `Revise proposed agent`. Preserve
-the original goal and deferred requirements for `INTEGRATION_PLAN.md`; do not
-present the reduced Purpose as fulfillment of that full goal.
+Selecting this option requests only a proposal. Create no files, inspect no
+credentials, and call no business system. Show the reduced Purpose, Name,
+Knowledge, Actions, and excluded behavior, then ask exactly `Build proposed
+agent` / `Revise proposed agent`. Preserve the original goal and deferred work
+for `INTEGRATION_PLAN.md`.
 
 For example, production Kubernetes auto-remediation can become **Kubernetes
-Remediation Advisor**: inspect mock incident snapshots, suggest a response from
-an example runbook, and explain risks or when human review is needed. State the
-assumed rules and explicitly exclude cluster access, continuous monitoring,
-actual restarts, rollback execution, and an implemented approval workflow.
-Use disclosure such as:
+Remediation Advisor** over mock incidents and an example runbook. Explicitly
+exclude cluster access, continuous monitoring, restart/rollback execution, and
+implemented approvals, and state that sample decisions do not prove production
+safety. Only explicit Build approval of that displayed scope starts the existing
+prototype flow. Add no new runtime, workflow engine, live tools, or background
+monitor. Results remain recommendations or missing evidence, never completed
+restarts, approvals, payments, or notifications. Keep this boundary in Purpose,
+answers, smoke interpretation, and handoff.
 
-> This PoC uses mock data and assumed rules to explore decisions. It will not
-> connect to your cluster or use an existing adapter. It does not remediate or
-> validate a real cluster; passing smoke tests does not prove production safety.
+## Revise in one reply
 
-Only `Build proposed agent` confirming that displayed reduced scope enters the
-existing local-prototype build. No new runtime, dependencies, workflow engine,
-executable remediation tools, or background monitoring are added. Results must
-describe recommendations or missing evidence, never claim a restart, approval,
-payment, or notification occurred. Keep the limitation visible in the configured
-UI Purpose, agent responses, and final handoff. Use the existing `knowledge`,
-`tool`, and `not-found` smoke cases to check only the demonstrated sample logic.
-
-## Revise the proposal in one reply
-
-When the user selects `Revise proposed agent`, show the current four values in
-one copyable text block, prefilled with the current proposal or inferred intent.
-This user-requested editing block is not an upfront plan preview:
+On `Revise proposed agent`, show one copyable block:
 
 ```text
 Purpose: <current purpose>
@@ -190,104 +125,67 @@ Knowledge: <current data sources>
 Actions: <current actions>
 ```
 
-Ask the user to change any fields in one reply; they can paste an edited block
-or simply describe their changes. Keep fields they do not change. Do not ask
-four separate questions or require a special IDE form. If edits conflict with
-preserved fields, flag the mismatch without silently rewriting those fields;
-use the scope rule below to determine the safe outcome.
-
-Apply the edits and rerun the scope decision: show an updated four-field
-proposal for a local prototype, or the scope explanation and choices together
-inside the question box for a complex request. A revision is not build approval,
-even if it only renames the
-agent. If new Knowledge or Actions require live access or real effects, return
-to the complex-request decision and reassess mock eligibility, honoring any
-rejection of mocks. Only a meaningfully revised local scope or the explicit
-mock-proposal flow can lead back to a prototype; neither bypasses its build
-confirmation. Do not silently drop requirements to make a request fit.
+Ask for all desired changes in one reply; accept an edited block or prose and
+retain untouched fields. Do not ask four questions. Flag conflicts rather than
+silently rewriting fields. Rerun routing and show either the revised local
+proposal with Build/Revise or the complex explanation with its choices. Even a
+name-only revision is not approval. New live/effect requirements return to the
+complex choice; never drop requirements to fit the starter.
 
 ## Representative intents
 
 | Purpose | Outcome |
 |---|---|
-| Triage Jira items into smaller actionable chunks. | Direct local proposal using supplied content or disclosed mock Jira issues, then native Build/Revise; no plan/mock gate. |
-| Answer HR questions using our SharePoint HR knowledge base. | Direct local proposal from supplied local documents or clearly labeled mock policies, then native Build/Revise; document the future SharePoint adapter. Required live retrieval instead uses the complex-request choice. |
-| Read the current Jira backlog through our live adapter. | Complex-request choice: developer plan or a separately proposed mock slice. The existing live adapter stays unused. |
-| Update Jira priorities, collect approval, and notify Slack. | Offer an integration plan or a proposal for mock priority recommendations; no Jira writes, approval workflow, or Slack delivery. |
-| Continuously monitor production Kubernetes, restart services, and roll back failed deployments. | Offer the full implementation plan or a proposal for a mock incident/remediation advisor; disclose the reduced scope before building. |
-| Connect to SAP and bank APIs, approve claims, reimburse employees, and notify managers. | Offer the full plan or a proposal to assess mock expense claims against sample rules; never approve, pay, or notify. |
-| Remediate our real cluster; a mock is not useful. | Offer plan/revise only; create no files unless the user later explicitly changes scope and confirms a local build. |
+| Triage Jira items into smaller actionable chunks. | Local proposal from supplied content or mock Jira issues; no plan/mock gate. |
+| Answer HR questions from SharePoint. | Local proposal from supplied files or mock policies plus future-adapter plan; required live retrieval uses the complex choice. |
+| Read the current Jira backlog through our adapter. | Developer plan or separately proposed mock slice; adapter remains unused. |
+| Update Jira, collect approval, and notify Slack. | Plan or mock recommendations; no writes, workflow, or delivery. |
+| Monitor Kubernetes and restart/roll back services. | Plan or mock incident/remediation advisor, with reduced scope confirmed. |
+| Use SAP/bank APIs to approve, reimburse, and notify. | Plan or mock claims assessment; never approve, pay, or notify. |
+| Remediate the real cluster; mocks are useless. | Plan/revise only; no files without later revised scope and Build approval. |
 
-## Prototype boundaries
+## Prototype content and continuation
 
-Imported sources must be workspace-relative, regular `.md`, `.txt`, `.json`, or
-`.csv` files. Reject symlinks, hidden paths, more than 10 files, any file over
-1 MiB, or more than 5 MiB total. Never copy `.env` files or other likely secret
-material.
+Only workspace-relative regular `.md`, `.txt`, `.json`, or `.csv` files are
+allowed: no links, hidden paths, `.env`, more than 10 files, files over 1 MiB,
+or totals over 5 MiB. In `appsettings.json`, `Content:Sources` exhaustively maps
+each exact path to `supplied` or `mock`. Generated content is `mock`; only actual
+user-provided files are `supplied`.
 
-Generated tools are bounded deterministic methods over local or synthetic data.
-They may simulate a read result but must not contact SharePoint, Jira, a
-database, SaaS, or another API. They must not perform writes, approvals,
-purchases, notifications, or claim a simulated effect occurred. When an
-external source is represented locally, the prototype's `INTEGRATION_PLAN.md`
-describes the future adapter and developer-owned work.
+Tools are deterministic over that content. They make no API/database calls or
+effects. For an external-source or reduced mock prototype,
+`INTEGRATION_PLAN.md` briefly records the original goal, local slice, sources,
+assumptions, unvalidated behavior, and future adapter/tool contracts. List
+authentication/permissions, failure handling, tests, and ordered developer work.
+An existing adapter may be assessed later but is not used or validated now.
 
-## Prototype continuation plan
+Preserve requested automation. Mark a safer alternative such as human approval
+as a **Recommended changed assumption** and explain its effect; never imply
+acceptance. End the file with a copyable Copilot prompt for separate developer-led
+implementation after permissions, scope, and tests are confirmed. Do not run it.
 
-In both continuation and chat-only plans, preserve the original automation
-requirement. Label any proposed safety change (for example, human approval
-before an otherwise automatic payment) as a **Recommended changed assumption**
-and explain its effect. Distinguish requested policy-authorized automation from
-recommended human review or escalation; do not imply the user accepted a change.
+## MAF guidance for plans
 
-Keep `INTEGRATION_PLAN.md` short and specific to the generated prototype: name
-the mock data or supplied local files, the simulated tools, and what has not
-been connected. For a simplified PoC, also preserve the original full goal,
-identify the demonstrated decision slice and assumed rules, and list the
-behavior and safety properties that remain unvalidated. Map the local tools
-and their input/output contracts to the future live adapter; list
-authentication/permissions, failure handling, and tests the developer must add.
-Organize the remaining work as ordered developer steps. An existing adapter can
-be assessed later, but is not used or validated by the current build.
+- Function tool: on-demand lookup/action after developers supply typed client,
+  authentication, contracts, and safety behavior.
+- Middleware: validation, authorization, redaction, logging, and errors—not the
+  business adapter.
+- Context provider: configured history/profile/retrieval injected per run; it
+  neither creates nor authorizes a source.
+- Runtime Agent Skill: reusable domain instructions/trusted resources, distinct
+  from this Copilot build skill and not a connector.
+- Workflow: explicit ordering, branching, approvals, checkpoints, or costly
+  effects; plan it rather than adding it to this prototype.
 
-End with a copyable follow-up Copilot prompt to review the plan and implement
-the real integration as separate developer-led work, confirming permissions,
-scope, and test strategy first. Do not run that prompt automatically. Link this
-file in the final prototype handoff so the user can find the continuation.
-
-## MAF mapping for plans
-
-- Use a narrow function tool for an on-demand lookup or action after a developer
-  supplies the typed client, authentication, schema, and safety behavior. The
-  model decides when to call a tool.
-- Use middleware for cross-cutting validation, authorization checks, redaction,
-  logging, and error handling. Middleware is not the business-system adapter.
-- Use a context provider when configured history, profile, or retrieved context
-  must be injected on every run. It does not create or authorize the source.
-- Use a runtime Agent Skill for reusable domain instructions or trusted
-  resources whose execution may remain adaptive. This is distinct from this
-  Copilot build skill and does not provide a live connector.
-- Use a workflow for explicit ordering, branching, human approval,
-  checkpointing, or costly side effects. Such a workflow belongs in the
-  integration plan, not this MVP prototype.
-
-MAF coordinates components developers provide. It does not provision external
-credentials or permissions, infer data contracts and business rules, make
-side effects idempotent, create production retrieval infrastructure, or turn
-checkpoints into transactions across external systems.
+MAF coordinates developer-provided components. It does not provision access,
+invent contracts/rules, make effects idempotent, create production retrieval,
+or turn checkpoints into cross-system transactions.
 
 ## Plan-only response
 
-After the user selects `Show implementation plan`, return a concise chat
-response with actionable developer steps for the full proposed goal. Make the
-dependencies and first implementation step clear, without executing them. Cover:
-
-1. recommended agent, tool, middleware, context-provider, and workflow shape;
-2. each external adapter plus its authentication owner and required permission;
-3. request/response data contracts and source-of-truth decisions;
-4. approval, idempotency, retry, compensation, and failure behavior for effects;
-5. local, contract, integration, and end-to-end tests;
-6. deployment, secret-management, and observability responsibilities;
-7. what the builder could provide later versus what remains developer-owned.
-
-Do not create `INTEGRATION_PLAN.md` or any other file in plan-only mode.
+After `Show implementation plan`, return concise ordered developer steps for the
+full goal: MAF shape; each adapter, auth owner, and permission; request/response
+and source-of-truth contracts; effect approval/idempotency/retry/compensation;
+local, contract, integration, and end-to-end tests; deployment, secrets, and
+observability; and builder versus developer ownership. Make dependencies and the
+first step clear. Execute nothing and create no `INTEGRATION_PLAN.md` or other file.

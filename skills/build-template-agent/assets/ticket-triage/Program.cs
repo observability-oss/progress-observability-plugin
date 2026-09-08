@@ -13,7 +13,9 @@ public static class Program
         var smokeMode = args.Contains("--smoke", StringComparer.Ordinal);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            Args = args, ContentRootPath = AppContext.BaseDirectory, WebRootPath = "wwwroot",
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory,
+            WebRootPath = "wwwroot",
         });
         builder.Configuration.AddUserSecrets<AgentMarker>(optional: true).AddEnvironmentVariables();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
@@ -35,7 +37,10 @@ public static class Program
         if (tracingEnabled)
             ObservabilityTracer.Initialize(new ObservabilityOptions
             {
-                AppName = appName, ApiKey = observabilityKey!, RecordInputs = false, RecordOutputs = false,
+                AppName = appName,
+                ApiKey = observabilityKey!,
+                RecordInputs = false,
+                RecordOutputs = false,
                 AdditionalAttributes = new Dictionary<string, object> { ["agent.template.id"] = "ticket-triage" },
             });
         else
@@ -77,8 +82,11 @@ public static class Program
         app.MapGet("/api/health", () => Results.Ok(new
         {
             status = store.Tickets.Count > 0 ? "ready" : "degraded",
-            ticketsLoaded = store.Tickets.Count, documentsLoaded = 1, mockData = true,
-            tracingEnabled, telemetryContentCaptureEnabled = false,
+            ticketsLoaded = store.Tickets.Count,
+            documentsLoaded = 1,
+            mockData = true,
+            tracingEnabled,
+            telemetryContentCaptureEnabled = false,
         }));
         app.MapGet("/api/tickets", () => Results.Ok(new { tickets = store.Tickets, mockData = true }));
         app.MapPost("/api/triage", async (TriageRequest? request, CancellationToken cancellationToken) =>

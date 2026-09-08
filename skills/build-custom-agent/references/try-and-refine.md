@@ -33,8 +33,10 @@ contracts. Judge a reduced-scope PoC, not its original live-system goal. Choose:
    or claims of real effects.
 
 For a lookup-based task, use a real bundled record plus a new user constraint;
-reserve an unknown-record test for the boundary check. User-supplied mock text
-is valid input when the accepted Purpose supports it. Do not invent a
+when it applies decision rules, choose a known near-miss that fails a requirement
+and check the explanation against that rule. A correct refusal with an invented
+reason does not pass. Reserve an unknown-record test for the boundary check.
+User-supplied mock text is valid input when the accepted Purpose supports it. Do not invent a
 "bundled records only" restriction or treat a useful, grounded answer as a
 failure just because the user describes a new scenario.
 

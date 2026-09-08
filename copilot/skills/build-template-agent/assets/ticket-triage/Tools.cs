@@ -19,8 +19,8 @@ public sealed class AssistantTools(TicketStore store, string ticketId, int maxCa
         var result = store.GetTicket(id);
         MissingTicketObserved = result.Status == "not_found";
         LastRecommendation = store.Suggest(id);
-        return new(result.Status, result.Ticket, result.Source, LastRecommendation,
-            store.BundledTicket ?? result.Ticket, store.Scenario);
+        return new(result.Status, store.BundledTicket ?? result.Ticket, result.Source,
+            LastRecommendation, store.Scenario);
     }
 
     [Description("Read the bundled Markdown triage policy, including required intake facts and routing rules.")]
@@ -56,5 +56,5 @@ public sealed class AssistantTools(TicketStore store, string ticketId, int maxCa
     }
 }
 
-public sealed record TicketInspection(string Status, Ticket? Ticket, string? Source, Recommendation Recommendation,
-    Ticket? BundledTicket, ScenarioInfo Scenario);
+public sealed record TicketInspection(string Status, Ticket? BundledTicket, string? BundledSource,
+    Recommendation Recommendation, ScenarioInfo Scenario);

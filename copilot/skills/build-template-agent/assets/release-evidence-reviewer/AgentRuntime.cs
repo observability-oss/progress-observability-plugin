@@ -54,12 +54,15 @@ public sealed class AgentRuntime(IChatClient chatClient, KnowledgeBase knowledge
             var tools = new AssistantTools(knowledgeBase, message, context?.Project);
             var boundedClient = new FunctionInvokingChatClient(chatClient)
             {
-                MaximumIterationsPerRequest = 3, MaximumConsecutiveErrorsPerRequest = 0,
-                AllowConcurrentInvocation = false, IncludeDetailedErrors = false,
+                MaximumIterationsPerRequest = 3,
+                MaximumConsecutiveErrorsPerRequest = 0,
+                AllowConcurrentInvocation = false,
+                IncludeDetailedErrors = false,
             };
             var agent = boundedClient.AsAIAgent(new ChatClientAgentOptions
             {
-                Name = appName, UseProvidedChatClientAsIs = true,
+                Name = appName,
+                UseProvidedChatClientAsIs = true,
                 ChatOptions = new ChatOptions
                 {
                     Instructions = """

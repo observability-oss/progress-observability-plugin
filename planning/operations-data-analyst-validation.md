@@ -1,3 +1,5 @@
+> Preserved development history from `d2516e3`. File layouts, TODOs and test counts below are historical. Start with the [current handoff](./agent-builder-handoff-2026-09-08.md) and [planning index](./README.md).
+
 # Operations Data Analyst simplification — 2026-09-03
 
 This supersedes the Analyst v7 interaction snapshot in

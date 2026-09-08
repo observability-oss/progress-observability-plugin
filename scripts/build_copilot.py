@@ -30,7 +30,9 @@ MIRRORED_SKILL_TREES = {
         ROOT / "copilot" / "skills" / "build-custom-agent"
     ),
 }
-EXCLUDED_TREE_PARTS = frozenset({"bin", "obj", "__pycache__", ".DS_Store"})
+EXCLUDED_TREE_PARTS = frozenset(
+    {"bin", "obj", "tests", "__pycache__", ".DS_Store"}
+)
 
 # include KEY -> (source path relative to repo root, heading demotion levels)
 SOURCES = {

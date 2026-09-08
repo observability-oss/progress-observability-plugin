@@ -11,7 +11,9 @@ static class HelperTests
 
     public static int Run()
     {
-        var skill = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(CurrentFile())!, ".."));
+        var repository = Path.GetFullPath(Path.Combine(
+            Path.GetDirectoryName(CurrentFile())!, "..", "..", ".."));
+        var skill = Path.Combine(repository, "skills", "build-custom-agent");
         var copier = Path.Combine(skill, "scripts", "copy-template.cs");
         var validator = Path.Combine(skill, "scripts", "validate-project.cs");
         var root = Path.Combine(Path.GetTempPath(), $"build-custom-agent-tests-{Guid.NewGuid():N}");
@@ -23,6 +25,14 @@ static class HelperTests
             ExpectExit(0, copier, "--target", valid);
             Expect(!File.Exists(Path.Combine(valid, ".env.example")),
                 "Copied projects must not contain .env.example.");
+            var copiedProgram = File.ReadAllText(Path.Combine(valid, "Program.cs"));
+            Expect(!copiedProgram.Contains("AddObservability", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("new MetadataOnlyChatClient", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("new FunctionInvokingChatClient", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("MaximumIterationsPerRequest = 3", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("MaxOutputTokens = 800", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("AllowMultipleToolCalls = false", StringComparison.Ordinal),
+                "The fixed runtime must use metadata-only telemetry and explicit model/tool bounds.");
             ExpectExit(0, validator, "--target", valid);
             var settingsPath = Path.Combine(valid, "appsettings.json");
             File.WriteAllText(
@@ -48,6 +58,8 @@ static class HelperTests
             Directory.CreateDirectory(Path.Combine(valid, "data", "nested"));
             File.WriteAllText(Path.Combine(valid, "docs", "nested", "policy.md"), "# Nested policy\n\nTest guidance.");
             File.WriteAllText(Path.Combine(valid, "data", "nested", "records.csv"), "id,status\nMOCK-1,open\n");
+            DeclareSource(settingsPath, "docs/nested/policy.md", "supplied");
+            DeclareSource(settingsPath, "data/nested/records.csv", "mock");
             ExpectExit(0, validator, "--target", valid);
             ExpectBuild(Path.Combine(valid, "CustomAgent.csproj"));
             var output = Path.Combine(valid, "bin", "Release", "net10.0");
@@ -116,6 +128,34 @@ static class HelperTests
                 "\npublic sealed class UnsafeProbe { public bool Exists(string path) => new FileInfo(path).Exists; }\n");
             ExpectExit(2, validator, "--target", unsafeEdit);
 
+            var harmlessText = CopyFresh(copier, root, "harmless-text");
+            File.AppendAllText(Path.Combine(harmlessText, "Tools.cs"), """"
+
+                public static class HarmlessText
+                {
+                    public const string Ordinary = "HttpClient, Credential, File.Open, and Process.Start are prose.";
+                    public const string Verbatim = @"System.Net and Environment.GetEnvironmentVariable are prose.";
+                    public const string Raw = """
+                        global::System.IO.File and unsafe stackalloc are prose.
+                        """;
+                }
+                """");
+            ExpectExit(0, validator, "--target", harmlessText);
+            ExpectBuild(Path.Combine(harmlessText, "CustomAgent.csproj"));
+
+            foreach (var (name, code) in new[]
+            {
+                ("alias-bypass", "\nusing IO = System.IO;\n"),
+                ("static-bypass", "\nusing static System.IO.File;\n"),
+                ("global-bypass", "\npublic static class Probe { public static bool Read() => global::System.IO.File.Exists(\"x\"); }\n"),
+                ("unsafe-bypass", "\npublic unsafe static class Probe { public static int* Read() => stackalloc int[1]; }\n"),
+            })
+            {
+                var bypass = CopyFresh(copier, root, name);
+                File.AppendAllText(Path.Combine(bypass, "Tools.cs"), code);
+                ExpectExit(2, validator, "--target", bypass);
+            }
+
             var inventedSource = CopyFresh(copier, root, "invented-source");
             File.AppendAllText(Path.Combine(inventedSource, "Tools.cs"),
                 "\npublic static class SourceProbe { public const string Citation = \"data/nonexistent-issues.json\"; }\n");
@@ -123,6 +163,7 @@ static class HelperTests
 
             var completeSource = CopyFresh(copier, root, "complete-source");
             File.WriteAllText(Path.Combine(completeSource, "docs", "policy.md-v2.md"), "# Revised policy\n\nExample only.");
+            DeclareSource(Path.Combine(completeSource, "appsettings.json"), "docs/policy.md-v2.md", "mock");
             File.AppendAllText(Path.Combine(completeSource, "Tools.cs"),
                 "\npublic static class SourceProbe { public const string Citation = \"docs/policy.md-v2.md\"; }\n");
             ExpectExit(0, validator, "--target", completeSource);
@@ -132,10 +173,29 @@ static class HelperTests
             var unicodeSettingsPath = Path.Combine(unicodeSource, "appsettings.json");
             var unicodeSettings = JsonNode.Parse(File.ReadAllText(unicodeSettingsPath))!;
             unicodeSettings["Agent"]!["Examples"]![0] = "Explain docs/правила.md.";
+            unicodeSettings["Content"]!["Sources"]!["docs/правила.md"] = "supplied";
             var escapedSettings = unicodeSettings.ToJsonString();
             Expect(escapedSettings.Contains("\\u", StringComparison.Ordinal), "The fixture must actually use JSON Unicode escapes.");
             File.WriteAllText(unicodeSettingsPath, escapedSettings);
             ExpectExit(0, validator, "--target", unicodeSource);
+
+            var undeclaredSource = CopyFresh(copier, root, "undeclared-source");
+            File.WriteAllText(Path.Combine(undeclaredSource, "docs", "extra.md"), "# Extra\n\nUndeclared.");
+            ExpectExit(2, validator, "--target", undeclaredSource);
+
+            var missingSource = CopyFresh(copier, root, "missing-source");
+            File.Delete(Path.Combine(missingSource, "docs", "sample-knowledge.md"));
+            ExpectExit(2, validator, "--target", missingSource);
+
+            var invalidProvenance = CopyFresh(copier, root, "invalid-provenance");
+            DeclareSource(Path.Combine(invalidProvenance, "appsettings.json"),
+                "docs/sample-knowledge.md", "synthetic");
+            ExpectExit(2, validator, "--target", invalidProvenance);
+
+            var unknownDeclaration = CopyFresh(copier, root, "unknown-declaration");
+            DeclareSource(Path.Combine(unknownDeclaration, "appsettings.json"),
+                "docs/not-present.md", "mock");
+            ExpectExit(2, validator, "--target", unknownDeclaration);
 
             var secretFile = CopyFresh(copier, root, "secret-file");
             File.WriteAllText(Path.Combine(secretFile, ".env"), "EXAMPLE=not-a-real-secret\n");
@@ -179,6 +239,32 @@ static class HelperTests
                 settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             ExpectExit(2, validator, "--target", weakSmoke);
 
+            // Short domain facts are useful when paired with a source or another concrete fact.
+            var shortSmoke = CopyFresh(copier, root, "short-smoke");
+            var shortSettingsPath = Path.Combine(shortSmoke, "appsettings.json");
+            var shortSettings = JsonNode.Parse(File.ReadAllText(shortSettingsPath))!;
+            foreach (var markers in new[]
+            {
+                new[] { "P2", "Ada", "data/sample-records.json" },
+                new[] { "P2", "Engineering" },
+            })
+            {
+                shortSettings["Smoke"]!["Cases"]![1]!["ExpectedMarkers"] = new JsonArray(markers.Select(marker => JsonValue.Create(marker)).ToArray());
+                File.WriteAllText(shortSettingsPath, shortSettings.ToJsonString());
+                ExpectExit(0, validator, "--target", shortSmoke);
+            }
+            foreach (var markers in new[]
+            {
+                new[] { "P2", "Ada" },
+                new[] { "x", "data/sample-records.json" },
+                new[] { "..", "data/sample-records.json" },
+            })
+            {
+                shortSettings["Smoke"]!["Cases"]![1]!["ExpectedMarkers"] = new JsonArray(markers.Select(marker => JsonValue.Create(marker)).ToArray());
+                File.WriteAllText(shortSettingsPath, shortSettings.ToJsonString());
+                ExpectExit(2, validator, "--target", shortSmoke);
+            }
+
             var diagnosticSmoke = CopyFresh(copier, root, "diagnostic-smoke");
             var diagnosticSettings = Path.Combine(diagnosticSmoke, "appsettings.json");
             var diagnosticJson = JsonNode.Parse(File.ReadAllText(diagnosticSettings))!;
@@ -204,6 +290,18 @@ static class HelperTests
             var realTarget = Path.Combine(realParent, "real-target");
             ExpectExit(0, copier, "--target", realTarget);
             ExpectExit(2, validator, "--target", Path.Combine(linkParent, "real-target"));
+
+            var workingDirectoryTarget = Path.Combine(root, "working-directory-target");
+            Directory.CreateDirectory(workingDirectoryTarget);
+            ExpectExitFrom(2, workingDirectoryTarget, copier, "--target", ".");
+            Expect(Directory.Exists(workingDirectoryTarget) &&
+                   !Directory.EnumerateFileSystemEntries(workingDirectoryTarget).Any(),
+                "The copier must not replace its process working directory.");
+            var otherEmptyTarget = Path.Combine(root, "other-empty-target");
+            Directory.CreateDirectory(otherEmptyTarget);
+            ExpectExit(0, copier, "--target", otherEmptyTarget);
+            Expect(File.Exists(Path.Combine(otherEmptyTarget, "CustomAgent.csproj")),
+                "A different real empty directory remains a supported target.");
 
             if (!OperatingSystem.IsWindows() && Directory.Exists("/tmp"))
             {
@@ -233,6 +331,20 @@ static class HelperTests
     }
 
     private static void ExpectExit(int expected, string script, params string[] arguments)
+        => ExpectExitCore(expected, null, script, arguments);
+
+    private static void ExpectExitFrom(
+        int expected,
+        string workingDirectory,
+        string script,
+        params string[] arguments)
+        => ExpectExitCore(expected, workingDirectory, script, arguments);
+
+    private static void ExpectExitCore(
+        int expected,
+        string? workingDirectory,
+        string script,
+        params string[] arguments)
     {
         _assertions++;
         var start = new ProcessStartInfo("dotnet")
@@ -241,6 +353,7 @@ static class HelperTests
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        if (workingDirectory is not null) start.WorkingDirectory = workingDirectory;
         start.ArgumentList.Add("run");
         start.ArgumentList.Add("--file");
         start.ArgumentList.Add(script);
@@ -257,6 +370,16 @@ static class HelperTests
             throw new InvalidOperationException(
                 $"Expected exit {expected}, got {process.ExitCode} for {Path.GetFileName(script)}.\n{stdout}{stderr}");
         }
+    }
+
+    private static void DeclareSource(
+        string settingsPath,
+        string label,
+        string provenance)
+    {
+        var settings = JsonNode.Parse(File.ReadAllText(settingsPath))!;
+        settings["Content"]!["Sources"]![label] = provenance;
+        File.WriteAllText(settingsPath, settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private static void Expect(bool condition, string message)

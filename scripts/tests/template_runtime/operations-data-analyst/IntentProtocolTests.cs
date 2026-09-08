@@ -66,12 +66,19 @@ internal static class IntentProtocolTests
         {
             Bodies.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
             object delta = Bodies.Count == 1
-                ? new { role = "assistant", tool_calls = new[] { new { index = 0, id = "call-explore", type = "function",
-                    function = new { name = "ExploreMetrics", arguments = "{\"metric\":\"errors\",\"grouping\":\"service\"}" } } } }
+                ? new
+                {
+                    role = "assistant",
+                    tool_calls = new[] { new { index = 0, id = "call-explore", type = "function",
+                    function = new { name = "ExploreMetrics", arguments = "{\"metric\":\"errors\",\"grouping\":\"service\"}" } } }
+                }
                 : new { role = "assistant", content = "Checkout contributes the most errors in this synthetic dataset." };
             string Chunk(object change, string? finish) => "data: " + JsonSerializer.Serialize(new
             {
-                id = "offline-response", @object = "chat.completion.chunk", created = 0, model = "offline-model",
+                id = "offline-response",
+                @object = "chat.completion.chunk",
+                created = 0,
+                model = "offline-model",
                 choices = new[] { new { index = 0, delta = change, finish_reason = finish } },
             }) + "\n\n";
             var events = Chunk(delta, null) + Chunk(new { }, Bodies.Count == 1 ? "tool_calls" : "stop") + "data: [DONE]\n\n";

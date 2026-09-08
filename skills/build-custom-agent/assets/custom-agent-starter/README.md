@@ -37,9 +37,16 @@ dotnet run --no-build -- --urls http://127.0.0.1:0
 For the UI, .NET chooses an available loopback port and prints it in the
 standard `Now listening on: http://127.0.0.1:<port>` line. Smoke mode runs
 exactly the `knowledge`, `tool`, and `not-found` cases configured in
-`appsettings.json` and prints one `SMOKE_REPORT=<json>` line. Raw prompts and
-responses are not sent to Progress telemetry (`RecordInputs=false`,
-`RecordOutputs=false`).
+`appsettings.json` and prints one `SMOKE_REPORT=<json>` line. Each run is capped
+at 45 seconds, three tool iterations, 800 output tokens, and 8,000 streamed
+characters.
+
+Progress receives explicit metadata only: span timing and status, model names,
+provider-reported token counts, and declared tool names. The pinned SDK's
+automatic `AddObservability()` wrapper is intentionally not used because it can
+capture prompts and tool arguments despite its content flags. The fixed
+metadata-only wrappers omit prompts, answers, tool arguments, results, and
+exception text.
 
 A passing smoke run checks execution and expected answer fragments, without
 telling the model those expected answers. It does not prove reasoning quality,
@@ -64,21 +71,29 @@ important decisions.
 
 ## Customization boundary
 
-The builder may customize `AgentDefinition.cs`, `Tools.cs`, the `Agent` and
-`Smoke` values in `appsettings.json`, supported files under `docs/` and `data/`,
-and an optional `INTEGRATION_PLAN.md`. The runtime, web routes, UI shell, smoke
-engine, project dependencies, and observability wiring stay fixed.
+The builder may customize `AgentDefinition.cs`, `Tools.cs`, the `Content`,
+`Agent`, and `Smoke` values in `appsettings.json`, supported files under `docs/`
+and `data/`, and an optional `INTEGRATION_PLAN.md`. Every content file must have
+one exact `Content:Sources` entry whose value is `mock` or `supplied`; startup
+fails rather than reading undeclared files or falling back to the working
+directory. The runtime, web routes, UI shell, smoke engine, project dependencies,
+and observability wiring stay fixed.
 
 The fixed UI reads its title, Purpose, suggested prompts, one of four visual
 presets (`knowledge`, `review`, `workflow`, or `analysis`), and its input hint
 from the `Agent` section. Customize those values in `appsettings.json`; do not
 edit the generated copy under `bin/`.
 
-Mock data and tools representing future external sources must be labeled as
-simulated; supplied local files must be identified accurately. For a prototype
+Mock data and tools representing future external sources must use provenance
+`mock`; user-supplied local files must use `supplied`. For a prototype
 representing SharePoint, Jira, a database, or another external source, see
 `INTEGRATION_PLAN.md` for the remaining adapter work and a follow-up Copilot
 prompt. A simplified mock PoC also includes this plan to distinguish its tested
 sample logic from the original full scope and deferred developer work.
 Connecting the real system is a separate step, not part of this build. Other
 local-file-only prototypes do not need that plan.
+
+The project validator checks the fixed starter, allowed shape, declared content,
+and obvious disallowed capabilities as defense in depth. It is not a sandbox or
+a proof that arbitrary editable C# is safe; review `AgentDefinition.cs` and
+`Tools.cs` before running code from an untrusted source.

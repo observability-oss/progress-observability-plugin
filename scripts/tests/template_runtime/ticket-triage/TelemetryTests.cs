@@ -111,7 +111,8 @@ internal static class TelemetryTests
             var first = ++_calls == 1;
             ChatResponse response = first
                 ? new(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call-1", "GetTicket",
-                    new Dictionary<string, object?> { ["id"] = "T-1001" })])) { FinishReason = ChatFinishReason.ToolCalls }
+                    new Dictionary<string, object?> { ["id"] = "T-1001" })]))
+                { FinishReason = ChatFinishReason.ToolCalls }
                 : new(new ChatMessage(ChatRole.Assistant, Private + "_ANSWER T-1001 is proposed for Operations at P1.")) { FinishReason = ChatFinishReason.Stop };
             response.ModelId = "offline-response-model";
             response.Usage = new() { InputTokenCount = first ? 11 : 23, OutputTokenCount = first ? 4 : 9 };

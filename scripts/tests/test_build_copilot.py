@@ -27,6 +27,7 @@ class CopilotPayloadTests(unittest.TestCase):
                     )
             starter = output / "assets/custom-agent-starter"
             self.assertFalse((starter / "references").exists())
+            self.assertFalse((output / "tests").exists())
             for relative, contents in BUILD_COPILOT.tree_files(starter).items():
                 with self.subTest(file=relative):
                     self.assertNotIn(b"try-and-refine", contents.lower())
@@ -44,6 +45,10 @@ class CopilotPayloadTests(unittest.TestCase):
             (source / ".env.example").write_text("SECRET=\n", encoding="utf-8")
             (source / "obj").mkdir()
             (source / "obj" / "build.json").write_text("{}\n", encoding="utf-8")
+            (source / "tests").mkdir()
+            (source / "tests" / "maintainer-only.txt").write_text(
+                "not distributed\n", encoding="utf-8"
+            )
 
             BUILD_COPILOT.write_skill_payload(source, output)
 
@@ -52,6 +57,7 @@ class CopilotPayloadTests(unittest.TestCase):
             self.assertFalse((output / ".env").exists())
             self.assertFalse((output / ".env.local").exists())
             self.assertFalse((output / "obj").exists())
+            self.assertFalse((output / "tests").exists())
             self.assertEqual(
                 BUILD_COPILOT.tree_files(output),
                 BUILD_COPILOT.tree_files(source),

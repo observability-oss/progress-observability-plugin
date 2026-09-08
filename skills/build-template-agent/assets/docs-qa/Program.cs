@@ -14,7 +14,9 @@ public static class Program
         var smoke = args.Contains("--smoke", StringComparer.Ordinal);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            Args = args, ContentRootPath = AppContext.BaseDirectory, WebRootPath = "wwwroot",
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory,
+            WebRootPath = "wwwroot",
         });
         builder.Configuration.AddUserSecrets<AgentMarker>(optional: true).AddEnvironmentVariables();
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
@@ -36,7 +38,10 @@ public static class Program
         if (tracingEnabled)
             ObservabilityTracer.Initialize(new ObservabilityOptions
             {
-                AppName = appName, ApiKey = tracingKey!, RecordInputs = false, RecordOutputs = false,
+                AppName = appName,
+                ApiKey = tracingKey!,
+                RecordInputs = false,
+                RecordOutputs = false,
                 AdditionalAttributes = new Dictionary<string, object> { ["agent.template.id"] = "docs-qa" },
             });
         else Console.Error.WriteLine("Progress tracing is disabled: Integration key is not configured.");
@@ -57,8 +62,11 @@ public static class Program
             app.UseStaticFiles();
             app.MapGet("/api/health", () => Results.Ok(new
             {
-                status = store.Sections.Count > 0 ? "ready" : "degraded", documentsLoaded = store.DocumentCount,
-                sectionsLoaded = store.Sections.Count, tracingEnabled, telemetryContentCaptureEnabled = false,
+                status = store.Sections.Count > 0 ? "ready" : "degraded",
+                documentsLoaded = store.DocumentCount,
+                sectionsLoaded = store.Sections.Count,
+                tracingEnabled,
+                telemetryContentCaptureEnabled = false,
             }));
             app.MapGet("/api/documents", () => Results.Ok(store.Sections));
             app.MapPost("/api/ask", async (AskRequest? request, CancellationToken token) =>

@@ -143,8 +143,6 @@ python scripts/build_copilot.py          # rewrite copilot-instructions.md
 python scripts/build_copilot.py --check   # verify it's in sync (used by CI)
 ```
 
-A ready-to-enable CI workflow lives at [`ci/check-copilot.yml`](../ci/check-copilot.yml).
-**Move it to `.github/workflows/check-copilot.yml`** to enable it - it then runs
-`--check` on every push/PR so a stale file fails the build. (It ships under `ci/`
-rather than `.github/workflows/` because the automation token that populated this
-repo lacks GitHub's `workflow` scope; moving it is a one-time step.)
+The active [Copilot packaging workflow](../.github/workflows/check-copilot.yml)
+runs generator checks and the credential-free builder test suites for relevant
+pull requests and pushes to `main`.

@@ -154,12 +154,19 @@ public sealed class ViewRules(MetricsStore metrics)
 
     public static decimal? Value(MetricSummary? summary, string metric) => metric switch
     {
-        "requests" => summary?.Requests, "errors" => summary?.Errors, "errorRatePercent" => summary?.ErrorRatePercent,
-        "averageResponseMs" => summary?.AverageResponseMs, _ => throw new ArgumentException("unsupported_metric"),
+        "requests" => summary?.Requests,
+        "errors" => summary?.Errors,
+        "errorRatePercent" => summary?.ErrorRatePercent,
+        "averageResponseMs" => summary?.AverageResponseMs,
+        _ => throw new ArgumentException("unsupported_metric"),
     };
     public static string Label(string metric) => metric switch
     {
-        "requests" => "Requests", "errors" => "Errors", "errorRatePercent" => "Error rate", "averageResponseMs" => "Average response time", _ => "Unknown metric",
+        "requests" => "Requests",
+        "errors" => "Errors",
+        "errorRatePercent" => "Error rate",
+        "averageResponseMs" => "Average response time",
+        _ => "Unknown metric",
     };
     public static string Describe(ViewSpec view) => $"{view.Service} · {view.Start} to {view.End} · {Label(view.Metric)} · {view.Grouping}" +
         (view.Comparison is { } p ? $" · {p.BeforeStart}–{p.BeforeEnd} vs {p.AfterStart}–{p.AfterEnd}" : "");

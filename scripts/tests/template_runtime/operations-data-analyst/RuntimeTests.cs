@@ -31,6 +31,34 @@ internal static class RuntimeTests
             client.TraceIds.All(trace => trace == reply.TraceId), "single independent agent trace covers both model requests and restores parent");
         Check(client.OutputLimits.All(limit => limit == 500), "both requests have bounded output tokens");
 
+        foreach (var question in new[] {
+            "What is the per-request p95 latency for checkout on August 24?",
+            "Show checkout p99 response time.",
+            "What is the 95th percentile latency?",
+            "Find the p99.9 for individual requests." })
+        {
+            using var percentileClient = new AnalystClient { Answer = "The per-request p95 latency is 900 ms." };
+            var updates = 0;
+            var unsupported = await Workflow(percentileClient).AskAsync(new(question, checkout, "Earlier question"),
+                onView: _ => { updates++; return Task.CompletedTask; }, onText: _ => { updates++; return Task.CompletedTask; });
+            Check(unsupported.Status == "unsupported" && percentileClient.Requests == 0 && updates == 0,
+                "unavailable request percentile avoids invented synthesis and dashboard updates: " + question);
+            Check(unsupported.View == checkout && unsupported.LastQuestion == "Earlier question" && unsupported.Chart is null &&
+                unsupported.Evidence is [{ Tool: "ExplainLimitation", Result: LimitationResult { Status: "unsupported" } }] &&
+                unsupported.Answer.Contains("not individual request latencies", StringComparison.Ordinal) && Activity.Current == parent,
+                "request percentile returns the existing limitation evidence and preserves view, context and trace: " + question);
+        }
+        foreach (var question in new[] {
+            "What is the 95th percentile of daily average response times?",
+            "Show the p95 of average daily latency.",
+            "What is the 95th percentile of daily requests?" })
+        {
+            using var dailyClient = new AnalystClient();
+            var daily = await Workflow(dailyClient).AskAsync(new(question, checkout));
+            Check(daily.Status == "answered" && dailyClient.Requests == 2 && daily.Chart is not null &&
+                daily.Evidence is [{ Tool: "ExploreMetrics" }], "daily aggregate percentiles retain the normal exploration: " + question);
+        }
+
         using var emptyClient = new AnalystClient { Answer = "Invented empty result: 999 requests." };
         var emptyChunks = new List<string>();
         var empty = await Workflow(emptyClient).AskAsync(new("Keep these dates", checkout with { Start = "2026-09-01", End = "2026-09-02" }),
@@ -83,7 +111,7 @@ internal static class RuntimeTests
             parallel[0].TraceId != parallel[1].TraceId && parallel[0].Evidence.Count == 1 && parallel[1].Evidence.Count == 1,
             "concurrent runs isolate service scope, tool evidence and trace");
 
-        using var smokeClient = new AnalystClient { IncludeOutliers = true };
+        using var smokeClient = new AnalystClient { IncludeOutliers = true, SemanticSmokeAnswers = true };
         using var output = new StringWriter();
         var original = Console.Out;
         int smokeCode;
@@ -101,6 +129,14 @@ internal static class RuntimeTests
         Check(smokeClient.Requests == 6 && smokeClient.NonStreamingRequests == 0, "three smoke cases each use exactly two model calls");
         Check(cases.Select(item => item.GetProperty("caseId").GetString()).Order().SequenceEqual(expectedIds), "smoke IDs remain canonical");
         Check(cases.All(item => item.GetProperty("tools").EnumerateArray().Single().GetString() == "ExploreMetrics"), "smoke reports the actual agent tool rather than internal helpers");
+        using var mismatchedSmokeClient = new AnalystClient { IncludeOutliers = true };
+        try
+        {
+            Console.SetOut(TextWriter.Null);
+            Check(await new SmokeRunner(Workflow(mismatchedSmokeClient)).RunAsync() == 1,
+                "numeric smoke rejects generic prose even when its typed tool evidence is correct");
+        }
+        finally { Console.SetOut(original); }
         return count;
     }
 }
@@ -113,6 +149,7 @@ internal sealed class AnalystClient : IChatClient
     public string Mode { get; set; } = "normal";
     public string Answer { get; set; } = "The synthetic metrics show the selected values. The chart shows the relevant comparison.";
     public bool IncludeOutliers { get; set; }
+    public bool SemanticSmokeAnswers { get; set; }
     public Func<JsonElement, Dictionary<string, object?>>? Plan { get; set; }
     public List<string?> TraceIds { get; } = [];
     public List<int?> OutputLimits { get; } = [];
@@ -144,11 +181,17 @@ internal sealed class AnalystClient : IChatClient
         }
         else
         {
-            var answer = Mode == "large-answer" ? new string('x', 6001) : Answer;
+            var answer = Mode == "large-answer" ? new string('x', 6001) : SemanticSmokeAnswers ? SmokeAnswer(json.RootElement) : Answer;
             yield return new(ChatRole.Assistant, answer[..(answer.Length / 2)]) { MessageId = "answer" };
             yield return new(ChatRole.Assistant, answer[(answer.Length / 2)..]) { MessageId = "answer" };
         }
     }
+    private static string SmokeAnswer(JsonElement context) =>
+        context.GetProperty("currentView").GetProperty("start").GetString() == "2026-09-01"
+            ? "No matching data exists for this selection."
+            : context.GetProperty("currentView").GetProperty("grouping").GetString() == "period"
+                ? "The after period has a 10% error rate."
+                : "The selection has a 0.99% error rate.";
     public object? GetService(Type serviceType, object? serviceKey = null) => serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
     public void Dispose() { }
 }

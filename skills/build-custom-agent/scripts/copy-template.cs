@@ -63,6 +63,7 @@ static class TemplateCopier
         }
 
         var target = Path.GetFullPath(targetArgument);
+        RejectCurrentDirectoryTarget(target, targetArgument);
         var parent = Path.GetDirectoryName(target);
         if (parent is null || !Directory.Exists(parent))
         {
@@ -95,6 +96,11 @@ static class TemplateCopier
         try
         {
             CopyDirectory(source, staging);
+
+            // Recheck after staging so a changed working directory or path component
+            // cannot turn the atomic replacement into removal of the active directory.
+            RejectCurrentDirectoryTarget(target, targetArgument);
+            RejectSymlinkPathComponents(target, "Target");
 
             if (targetExisted)
             {
@@ -240,6 +246,15 @@ static class TemplateCopier
             : StringComparison.Ordinal;
         var prefix = directory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         return path.Equals(directory, comparison) || path.StartsWith(prefix, comparison);
+    }
+
+    private static void RejectCurrentDirectoryTarget(string target, string targetArgument)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        if (target.Equals(Path.GetFullPath(Directory.GetCurrentDirectory()), comparison))
+            throw new ArgumentException($"Target must not be the process working directory: {targetArgument}");
     }
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;

@@ -221,7 +221,7 @@
       $('#submitted-question').textContent = `Answering: ${question}${request.previousTurn ? `\nFollow-up to: ${request.previousTurn.question}` : ''}\nScope: ${scope ? `${scope.title} · ${scope.heading}` : 'all bundled documents'}`;
       $('#answer').textContent = result.answer; $('#result').hidden = false;
       lastTurn = { question, answer: result.answer }; followUp = false; updateContext();
-      $('#answer-status').textContent = result.status === 'not_found' ? 'No matching information' : `${result.citations.length} sources read`;
+      $('#answer-status').textContent = result.status === 'not_found' ? 'No matching information' : `${result.citations.length} source${result.citations.length === 1 ? '' : 's'} read`;
       $('#citations').replaceChildren(...result.citations.map(section => sourceButton(section, 'citation')));
       $('#citations').hidden = result.citations.length === 0;
       const ran = (result.toolCalls || []).join(', ');
