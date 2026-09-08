@@ -46,6 +46,9 @@ Check(blocked.Evidence is { Status: "Blocked", Project: "Atlas", Checks.Count: 2
 Check(blocked.Evidence!.Checks.Where(check => !check.Satisfied)
         .All(check => blockedText.Contains(check.Requirement.ToLowerInvariant().Replace(' ', '_'), StringComparison.Ordinal)),
     "unsatisfied requirements match the missing list the model actually received");
+Check(blocked.Evidence.Checks.All(check => blockedText.Contains(
+        $"{check.Requirement.ToLowerInvariant().Replace(' ', '_')}={check.DocumentedValue}", StringComparison.Ordinal)),
+    "blocked tool result includes satisfied and unsatisfied documented values shown in the panel");
 var ready = new AssistantTools(knowledge);
 ready.CheckReleaseReadiness("Project Orion");
 Check(ready.Evidence is { Status: "Ready", Project: "Orion" } orion && orion.Checks.All(check => check.Satisfied)
@@ -101,6 +104,8 @@ Check(first.TraceId.Length == 32 && first.TraceId != parent.TraceId.ToHexString(
 var previous = new ReviewContext(first.Project, "Check Project Atlas.", first.Answer);
 var followUp = await runtime.RunAsync("What is still missing?", "test", context: previous);
 Check(followUp.Project == "Atlas" && followUp.Answer.Contains("rollback_owner"), "contextual follow-up rechecks actual Atlas evidence");
+Check(followUp.Answer.Contains("security_approval=Approved") && followUp.Answer.Contains("rollback_owner=Not assigned"),
+    "actual MAF follow-up receives enough evidence to explain both satisfied and missing requirements");
 Check(followUp.ToolsUsed.SequenceEqual(["CheckReleaseReadiness"]) && followUp.TraceId != first.TraceId, "follow-up is fresh real tool run");
 var input = client.Inputs.Last();
 Check(input.GetProperty("message").GetString() == "What is still missing?" &&

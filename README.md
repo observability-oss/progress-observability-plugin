@@ -200,7 +200,11 @@ The catalog and each copied project's README define the maintained template
 contract. Packaging and credential-free runtime coverage live under
 [`scripts/tests`](./scripts/tests/).
 
-### Optional custom-prototype review
+### Custom prototypes
+
+Use interactive Copilot for the guided custom build. Noninteractive `copilot -p`
+returns a proposal until that displayed scope is explicitly approved;
+`--allow-all` grants tool permission, not scope approval.
 
 After the custom app passes its required checks, Copilot normally tries four
 chat interactions: a real task, an exact-history follow-up, a fresh-chat check,

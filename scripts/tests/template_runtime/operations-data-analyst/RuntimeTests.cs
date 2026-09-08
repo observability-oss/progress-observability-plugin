@@ -31,6 +31,34 @@ internal static class RuntimeTests
             client.TraceIds.All(trace => trace == reply.TraceId), "single independent agent trace covers both model requests and restores parent");
         Check(client.OutputLimits.All(limit => limit == 500), "both requests have bounded output tokens");
 
+        foreach (var question in new[] {
+            "What is the per-request p95 latency for checkout on August 24?",
+            "Show checkout p99 response time.",
+            "What is the 95th percentile latency?",
+            "Find the p99.9 for individual requests." })
+        {
+            using var percentileClient = new AnalystClient { Answer = "The per-request p95 latency is 900 ms." };
+            var updates = 0;
+            var unsupported = await Workflow(percentileClient).AskAsync(new(question, checkout, "Earlier question"),
+                onView: _ => { updates++; return Task.CompletedTask; }, onText: _ => { updates++; return Task.CompletedTask; });
+            Check(unsupported.Status == "unsupported" && percentileClient.Requests == 0 && updates == 0,
+                "unavailable request percentile avoids invented synthesis and dashboard updates: " + question);
+            Check(unsupported.View == checkout && unsupported.LastQuestion == "Earlier question" && unsupported.Chart is null &&
+                unsupported.Evidence is [{ Tool: "ExplainLimitation", Result: LimitationResult { Status: "unsupported" } }] &&
+                unsupported.Answer.Contains("not individual request latencies", StringComparison.Ordinal) && Activity.Current == parent,
+                "request percentile returns the existing limitation evidence and preserves view, context and trace: " + question);
+        }
+        foreach (var question in new[] {
+            "What is the 95th percentile of daily average response times?",
+            "Show the p95 of average daily latency.",
+            "What is the 95th percentile of daily requests?" })
+        {
+            using var dailyClient = new AnalystClient();
+            var daily = await Workflow(dailyClient).AskAsync(new(question, checkout));
+            Check(daily.Status == "answered" && dailyClient.Requests == 2 && daily.Chart is not null &&
+                daily.Evidence is [{ Tool: "ExploreMetrics" }], "daily aggregate percentiles retain the normal exploration: " + question);
+        }
+
         using var emptyClient = new AnalystClient { Answer = "Invented empty result: 999 requests." };
         var emptyChunks = new List<string>();
         var empty = await Workflow(emptyClient).AskAsync(new("Keep these dates", checkout with { Start = "2026-09-01", End = "2026-09-02" }),

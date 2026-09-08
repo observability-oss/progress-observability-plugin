@@ -34,7 +34,8 @@ public sealed class AgentRuntime
         Ground factual knowledge claims in current local tool results. Cite the source
         label and exact section returned by the tool.
         If a passage lacks the needed context, read that source before answering when
-        a read tool is available. Never attach an unrelated section to a claim. Preserve
+        a read tool is available. Also read the relevant source before claiming a rule
+        is absent. Never attach an unrelated section to a claim. Preserve
         explicit limitations, qualifications, and referrals found in the evidence.
         Do not invent missing facts. If no matching local information exists, say
         "No matching local information found." and explain the missing evidence briefly.

@@ -172,8 +172,13 @@ Check(scenarioReply.Scenario.Active && scenarioReply.Scenario.SuppliedFields.Cou
     "scenario and bundled evidence retain distinct real provenance");
 Check(scenarioReply.ToolsUsed.SequenceEqual(["GetTicket"]), "scenario reevaluation uses actual inspected preview without fake tool calls");
 var scopedInspection = new AssistantTools(store.WithScenario("T-1005", completion), "T-1005").GetTicket("T-1005");
-Check(scopedInspection.Ticket?.Environment == "production" && scopedInspection.BundledTicket?.Environment is null &&
-    scopedInspection.Scenario.Active, "tool exposes scenario versus original facts to model");
+Check(scopedInspection.BundledTicket == store.GetTicket("T-1005").Ticket &&
+    scopedInspection.BundledSource == "tickets.json#T-1005" && scopedInspection.Scenario.Active,
+    "tool binds the bundled source to the complete unchanged original ticket");
+Check(scopedInspection.Recommendation.Evidence.Single(fact => fact.Field == "environment") is
+{ Value: "production", Source: "temporary-scenario#T-1005" } &&
+    scopedInspection.Scenario.SuppliedFields.All(fact => scopedInspection.Recommendation.Evidence.Contains(fact)),
+    "tool exposes every effective scenario fact with its own source instead of attributing it to the fixture");
 var restored = await runtime.RunAsync("T-1005", "reset-test");
 Check(restored.Recommendation.Status == "needs_information" && !restored.Scenario.Active &&
     store.GetTicket("T-1005").Ticket?.Environment is null, "reset and later request return unchanged bundled evidence");

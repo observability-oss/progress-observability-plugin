@@ -423,8 +423,9 @@ static class ProjectValidator
     {
         if (markers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != markers.Count)
             throw new InvalidDataException($"Smoke case '{caseId}' has duplicate expected markers.");
-        if (markers.Any(marker => marker.Length < 4 || !marker.Any(char.IsLetterOrDigit)))
-            throw new InvalidDataException($"Smoke case '{caseId}' needs meaningful expected answer fragments (at least four characters).");
+        if (markers.Any(marker => marker.Length < 2 || !marker.Any(char.IsLetterOrDigit)) ||
+            !markers.Any(marker => marker.Length >= 4))
+            throw new InvalidDataException($"Smoke case '{caseId}' needs meaningful answer fragments: at least two characters each, with at least one longer fact or source path (four or more characters).");
         if (markers.Any(marker => Regex.IsMatch(marker, @"^(status|mode|source)=", RegexOptions.IgnoreCase)))
             throw new InvalidDataException($"Smoke case '{caseId}' must check plain-text facts or source paths, not internal diagnostic tokens.");
         if (caseId == "knowledge" && !markers.Any(marker =>

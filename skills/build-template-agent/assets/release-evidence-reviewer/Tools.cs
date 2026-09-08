@@ -62,20 +62,14 @@ public sealed class AssistantTools(KnowledgeBase knowledgeBase, string? requestM
                             !string.Equals(rollbackOwner, "Not assigned", StringComparison.OrdinalIgnoreCase) &&
                             !string.Equals(rollbackOwner, "None", StringComparison.OrdinalIgnoreCase);
 
-        RecordEvidence(securityApproved && ownerAssigned ? "Ready" : "Blocked", slug,
-            securityApproval, securityApproved, rollbackOwner, ownerAssigned);
-        if (securityApproved && ownerAssigned)
-        {
-            return $"status=Ready; project={DisplayName(slug)}; " +
-                   $"security_approval=Approved; rollback_owner={rollbackOwner}; " +
-                   $"sources=[readiness-policy,project-{slug}]";
-        }
-
         var missing = new List<string>();
         if (!securityApproved) missing.Add("security_approval");
         if (!ownerAssigned) missing.Add("rollback_owner");
-        return $"status=Blocked; project={DisplayName(slug)}; " +
-               $"missing={string.Join(',', missing)}; " +
+        var status = missing.Count == 0 ? "Ready" : "Blocked";
+        RecordEvidence(status, slug, securityApproval, securityApproved, rollbackOwner, ownerAssigned);
+        return $"status={status}; project={DisplayName(slug)}; " +
+               $"security_approval={securityApproval ?? "Not documented"}; rollback_owner={rollbackOwner ?? "Not documented"}; " +
+               (missing.Count == 0 ? "" : $"missing={string.Join(',', missing)}; ") +
                $"sources=[readiness-policy,project-{slug}]";
     }
 

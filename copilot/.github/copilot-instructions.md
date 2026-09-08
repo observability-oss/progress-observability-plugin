@@ -683,7 +683,11 @@ contains the scope explanation. Do not duplicate that explanation in commentary.
    - `Revise proposed agent`: use the reference's one-reply revision, reroute,
      and ask the appropriate next choice.
 
-No project writes occur before explicit Build approval.
+No project writes occur before explicit Build approval. Use interactive Copilot
+for the guided flow. In noninteractive mode (such as `copilot -p`), return the
+proposal and end the turn unless the conversation already contains explicit
+approval of that exact displayed scope. Tool permission flags such as
+`--allow-all` do not approve a proposed scope.
 
 ### Build the local prototype
 
@@ -712,7 +716,9 @@ Choose UI preset `knowledge` for Q&A, `review` for evidence checking,
 `workflow` for triage/process work, or `analysis` for summaries/metrics. Keep
 the input hint short and scenario-specific. Instructions must preserve concise
 plain text, exact source/section citations, provenance, qualifications, and
-honest missing evidence. Every literal `docs/` or `data/` reference must resolve.
+honest missing evidence. Keep conditional rules within their source's scope;
+a requirement for one case must not become a requirement for all cases.
+Every literal `docs/` or `data/` reference must resolve.
 
 All other files are fixed, including runtime, metadata-only telemetry wrappers,
 HTTP/UI/health, project/packages, and smoke engine. Add no dependencies. Generate

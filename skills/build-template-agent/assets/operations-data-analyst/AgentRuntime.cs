@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Progress.Observability.Extensions.AI;
@@ -36,6 +37,13 @@ public sealed class AgentRuntime(IChatClient chatClient, MetricsStore metrics, s
         var tools = new AssistantTools(metrics, rules, current, request.ApprovedView is not null, deadline, onView);
         try
         {
+            if (RequestsUnavailableLatencyPercentile(request.Question!))
+            {
+                var unsupported = tools.ExplainLimitation("unsupported");
+                activity.SetTag("agent.tool.count", 1);
+                activity.SetStatus(ActivityStatusCode.Ok);
+                return new(unsupported.Status, unsupported.Message, traceId, current, null, null, null, [tools.Evidence!], request.LastQuestion);
+            }
             var boundedClient = new FunctionInvokingChatClient(chatClient)
             {
                 // One model-selected exploration, followed by one synthesis request.
@@ -66,6 +74,9 @@ public sealed class AgentRuntime(IChatClient chatClient, MetricsStore metrics, s
                         them. Omit unchanged fields or use null; never silently reset the selection.
                         If fixedView is true the user clicked that exact view: call ExploreMetrics with unchanged
                         fields and explain those selected data. Respect requests to keep the view unchanged.
+                        The CSV has daily totals and averages, not individual request durations. Per-request
+                        latency percentiles are unsupported; never substitute an average for p95 or p99.
+                        Percentiles of daily averages are different and may be described explicitly as such.
                         Metrics: requests, errors, errorRatePercent, averageResponseMs. Groupings: day, service,
                         period. Services and dataset bounds are supplied in the context. Dates are YYYY-MM-DD,
                         inclusive, interpreted against the dataset year, never today's clock. Follow-up questions
@@ -150,6 +161,16 @@ public sealed class AgentRuntime(IChatClient chatClient, MetricsStore metrics, s
 
     private static bool NeedsFixedAnswer(object result) => result is ExplorationResult { Summary.Status: "empty" } or
         ExplorationResult { Comparison.Status: "empty" };
+
+    private static bool RequestsUnavailableLatencyPercentile(string question)
+    {
+        bool Has(string pattern) => Regex.IsMatch(question, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (!Has(@"\bp\d{1,2}(?:\.\d+)?\b|\bpercentile\b")) return false;
+        // Explicit daily-average questions concern the plotted series, not individual requests.
+        return Has(@"\bper[- ]request\b|\bindividual\s+requests?\b") ||
+            Has(@"\blatenc(?:y|ies)\b|\bresponse\s+times?\b") &&
+            !Has(@"\bdaily\s+(?:averages?|means?)\b|\b(?:average|mean)\s+daily\b");
+    }
 }
 
 public sealed class AgentRunException(string traceId, Exception innerException) : Exception("agent_run_failed", innerException)

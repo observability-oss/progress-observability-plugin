@@ -110,10 +110,24 @@ internal static class BehaviorCheckerTests
             Check(report.DeadlineUtc.EqualsExact(options.Deadline), "incomplete report keeps original deadline");
             Check(report.RemainingSeconds == 0, "deadline cancellation has no remaining time");
             Check(handler.Requests.Count == 1 && report.Results.Skip(1).All(result => result.Status == "untested"), "deadline prevents remaining requests");
-            var second = await BehaviorChecker.CheckAsync(client, options);
+            var expiredOptions = options with { Deadline = DateTimeOffset.UtcNow.AddSeconds(-1) };
+            var second = await BehaviorChecker.CheckAsync(client, expiredOptions);
             Check(handler.Requests.Count == 1 && second.Results.All(result => result.Status == "untested"), "reused expired deadline cannot start post-repair requests");
-            Check(second.DeadlineUtc.EqualsExact(options.Deadline), "expired report never resets deadline");
+            Check(second.DeadlineUtc.EqualsExact(expiredOptions.Deadline), "expired report never resets deadline");
             Check(second.RemainingSeconds == 0, "expired report clamps remaining seconds to zero");
+        }
+
+        using (var handler = new CapturingHandler((_, _) => throw new OperationCanceledException()))
+        using (var client = new HttpClient(handler))
+        {
+            // Amplify the timer-rounding race without depending on timer resolution.
+            var options = Options(checks) with { Deadline = DateTimeOffset.UtcNow.AddSeconds(30) };
+            var report = await BehaviorChecker.CheckAsync(client, options);
+            Check(report.Results[0].Error == "deadline" && DateTimeOffset.UtcNow < options.Deadline,
+                "transport can report deadline-limited cancellation before the wall clock catches up");
+            Check(handler.Requests.Count == 1 && report.Results.Skip(1).All(result => result.Status == "untested"),
+                "deadline-limited cancellation prevents redispatch even while the clock has time left");
+            Check(report.RemainingSeconds == 0, "deadline-limited cancellation does not advertise a remaining budget");
         }
 
         foreach (var invalid in new[]

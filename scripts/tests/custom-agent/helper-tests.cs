@@ -239,6 +239,32 @@ static class HelperTests
                 settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             ExpectExit(2, validator, "--target", weakSmoke);
 
+            // Short domain facts are useful when paired with a source or another concrete fact.
+            var shortSmoke = CopyFresh(copier, root, "short-smoke");
+            var shortSettingsPath = Path.Combine(shortSmoke, "appsettings.json");
+            var shortSettings = JsonNode.Parse(File.ReadAllText(shortSettingsPath))!;
+            foreach (var markers in new[]
+            {
+                new[] { "P2", "Ada", "data/sample-records.json" },
+                new[] { "P2", "Engineering" },
+            })
+            {
+                shortSettings["Smoke"]!["Cases"]![1]!["ExpectedMarkers"] = new JsonArray(markers.Select(marker => JsonValue.Create(marker)).ToArray());
+                File.WriteAllText(shortSettingsPath, shortSettings.ToJsonString());
+                ExpectExit(0, validator, "--target", shortSmoke);
+            }
+            foreach (var markers in new[]
+            {
+                new[] { "P2", "Ada" },
+                new[] { "x", "data/sample-records.json" },
+                new[] { "..", "data/sample-records.json" },
+            })
+            {
+                shortSettings["Smoke"]!["Cases"]![1]!["ExpectedMarkers"] = new JsonArray(markers.Select(marker => JsonValue.Create(marker)).ToArray());
+                File.WriteAllText(shortSettingsPath, shortSettings.ToJsonString());
+                ExpectExit(2, validator, "--target", shortSmoke);
+            }
+
             var diagnosticSmoke = CopyFresh(copier, root, "diagnostic-smoke");
             var diagnosticSettings = Path.Combine(diagnosticSmoke, "appsettings.json");
             var diagnosticJson = JsonNode.Parse(File.ReadAllText(diagnosticSettings))!;
