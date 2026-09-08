@@ -137,3 +137,9 @@ previous browser suite were not repeated for an unchanged HTML/source copy.
 - Keep future product fixes on the clean branch; update this development branch
   and dated guide deliberately. Do not pull the planning directory into the
   distributed PR when moving a code fix.
+
+## Learning kit added later on 8 September
+
+The development branch now also contains a [simplified C# cheat sheet](./csharp-learning/cheat-sheet.html), [Markdown copy](./csharp-learning/cheat-sheet.md) and [interactive learning game](./csharp-learning/learning-game.html). They reuse the concepts, with new small examples and Python comparisons. Sixteen lessons cover the walkthrough’s 49 topics; 64 checkpoints provide feedback, hints, review and browser-local progress export/import.
+
+The pages are self-contained and work offline. Editable sources and [compact validation](./csharp-learning/validation/README.md) stay alongside them under planning. Validation passed 57 C# compiler/output cases and 358 browser checks, including progress recovery and 320px layouts. This learning-material update changes no distributed agent runtime, packages or model limits.

@@ -1,0 +1,1169 @@
+{
+  "lessons": [
+    {
+      "id": "01-basics",
+      "title": "Read your first C# program",
+      "subtitle": "Familiar loops; a compiler checks types before execution.",
+      "conceptIds": [
+        "build",
+        "top-level",
+        "file-based",
+        "inference",
+        "expressions",
+        "namespaces",
+        "using"
+      ],
+      "rules": [
+        "C# is the language. .NET supplies the runtime and libraries; the SDK supplies development tools; ASP.NET Core builds web apps.",
+        "A .csproj sets the target framework and dependencies. dotnet build compiles; dotnet run normally builds, then starts the app.",
+        "Main is the entry point. Top-level statements generate it; .NET 10 also supports file-based apps without a .csproj.",
+        "var infers one compile-time type. int, bool and string mean integer, Boolean and text; they are not interchangeable.",
+        "Arrays hold typed elements. foreach visits them. && requires both conditions; a single-statement body can omit braces."
+      ],
+      "code": "var minimum = 2;                 // inferred int, not dynamic\nint[] apples = [1, 3, 2];       // an array of integers\nforeach (var count in apples)\n{\n    if (count >= minimum && count < 3)\n        Console.WriteLine(count);\n}",
+      "python": "minimum = 2\napples = [1, 3, 2]\nfor count in apples:\n    if count >= minimum and count < 3:\n        print(count)",
+      "pythonNote": "Python lists can mix types and grow. This C# array has an element type and a fixed length.",
+      "trap": "var does not mean Python-style rebinding to any type. Top-level code is still compiled C#.",
+      "agentConnection": "Every generated app starts in Program.cs; its .csproj selects .NET and packages before request handling begins.",
+      "verification": {
+        "program": "using System;\nvar minimum = 2;                 // inferred int, not dynamic\nint[] apples = [1, 3, 2];       // an array of integers\nforeach (var count in apples)\n{\n    if (count >= minimum && count < 3)\n        Console.WriteLine(count);\n}",
+        "output": "2\n"
+      },
+      "questions": [
+        {
+          "id": "q01a",
+          "type": "choice",
+          "prompt": "What happens when this is compiled?",
+          "options": [
+            {
+              "text": "It prints three.",
+              "why": "That would fit Python rebinding; C# has already inferred int for apples."
+            },
+            {
+              "text": "Compilation fails: apples is an int.",
+              "why": "Correct. var selected int from 3; a later assignment cannot change that type."
+            },
+            {
+              "text": "apples becomes dynamic.",
+              "why": "var is compile-time inference. dynamic is a different, explicit C# feature."
+            }
+          ],
+          "answer": 1,
+          "hint": "The first assignment fixes the inferred type.",
+          "explanation": "The compiler rejects assigning a string to an int before this program can run.",
+          "code": "var apples = 3;\napples = \"three\";\nConsole.WriteLine(apples);",
+          "verification": {
+            "program": "using System;\nvar apples = 3;\napples = \"three\";\nConsole.WriteLine(apples);",
+            "output": "",
+            "compileError": "CS0029"
+          }
+        },
+        {
+          "id": "q01b",
+          "type": "choice",
+          "prompt": "What type does the compiler infer for basket?",
+          "options": [
+            {
+              "text": "int[]",
+              "why": "Correct. new[] creates an array and infers the element type int from these values."
+            },
+            {
+              "text": "List<int>",
+              "why": "A List<int> is a growable collection. new[] specifically creates an array."
+            },
+            {
+              "text": "A tuple of three values",
+              "why": "Tuples use parentheses, such as (1, 2, 3), and are a different type."
+            }
+          ],
+          "answer": 0,
+          "hint": "The square brackets after new are the clue.",
+          "explanation": "new[] infers the element type. The resulting int[] has a fixed length of three.",
+          "code": "var basket = new[] { 1, 2, 3 };"
+        },
+        {
+          "id": "q01c",
+          "type": "fill",
+          "prompt": "Fill one operator so both conditions must be true.",
+          "code": "var count = 2;\nif (count > 0 ___ count < 4)\n    Console.WriteLine(\"small\");",
+          "accepted": [
+            "&&"
+          ],
+          "hint": "Use C# logical AND, which skips the right side when the left side is false.",
+          "explanation": "&& is logical AND. The right condition is evaluated only when the left condition is true.",
+          "verification": {
+            "program": "using System;\nvar count = 2;\nif (count > 0 && count < 4)\n    Console.WriteLine(\"small\");",
+            "output": "small\n"
+          }
+        },
+        {
+          "id": "q01d",
+          "type": "order",
+          "prompt": "Arrange these lines into a program that prints 4.",
+          "lines": [
+            "var apples = 2;",
+            "var doubled = apples * 2;",
+            "Console.WriteLine(doubled);"
+          ],
+          "hint": "Each name must be declared before the line that uses it.",
+          "explanation": "The second line needs apples; the final line needs doubled. These data dependencies determine the order.",
+          "verification": {
+            "program": "using System;\nvar apples = 2;\nvar doubled = apples * 2;\nConsole.WriteLine(doubled);",
+            "output": "4\n"
+          }
+        }
+      ],
+      "reference": [
+        {
+          "term": "A tiny project file",
+          "meaning": "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable></PropertyGroup></Project> defines an executable project. Web projects use Microsoft.NET.Sdk.Web."
+        },
+        {
+          "term": "C# 14 and .NET 10",
+          "meaning": "These are the lesson targets. C# is versioned separately from .NET, and many demonstrated features existed before C# 14."
+        },
+        {
+          "term": "Entry-point shape",
+          "meaning": "static void Main() is an explicit entry method inside a type. Alternatively, top-level statements appear before type declarations; only one project source file may contain top-level statements."
+        },
+        {
+          "term": "File-based app",
+          "meaning": "With .NET 10, dotnet run --file hello.cs builds and runs a standalone C# source file. The generated agents use projects; some development helpers can be file-based apps."
+        },
+        {
+          "term": "Namespace",
+          "meaning": "namespace Pantry; groups type names logically. A namespace need not equal a folder, though matching them often helps readers."
+        },
+        {
+          "term": "using as an import",
+          "meaning": "using System; lets you write Console instead of System.Console. It neither copies source nor installs a package. using for disposal is a separate syntax."
+        },
+        {
+          "term": "Explicit typing and literals",
+          "meaning": "int count = 2; bool ready = true; string name = \"Ada\"; use explicit types. C# uses semicolons and braces; // starts a line comment."
+        },
+        {
+          "term": "while, continue and break",
+          "meaning": "while (count > 0) repeats while a condition stays true. continue skips to the next loop iteration; break exits the nearest loop. Make progress toward a stopping condition."
+        }
+      ]
+    },
+    {
+      "id": "02-functions",
+      "title": "Functions, methods and little helpers",
+      "subtitle": "Start with inputs and outputs; introduce objects only when needed.",
+      "conceptIds": [
+        "methods",
+        "lambdas",
+        "local-functions",
+        "argument-modifiers",
+        "recursion"
+      ],
+      "rules": [
+        "Read int Double(int number) as: returns int, named Double, accepts one int. void means no return value.",
+        "A static method belongs to its type; an instance method uses an object. A local function belongs inside another body.",
+        "Overloads share a name but differ in parameters. An override replaces an inherited virtual or abstract implementation.",
+        "number => number + extra is a lambda. Func<int, int> describes input and output types; captures can observe later changes.",
+        "out supplies an output; ref accesses an initialized caller variable; params accepts several arguments. Recursion needs a stopping case."
+      ],
+      "code": "var extra = 2;\nFunc<int, int> addExtra = number => number + extra;\nConsole.WriteLine(addExtra(3));\nextra = 4;\nConsole.WriteLine(addExtra(3));\nstatic int Double(int number) => number * 2;\nConsole.WriteLine(Double(3));",
+      "python": "extra = 2\nadd_extra = lambda number: number + extra\nprint(add_extra(3))\nextra = 4\nprint(add_extra(3))\ndef double(number):\n    return number * 2\nprint(double(3))",
+      "pythonNote": "Both examples observe the later extra value. C# also checks the delegate signature; local functions can capture unless static.",
+      "trap": "The arrow can introduce a lambda or an expression-bodied member. Neither makes the computation asynchronous.",
+      "agentConnection": "Tool handlers are methods; routing and LINQ use lambdas. Small helpers can stay functions without new class hierarchies.",
+      "verification": {
+        "program": "using System;\nvar extra = 2;\nFunc<int, int> addExtra = number => number + extra;\nConsole.WriteLine(addExtra(3));\nextra = 4;\nConsole.WriteLine(addExtra(3));\nstatic int Double(int number) => number * 2;\nConsole.WriteLine(Double(3));",
+        "output": "5\n7\n6\n"
+      },
+      "questions": [
+        {
+          "id": "q02a",
+          "type": "choice",
+          "prompt": "What does the second Console.WriteLine print?",
+          "options": [
+            {
+              "text": "5",
+              "why": "That is the first call. The lambda captured the variable, not a frozen copy of its original value."
+            },
+            {
+              "text": "7",
+              "why": "Correct. extra is now 4, so addExtra(3) computes 3 + 4."
+            },
+            {
+              "text": "It fails because captured variables cannot change.",
+              "why": "This captured local is mutable. A capture does not make it readonly."
+            }
+          ],
+          "answer": 1,
+          "hint": "Read the current value of extra when the lambda runs.",
+          "explanation": "The lambda reads the same captured variable on both calls; assigning 4 changes what the later call reads.",
+          "code": "var extra = 2;\nFunc<int, int> addExtra = number => number + extra;\nConsole.WriteLine(addExtra(3));\nextra = 4;\nConsole.WriteLine(addExtra(3));\nstatic int Double(int number) => number * 2;\nConsole.WriteLine(Double(3));",
+          "verification": {
+            "program": "using System;\nvar extra = 2;\nFunc<int, int> addExtra = number => number + extra;\nConsole.WriteLine(addExtra(3));\nextra = 4;\nConsole.WriteLine(addExtra(3));\nstatic int Double(int number) => number * 2;\nConsole.WriteLine(Double(3));",
+            "output": "5\n7\n6\n"
+          }
+        },
+        {
+          "id": "q02b",
+          "type": "choice",
+          "prompt": "What language feature is this pair of methods?",
+          "options": [
+            {
+              "text": "Overriding",
+              "why": "An override requires an inherited virtual or abstract member, and uses override."
+            },
+            {
+              "text": "Overloading",
+              "why": "Correct. The methods share a name but accept different parameter types."
+            },
+            {
+              "text": "Recursion",
+              "why": "Recursion happens when a function calls itself. Neither of these methods does."
+            }
+          ],
+          "answer": 1,
+          "hint": "Compare the parameter lists, not just the shared name.",
+          "explanation": "Overload selection uses the call arguments. string Repeat(string text) and int Repeat(int number) have distinct signatures.",
+          "code": "static class Repeater\n{\n    public static string Repeat(string text) => text + text;\n    public static int Repeat(int number) => number * 2;\n}",
+          "verification": {
+            "program": "using System;\nConsole.WriteLine(Repeater.Repeat(\"hi\"));\nConsole.WriteLine(Repeater.Repeat(2));\nstatic class Repeater\n{\n    public static string Repeat(string text) => text + text;\n    public static int Repeat(int number) => number * 2;\n}",
+            "output": "hihi\n4\n"
+          }
+        },
+        {
+          "id": "q02c",
+          "type": "fill",
+          "prompt": "Fill one keyword so TryParse can assign its parsed result.",
+          "code": "bool ok = int.TryParse(\"12\", ___ var count);\nConsole.WriteLine(ok ? count : 0);",
+          "accepted": [
+            "out"
+          ],
+          "hint": "The method writes a result into this caller variable.",
+          "explanation": "out marks an output argument. TryParse assigns it and separately returns a bool indicating success; ref would require an initialized variable.",
+          "verification": {
+            "program": "using System;\nbool ok = int.TryParse(\"12\", out var count);\nConsole.WriteLine(ok ? count : 0);",
+            "output": "12\n"
+          }
+        },
+        {
+          "id": "q02d",
+          "type": "choice",
+          "prompt": "What does Total(3) return?",
+          "options": [
+            {
+              "text": "3",
+              "why": "The function adds n to a smaller recursive result; it does not return only the first n."
+            },
+            {
+              "text": "6",
+              "why": "Correct. Total(3) is 3 + 2 + 1 + 0. n == 0 is the stopping case."
+            },
+            {
+              "text": "It never stops.",
+              "why": "For this positive input, each call decreases n until it reaches zero."
+            }
+          ],
+          "answer": 1,
+          "hint": "Expand one call at a time until n reaches zero.",
+          "explanation": "The recursive calls return in reverse order: 0, then 1, then 3, then 6. This version is intended for nonnegative inputs.",
+          "code": "static int Total(int n) => n == 0 ? 0 : n + Total(n - 1);\nConsole.WriteLine(Total(3));",
+          "verification": {
+            "program": "using System;\nstatic int Total(int n) => n == 0 ? 0 : n + Total(n - 1);\nConsole.WriteLine(Total(3));",
+            "output": "6\n"
+          }
+        }
+      ],
+      "reference": [
+        {
+          "term": "Return versus output",
+          "meaning": "return value; sends a value back to the caller. Console.WriteLine(value) displays it. void means the function has no return value."
+        },
+        {
+          "term": "A method in a class",
+          "meaning": "public static int Double(int number) { return number * 2; } is called as Helpers.Double(3) when declared in Helpers. Its expression-bodied equivalent ends with => number * 2;."
+        },
+        {
+          "term": "Instance method",
+          "meaning": "jar.Add(3) acts on jar. Inside an ordinary instance method, this denotes that current object; a static method has no this."
+        },
+        {
+          "term": "Local function",
+          "meaning": "A helper declared inside a method or top-level body can use surrounding locals. Add static to forbid capturing surrounding instance or local state."
+        },
+        {
+          "term": "Lambda and delegate",
+          "meaning": "Func<int, int> accepts an int and returns an int. Action<int> accepts an int and returns void. A lambda supplies a callable value; => also appears in expression-bodied members."
+        },
+        {
+          "term": "out",
+          "meaning": "int.TryParse(text, out var number) assigns number and returns a success bool. The caller does not have to initialize an out argument."
+        },
+        {
+          "term": "ref",
+          "meaning": "void Increment(ref int value) { value++; } can change a caller variable. Initialize int n = 2; then call Increment(ref n). Ordinary reference-type arguments already pass an object reference by value; ref is not needed to mutate that object."
+        },
+        {
+          "term": "params",
+          "meaning": "static int Count(params int[] numbers) => numbers.Length; accepts Count(1, 2, 3) or Count(new[] { 1, 2, 3 }). params makes the last parameter accept a variable number of arguments."
+        },
+        {
+          "term": "Recursion",
+          "meaning": "A recursive helper calls itself on a smaller subproblem. A stopping case prevents endless calls; recursion is useful for nested structures, not a requirement for ordinary loops."
+        },
+        {
+          "term": "nameof",
+          "meaning": "nameof(Double) produces the string \"Double\" at compile time when that symbol is in scope. It names the symbol without calling the function or reading its value."
+        }
+      ]
+    },
+    {
+      "id": "03-null",
+      "title": "Missing values without guessing",
+      "subtitle": "A compiler warning helps; runtime checks still matter.",
+      "conceptIds": [
+        "nullable",
+        "patterns",
+        "expressions"
+      ],
+      "rules": [
+        "null means absent, not empty text or zero. string? marks a nullable reference; int? can hold an integer or null.",
+        "<Nullable>enable</Nullable> enables reference annotations and compiler analysis. An annotation does not validate runtime input.",
+        "value?.Member accesses only when non-null; value ?? fallback uses the fallback only when value is null.",
+        "value! suppresses a compiler warning; it performs no runtime check. Prefer proving a value exists before using it.",
+        "is matches patterns: is null, is not null, or is \"red\" or \"blue\". && evaluates the right side only if needed."
+      ],
+      "code": "string? nickname = null;\nstring display = nickname ?? \"Guest\";\nConsole.WriteLine(display);\nConsole.WriteLine(nickname?.Length ?? 0);\nnickname = \"Ada\";\nif (nickname is not null && nickname.Length > 2)\n    Console.WriteLine(\"long enough\");",
+      "python": "nickname = None\ndisplay = nickname if nickname is not None else \"Guest\"\nprint(display)\nprint(len(nickname) if nickname is not None else 0)\nnickname = \"Ada\"\nif nickname is not None and len(nickname) > 2:\n    print(\"long enough\")",
+      "pythonNote": "Do not translate ?? as Python or: or also replaces empty strings, zero and other falsy values.",
+      "trap": "name!.Length still throws if name is null. The exclamation mark changes compiler analysis, not the object.",
+      "agentConnection": "Optional configuration and request properties need explicit defaults or validation before handlers dereference them.",
+      "verification": {
+        "program": "#nullable enable\nusing System;\nstring? nickname = null;\nstring display = nickname ?? \"Guest\";\nConsole.WriteLine(display);\nConsole.WriteLine(nickname?.Length ?? 0);\nnickname = \"Ada\";\nif (nickname is not null && nickname.Length > 2)\n    Console.WriteLine(\"long enough\");",
+        "output": "Guest\n0\nlong enough\n"
+      },
+      "questions": [
+        {
+          "id": "q03a",
+          "type": "choice",
+          "prompt": "What does this print?",
+          "options": [
+            {
+              "text": "[]",
+              "why": "Correct. Empty text is a present string, so ?? keeps it."
+            },
+            {
+              "text": "[Guest]",
+              "why": "?? replaces only null. It does not replace an empty string."
+            },
+            {
+              "text": "It throws.",
+              "why": "The left side is a valid string, and interpolation can print it."
+            }
+          ],
+          "answer": 0,
+          "hint": "Ask whether name is absent or merely empty.",
+          "explanation": "The fallback is skipped because name is not null. This differs from Python name or \"Guest\".",
+          "code": "string? name = \"\";\nConsole.WriteLine($\"[{name ?? \"Guest\"}]\");",
+          "verification": {
+            "program": "#nullable enable\nusing System;\nstring? name = \"\";\nConsole.WriteLine($\"[{name ?? \"Guest\"}]\");",
+            "output": "[]\n"
+          }
+        },
+        {
+          "id": "q03b",
+          "type": "fill",
+          "prompt": "Fill one operator to access Length only when name is non-null.",
+          "code": "string? name = null;\nConsole.WriteLine(name___Length ?? 0);",
+          "accepted": [
+            "?."
+          ],
+          "hint": "This operator combines a null check with member access.",
+          "explanation": "?. returns null here without accessing Length. ?? then supplies zero.",
+          "verification": {
+            "program": "#nullable enable\nusing System;\nstring? name = null;\nConsole.WriteLine(name?.Length ?? 0);",
+            "output": "0\n"
+          }
+        },
+        {
+          "id": "q03c",
+          "type": "choice",
+          "prompt": "Does this safely check whether name is long?",
+          "options": [
+            {
+              "text": "Yes; ! converts null into an empty string.",
+              "why": "! does not convert values or supply defaults."
+            },
+            {
+              "text": "No; ! suppresses a warning, and the access throws.",
+              "why": "Correct. Runtime null remains null, so accessing Length throws NullReferenceException."
+            },
+            {
+              "text": "No; string? prevents the code from compiling.",
+              "why": "Nullable annotations enable warnings, not a blanket ban on dereferencing."
+            }
+          ],
+          "answer": 1,
+          "hint": "The null-forgiving operator has no runtime effect.",
+          "explanation": "Use name is not null && name.Length > 3, or a suitable null-conditional expression, when absence is expected.",
+          "code": "string? name = null;\nbool isLong = name!.Length > 3;",
+          "verification": {
+            "program": "#nullable enable\nusing System;\nstring? name = null;\ntry { bool isLong = name!.Length > 3; Console.WriteLine(isLong); }\ncatch (NullReferenceException) { Console.WriteLine(\"NullReferenceException\"); }",
+            "output": "NullReferenceException\n"
+          }
+        },
+        {
+          "id": "q03d",
+          "type": "choice",
+          "prompt": "What does this print?",
+          "options": [
+            {
+              "text": "False",
+              "why": "Correct. The first condition is false, so && skips the Length access."
+            },
+            {
+              "text": "True",
+              "why": "The first condition is false because color is null."
+            },
+            {
+              "text": "It throws while reading Length.",
+              "why": "Short-circuit && skips its right side when the left side is false."
+            }
+          ],
+          "answer": 0,
+          "hint": "Evaluate only the left condition first.",
+          "explanation": "The is not null pattern proves a value exists on the path where the right-hand expression runs.",
+          "code": "string? color = null;\nConsole.WriteLine(color is not null && color.Length > 3);",
+          "verification": {
+            "program": "#nullable enable\nusing System;\nstring? color = null;\nConsole.WriteLine(color is not null && color.Length > 3);",
+            "output": "False\n"
+          }
+        }
+      ],
+      "reference": [
+        {
+          "term": "Nullable reference versus nullable value",
+          "meaning": "string? and string use the same runtime reference type; ? enables compiler analysis. int? is Nullable<int>, a value type that represents an integer or no value."
+        },
+        {
+          "term": "Conditional expression",
+          "meaning": "condition ? whenTrue : whenFalse selects one result. It is different from the nullable annotation in string? and the null-conditional operator ?. ."
+        },
+        {
+          "term": "Value patterns",
+          "meaning": "color is \"red\" or \"blue\" accepts either text value. count is >= 1 and <= 3 combines relational patterns; or/and here are pattern combinators, not ||/&& operators."
+        },
+        {
+          "term": "Pattern captures",
+          "meaning": "if (value is string text) proves value is a string and introduces text for the matching path. A property pattern can inspect shape: value is { Length: > 2 }."
+        },
+        {
+          "term": "Null-safe length test",
+          "meaning": "name is not null && name.Length > 3 checks existence before accessing Length. Merely writing name! does not check anything at runtime."
+        },
+        {
+          "term": "Assign a null fallback",
+          "meaning": "name ??= \"Guest\" assigns \"Guest\" only if name is currently null. name ?? \"Guest\" merely produces a fallback value without assigning it to name."
+        }
+      ]
+    },
+    {
+      "id": "04-objects",
+      "title": "An object is data with useful operations",
+      "subtitle": "A class defines the shape; new creates one instance.",
+      "conceptIds": [
+        "classes",
+        "primary-constructors",
+        "fields",
+        "access",
+        "initializers"
+      ],
+      "rules": [
+        "A class is a type; new Jar(2) creates an instance. A constructor initializes each new object.",
+        "A field stores state. A property provides access; get reads, set assigns, and init restricts assignment to initialization.",
+        "Class primary-constructor parameters are inputs, not automatic public properties. Declare properties explicitly when callers need them.",
+        "public exposes; private confines to the type; internal confines to the assembly. static belongs to the type; sealed forbids subclassing.",
+        "readonly fields cannot be reassigned after their allowed initialization. Referenced objects may still mutate. Object initializers run after construction."
+      ],
+      "code": "var jar = new Jar(2) { Label = \"Rice\" };\njar.Add(3);\nConsole.WriteLine($\"{jar.Label}: {jar.Count}\");\nsealed class Jar(int start)\n{\n    private int count = start;\n    public string Label { get; init; } = \"Plain\";\n    public int Count => count;\n    public void Add(int amount) => count += amount;\n}",
+      "python": "class Jar:\n    def __init__(self, start):\n        self._count = start\n        self.label = \"Plain\"\n    @property\n    def count(self):\n        return self._count\n    def add(self, amount):\n        self._count += amount\njar = Jar(2)\njar.label = \"Rice\"\njar.add(3)\nprint(f\"{jar.label}: {jar.count}\")",
+      "pythonNote": "Python _count is a convention, unlike C# private. This Python label also lacks the C# init-only restriction.",
+      "trap": "A primary constructor is shorter syntax for accepting construction inputs, not a second object or an automatic public API.",
+      "agentConnection": "Stores and tool handlers keep state in fields and expose deliberate methods/properties; their constructors receive dependencies.",
+      "verification": {
+        "program": "using System;\nvar jar = new Jar(2) { Label = \"Rice\" };\njar.Add(3);\nConsole.WriteLine($\"{jar.Label}: {jar.Count}\");\nsealed class Jar(int start)\n{\n    private int count = start;\n    public string Label { get; init; } = \"Plain\";\n    public int Count => count;\n    public void Add(int amount) => count += amount;\n}",
+        "output": "Rice: 5\n"
+      },
+      "questions": [
+        {
+          "id": "q04a",
+          "type": "choice",
+          "prompt": "After these lines, what does first.Count print?",
+          "options": [
+            {
+              "text": "2",
+              "why": "second is not a copied Jar; both variables refer to the same object."
+            },
+            {
+              "text": "5",
+              "why": "Correct. Assigning a class reference gives both variables access to the same Jar."
+            },
+            {
+              "text": "It fails because Jar is sealed.",
+              "why": "sealed blocks subclasses; it does not prevent creating or mutating instances."
+            }
+          ],
+          "answer": 1,
+          "hint": "Count how many times new Jar appears.",
+          "explanation": "There is one Jar and two references. second.Add changes the object that first also refers to.",
+          "code": "var first = new Jar(2);\nvar second = first;\nsecond.Add(3);\nConsole.WriteLine(first.Count);\nsealed class Jar(int start)\n{\n    private int count = start;\n    public int Count => count;\n    public void Add(int amount) => count += amount;\n}",
+          "verification": {
+            "program": "using System;\nvar first = new Jar(2);\nvar second = first;\nsecond.Add(3);\nConsole.WriteLine(first.Count);\nsealed class Jar(int start) { private int count = start; public int Count => count; public void Add(int amount) => count += amount; }",
+            "output": "5\n"
+          }
+        },
+        {
+          "id": "q04b",
+          "type": "choice",
+          "prompt": "With this complete class, can a caller read jar.start?",
+          "options": [
+            {
+              "text": "Yes; every primary parameter becomes a public property.",
+              "why": "That property synthesis applies to positional records, not an ordinary class."
+            },
+            {
+              "text": "No; start is a constructor parameter, not a public member.",
+              "why": "Correct. The class accepts start, but exposes no public property named start."
+            },
+            {
+              "text": "Yes; sealed makes fields public.",
+              "why": "sealed only prevents inheritance; it does not change accessibility."
+            }
+          ],
+          "answer": 1,
+          "hint": "This is a class declaration without record.",
+          "explanation": "Add public int Start { get; } = start; if callers need a property. Parameters and properties are different structures.",
+          "code": "sealed class Jar(int start)\n{\n    private int count = start;\n}"
+        },
+        {
+          "id": "q04c",
+          "type": "fill",
+          "prompt": "Fill one property accessor so assignment is allowed during initialization, but not later.",
+          "code": "sealed class Jar\n{\n    public string Label { get; ___; } = \"Plain\";\n}",
+          "accepted": [
+            "init"
+          ],
+          "hint": "It is the initialization-only alternative to set.",
+          "explanation": "init permits new Jar { Label = \"Rice\" }. It does not permit jar.Label = \"Beans\" in an ordinary later statement."
+        },
+        {
+          "id": "q04d",
+          "type": "order",
+          "prompt": "Using this Jar type, arrange the statements to create a jar, add three, then print the updated count.",
+          "lines": [
+            "var jar = new Jar(2);",
+            "jar.Add(3);",
+            "Console.WriteLine(jar.Count);"
+          ],
+          "hint": "Construction must precede using the object; print after its change.",
+          "explanation": "The constructor sets count to 2. Add changes it to 5. The final property read observes that updated state.",
+          "verification": {
+            "program": "using System;\nvar jar = new Jar(2);\njar.Add(3);\nConsole.WriteLine(jar.Count);\nsealed class Jar(int start) { private int count = start; public int Count => count; public void Add(int amount) => count += amount; }",
+            "output": "5\n"
+          },
+          "code": "sealed class Jar(int start)\n{\n    private int count = start;\n    public int Count => count;\n    public void Add(int amount) => count += amount;\n}"
+        }
+      ],
+      "reference": [
+        {
+          "term": "Ordinary constructor",
+          "meaning": "class Jar { private int count; public Jar(int start) { count = start; } } spells out construction explicitly. Constructors use the type name and have no declared return type."
+        },
+        {
+          "term": "Primary-constructor equivalent",
+          "meaning": "class Jar(int start) { private int count = start; } accepts the same input more concisely. start is a parameter, not a public property; it can be used within the type body."
+        },
+        {
+          "term": "Field versus property",
+          "meaning": "private int count; is storage. public int Count => count; is a getter exposing that storage. public string Label { get; set; } is an auto-property with compiler-provided storage."
+        },
+        {
+          "term": "Initializer timing",
+          "meaning": "new Jar(2) { Label = \"Rice\" } constructs the object first, then assigns Label during initialization. required demands initialization by the caller; it does not validate the supplied value."
+        },
+        {
+          "term": "readonly is shallow",
+          "meaning": "A readonly List<int> field cannot normally be reassigned outside field initialization or its declaring constructor, but its existing list can still Add elements."
+        },
+        {
+          "term": "Shared static state",
+          "meaning": "A static field belongs to the type rather than one instance. Every instance can observe shared state through it; do not use it merely to avoid constructing an object."
+        },
+        {
+          "term": "Accessibility and assembly",
+          "meaning": "An assembly is a compiled .dll or .exe unit. internal restricts ordinary access to that assembly; private restricts access to the declaring type, not the entire source file."
+        },
+        {
+          "term": "const versus readonly",
+          "meaning": "const int Limit = 5; declares a compile-time constant. A readonly field can instead be initialized at runtime during construction; neither keyword makes a referenced object deeply immutable."
+        },
+        {
+          "term": "protected",
+          "meaning": "A protected member is accessible within its declaring class and derived classes, subject to C# receiver rules. It is useful for base-class helpers; it is not publicly callable by any object."
+        }
+      ]
+    },
+    {
+      "id": "05-records",
+      "title": "Data shapes and copies",
+      "subtitle": "Choose a simple shape; know what copying really copies.",
+      "conceptIds": [
+        "records",
+        "with",
+        "tuples"
+      ],
+      "rules": [
+        "Class variables hold references; assigning one copies the reference. Struct assignment copies its value, including any references inside it.",
+        "record means record class unless struct is stated. Records generate value-based equality using their members’ equality rules.",
+        "Positional record-class parameters generate public init properties and deconstruction. Ordinary class primary parameters do not.",
+        "with copies a record and changes selected members. Nested reference objects remain shared: the copy is shallow.",
+        "Tuples group a few values: (string Name, int Count). Deconstruction, var (name, count), puts the components into local variables."
+      ],
+      "code": "var first = new Label(\"Blue\", 2);\nvar same = new Label(\"Blue\", 2);\nvar changed = first with { Size = 3 };\nConsole.WriteLine(first == same);\nConsole.WriteLine($\"{first.Size}/{changed.Size}\");\nvar (color, size) = changed;\nConsole.WriteLine($\"{color}: {size}\");\nrecord Label(string Color, int Size);",
+      "python": "from dataclasses import dataclass, replace\n@dataclass(frozen=True)\nclass Label:\n    color: str\n    size: int\nfirst = Label(\"Blue\", 2)\nsame = Label(\"Blue\", 2)\nchanged = replace(first, size=3)\nprint(first == same)\nprint(f\"{first.size}/{changed.size}\")",
+      "pythonNote": "A frozen dataclass is a useful analogy, not an exact equivalent. It does not automatically support C# record-style deconstruction.",
+      "trap": "Records are not deeply immutable. A record containing List<string> can share a mutable list, and list equality is not element equality.",
+      "agentConnection": "Agent request/result records give data a clear shape. Readonly properties and with copies do not freeze nested lists.",
+      "verification": {
+        "program": "using System;\nvar first = new Label(\"Blue\", 2);\nvar same = new Label(\"Blue\", 2);\nvar changed = first with { Size = 3 };\nConsole.WriteLine(first == same);\nConsole.WriteLine($\"{first.Size}/{changed.Size}\");\nvar (color, size) = changed;\nConsole.WriteLine($\"{color}: {size}\");\nrecord Label(string Color, int Size);",
+        "output": "True\n2/3\nBlue: 3\n"
+      },
+      "questions": [
+        {
+          "id": "q05a",
+          "type": "choice",
+          "prompt": "What does this print?",
+          "options": [
+            {
+              "text": "True",
+              "why": "Correct. These Label records have the same type and equal Color and Size members."
+            },
+            {
+              "text": "False",
+              "why": "Separate record instances can be equal because record equality compares their members."
+            },
+            {
+              "text": "It fails because == cannot compare records.",
+              "why": "The compiler generates equality operators for records."
+            }
+          ],
+          "answer": 0,
+          "hint": "The declaration says record, not ordinary class.",
+          "explanation": "The generated equality compares member values here: strings compare their text, and integers compare their numeric value.",
+          "code": "Console.WriteLine(new Label(\"Blue\", 2) == new Label(\"Blue\", 2));\nrecord Label(string Color, int Size);",
+          "verification": {
+            "program": "using System;\nConsole.WriteLine(new Label(\"Blue\", 2) == new Label(\"Blue\", 2));\nrecord Label(string Color, int Size);",
+            "output": "True\n"
+          }
+        },
+        {
+          "id": "q05b",
+          "type": "choice",
+          "prompt": "What does this print after adding to the copy’s list?",
+          "options": [
+            {
+              "text": "1",
+              "why": "with copied the record, not the nested List object. Both records still refer to the same list."
+            },
+            {
+              "text": "2",
+              "why": "Correct. The shallow copy shares Items, so adding through copy changes the list original also holds."
+            },
+            {
+              "text": "It fails because records cannot contain mutable lists.",
+              "why": "A record may hold a mutable collection. init-only prevents property reassignment, not changes inside that list."
+            }
+          ],
+          "answer": 1,
+          "hint": "Ask whether with also creates a new List here.",
+          "explanation": "The record objects differ, but their Items references point to the same list. Copy the list explicitly when independent contents are required.",
+          "code": "var original = new Bag(new List<string> { \"pear\" });\nvar copy = original with { };\ncopy.Items.Add(\"plum\");\nConsole.WriteLine(original.Items.Count);\nrecord Bag(List<string> Items);",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nvar original = new Bag(new List<string> { \"pear\" });\nvar copy = original with { };\ncopy.Items.Add(\"plum\");\nConsole.WriteLine(original.Items.Count);\nrecord Bag(List<string> Items);",
+            "output": "2\n"
+          }
+        },
+        {
+          "id": "q05c",
+          "type": "fill",
+          "prompt": "Fill one keyword to make a modified record copy.",
+          "code": "var first = new Label(\"Blue\", 2);\nvar changed = first ___ { Size = 3 };\nrecord Label(string Color, int Size);",
+          "accepted": [
+            "with"
+          ],
+          "hint": "This expression starts from the original record’s members.",
+          "explanation": "with creates the modified copy. first.Size remains 2; changed.Size becomes 3.",
+          "verification": {
+            "program": "using System;\nvar first = new Label(\"Blue\", 2);\nvar changed = first with { Size = 3 };\nConsole.WriteLine($\"{first.Size}/{changed.Size}\");\nrecord Label(string Color, int Size);",
+            "output": "2/3\n"
+          }
+        },
+        {
+          "id": "q05d",
+          "type": "choice",
+          "prompt": "What does this print?",
+          "options": [
+            {
+              "text": "2/5",
+              "why": "Correct. Pair is a struct, so assigning a copies its value. Updating b.Count does not change a.Count."
+            },
+            {
+              "text": "5/5",
+              "why": "That would be the result for this mutable shape declared as a class; here it is a value type."
+            },
+            {
+              "text": "2/2",
+              "why": "b is mutable; changing its Count field succeeds and updates its own copy."
+            }
+          ],
+          "answer": 0,
+          "hint": "Find the struct keyword in the declaration.",
+          "explanation": "Value-type assignment copies the value. This example contains only an int; a struct can still contain references to shared objects.",
+          "code": "var a = new Pair { Count = 2 };\nvar b = a;\nb.Count = 5;\nConsole.WriteLine($\"{a.Count}/{b.Count}\");\nstruct Pair { public int Count; }",
+          "verification": {
+            "program": "using System;\nvar a = new Pair { Count = 2 };\nvar b = a;\nb.Count = 5;\nConsole.WriteLine($\"{a.Count}/{b.Count}\");\nstruct Pair { public int Count; }",
+            "output": "2/5\n"
+          }
+        }
+      ],
+      "reference": [
+        {
+          "term": "record class versus record struct",
+          "meaning": "record Label(string Color, int Size) is a reference type with generated init properties. record struct Label(...) is a value type whose generated positional properties are normally mutable; readonly record struct makes them init-only."
+        },
+        {
+          "term": "Nested collection equality",
+          "meaning": "Two records containing separate List<int> objects with equal elements are not automatically equal: each list normally uses reference equality. Records use the members’ own equality rules."
+        },
+        {
+          "term": "Tuple deconstruction",
+          "meaning": "var snack = (Name: \"Pear\", Count: 2); var (name, count) = snack; creates local variables. Tuple labels aid readability; a tuple is not an interchangeable instance of a named record."
+        },
+        {
+          "term": "A with copy is shallow",
+          "meaning": "A copied record gets copied member values. Reference-valued members still point at the original nested objects unless explicitly replaced with fresh copies."
+        },
+        {
+          "term": "Anonymous object",
+          "meaning": "var snack = new { Name = \"Pear\", Count = 2 }; creates a compiler-generated type with read-only properties. new Jar { Label = \"Rice\" } instead initializes an existing named type. Both remain shallow with respect to referenced values."
+        }
+      ]
+    },
+    {
+      "id": "06-contracts",
+      "title": "Compose objects through small contracts",
+      "subtitle": "An interface says what is available; an object does the work.",
+      "conceptIds": [
+        "interfaces",
+        "injection",
+        "classes"
+      ],
+      "rules": [
+        "An interface is a contract. IText inner accepts an existing implementing object; that parameter does not declare inheritance.",
+        "class PlainText : IText implements an interface. class Child : Parent inherits a base class: Child is a Parent.",
+        "A constructor dependency expresses has-a: Brackets has an IText. Passing it manually is dependency injection; a container is optional.",
+        "A decorator keeps the same contract, adds behavior, and forwards calls. virtual enables override; base accesses inherited behavior.",
+        "sealed blocks subclasses; sealed override blocks further overriding of that member. Keep simple transformations as functions when state is unnecessary."
+      ],
+      "code": "IText source = new PlainText();\nIText decorated = new Brackets(source);\nConsole.WriteLine(decorated.Read());\ninterface IText { string Read(); }\nsealed class PlainText : IText\n{\n    public string Read() => \"hello\";\n}\nsealed class Brackets(IText inner) : IText\n{\n    public string Read() => $\"[{inner.Read()}]\";\n}",
+      "python": "class PlainText:\n    def read(self):\n        return \"hello\"\nclass Brackets:\n    def __init__(self, inner):\n        self.inner = inner\n    def read(self):\n        return f\"[{self.inner.read()}]\"\nsource = PlainText()\nprint(Brackets(source).read())",
+      "pythonNote": "This Python version relies on duck typing. C# explicitly checks the declared IText contract; neither needs a dependency-injection container.",
+      "trap": "Implements, inherits and receives are three different relationships. A constructor parameter alone never means is-a.",
+      "agentConnection": "Generated chat wrappers accept a client, add tracing or request behavior, and forward calls through a shared client contract.",
+      "verification": {
+        "program": "using System;\nIText source = new PlainText();\nIText decorated = new Brackets(source);\nConsole.WriteLine(decorated.Read());\ninterface IText { string Read(); }\nsealed class PlainText : IText\n{\n    public string Read() => \"hello\";\n}\nsealed class Brackets(IText inner) : IText\n{\n    public string Read() => $\"[{inner.Read()}]\";\n}",
+        "output": "[hello]\n"
+      },
+      "questions": [
+        {
+          "id": "q06a",
+          "type": "choice",
+          "prompt": "Which statement correctly describes Brackets here?",
+          "options": [
+            {
+              "text": "Brackets inherits from inner.",
+              "why": "inner is a parameter naming an object, not a base class declaration."
+            },
+            {
+              "text": "Brackets implements IText and receives an IText dependency.",
+              "why": "Correct. The colon states the contract; the constructor parameter receives another object satisfying it."
+            },
+            {
+              "text": "Brackets creates a new IText interface instance.",
+              "why": "Interfaces are contracts. This constructor receives an already created implementation."
+            }
+          ],
+          "answer": 1,
+          "hint": "Read the parentheses and the colon separately.",
+          "explanation": "Brackets is usable as an IText and has an inner IText. Those are different relationships, joined by composition.",
+          "code": "interface IText { string Read(); }\nsealed class Brackets(IText inner) : IText\n{\n    public string Read() => $\"[{inner.Read()}]\";\n}"
+        },
+        {
+          "id": "q06b",
+          "type": "choice",
+          "prompt": "What does this decorator pipeline print?",
+          "options": [
+            {
+              "text": "hello",
+              "why": "Both Brackets objects add behavior while forwarding; their output is not ignored."
+            },
+            {
+              "text": "[hello]",
+              "why": "There are two nested wrappers, and each contributes one pair of brackets."
+            },
+            {
+              "text": "[[hello]]",
+              "why": "Correct. The outer wrapper brackets the inner wrapper’s [hello] result."
+            }
+          ],
+          "answer": 2,
+          "hint": "Follow Read inward, then assemble its returned text outward.",
+          "explanation": "Each decorator calls its inner object once and wraps that result. This adds behavior without editing PlainText.",
+          "code": "IText text = new Brackets(new Brackets(new PlainText()));\nConsole.WriteLine(text.Read());\ninterface IText { string Read(); }\nsealed class PlainText : IText\n{\n    public string Read() => \"hello\";\n}\nsealed class Brackets(IText inner) : IText\n{\n    public string Read() => $\"[{inner.Read()}]\";\n}",
+          "verification": {
+            "program": "using System;\nIText text = new Brackets(new Brackets(new PlainText()));\nConsole.WriteLine(text.Read());\ninterface IText { string Read(); }\nsealed class PlainText : IText { public string Read() => \"hello\"; }\nsealed class Brackets(IText inner) : IText { public string Read() => $\"[{inner.Read()}]\"; }",
+            "output": "[[hello]]\n"
+          }
+        },
+        {
+          "id": "q06c",
+          "type": "fill",
+          "prompt": "Fill one keyword to replace the inherited virtual method.",
+          "code": "class Greeting { public virtual string Say() => \"hello\"; }\nclass Friendly : Greeting\n{\n    public ___ string Say() => \"hi\";\n}",
+          "accepted": [
+            "override"
+          ],
+          "hint": "This is the inheritance feature, not another method overload.",
+          "explanation": "override supplies the derived implementation. When an overridden virtual member is called, the runtime object type selects the implementation.",
+          "verification": {
+            "program": "using System;\nGreeting greeting = new Friendly();\nConsole.WriteLine(greeting.Say());\nclass Greeting { public virtual string Say() => \"hello\"; }\nclass Friendly : Greeting { public override string Say() => \"hi\"; }",
+            "output": "hi\n"
+          }
+        },
+        {
+          "id": "q06d",
+          "type": "choice",
+          "prompt": "You only need to convert Celsius to Fahrenheit. Which starting design is simplest?",
+          "options": [
+            {
+              "text": "A function accepting a number and returning a number.",
+              "why": "Correct. No persistent object state or replaceable service is required by this task."
+            },
+            {
+              "text": "A base class plus a subclass for every temperature.",
+              "why": "Individual numeric values do not require an inheritance hierarchy."
+            },
+            {
+              "text": "An interface, factory and dependency container before writing the formula.",
+              "why": "Those tools can solve other needs, but this pure transformation does not need them."
+            }
+          ],
+          "answer": 0,
+          "hint": "Look for actual state or variation that would justify objects.",
+          "explanation": "Use the smallest structure that expresses the job: static double ToFahrenheit(double c) => c * 9 / 5 + 32. Add abstractions when a real need appears."
+        }
+      ],
+      "reference": [
+        {
+          "term": "Dependency injection without machinery",
+          "meaning": "new Brackets(new PlainText()) supplies a dependency through a constructor. A framework container may automate construction and lifetimes, but is not the definition of dependency injection."
+        },
+        {
+          "term": "Base behavior",
+          "meaning": "class Friendly : Greeting { public override string Say() => base.Say() + \"!\"; } calls the base implementation, then adds behavior. The base method must permit overriding."
+        },
+        {
+          "term": "abstract",
+          "meaning": "An abstract class cannot be instantiated directly. An abstract method declares a required implementation without a body; a concrete derived class must override it."
+        },
+        {
+          "term": "Contract size",
+          "meaning": "Keep interfaces small and tied to actual substitution needs. A pure calculation usually fits a function; an object is useful for associated state or interchangeable behavior."
+        }
+      ]
+    },
+    {
+      "id": "07-collections",
+      "title": "Choose a container by its job",
+      "subtitle": "The generic type tells you what goes inside.",
+      "conceptIds": [
+        "generics",
+        "inference",
+        "extension-methods",
+        "initializers"
+      ],
+      "rules": [
+        "List<T> grows; T is the element type. Arrays have fixed length. Dictionary<TKey,TValue> maps keys; HashSet<T> keeps unique values.",
+        "IEnumerable<T> promises enumeration, not stored contents. IReadOnlyList<T> exposes indexing and Count without mutation methods through that interface.",
+        "A read-only interface does not freeze the underlying object or its elements. Another reference may still change them.",
+        "new() gets its type from context. [a, b] is a collection expression requiring a target type; new[] infers an array.",
+        "Extension methods are static methods callable with instance syntax. In a traditional declaration, this marks the first receiver parameter."
+      ],
+      "code": "List<string> fruit = [\"pear\", \"plum\", \"pear\"];\nIReadOnlyList<string> view = fruit;\nHashSet<string> unique = new(fruit);\nDictionary<string, int> prices = new() { [\"pear\"] = 2 };\nfruit.Add(\"apple\");\nConsole.WriteLine(view.Count);\nConsole.WriteLine(unique.Count);\nConsole.WriteLine(prices[\"pear\"]);",
+      "python": "fruit = [\"pear\", \"plum\", \"pear\"]\nview = fruit\nunique = set(fruit)\nprices = {\"pear\": 2}\nfruit.append(\"apple\")\nprint(len(view))\nprint(len(unique))\nprint(prices[\"pear\"])",
+      "pythonNote": "The aliasing is similar. Python does not restrict view to IReadOnlyList operations; C# generic arguments are compiler-checked.",
+      "trap": "IReadOnlyList<T> means this access path cannot mutate through that interface; it is not a deeply immutable snapshot.",
+      "agentConnection": "Stores expose collections of records, use dictionaries for lookup and sets for deduplication, and pass enumeration contracts to helpers.",
+      "verification": {
+        "program": "using System;\nusing System.Collections.Generic;\nList<string> fruit = [\"pear\", \"plum\", \"pear\"];\nIReadOnlyList<string> view = fruit;\nHashSet<string> unique = new(fruit);\nDictionary<string, int> prices = new() { [\"pear\"] = 2 };\nfruit.Add(\"apple\");\nConsole.WriteLine(view.Count);\nConsole.WriteLine(unique.Count);\nConsole.WriteLine(prices[\"pear\"]);",
+        "output": "4\n2\n2\n"
+      },
+      "questions": [
+        {
+          "id": "q07a",
+          "type": "choice",
+          "prompt": "Which type best expresses unique color names?",
+          "options": [
+            {
+              "text": "List<string>",
+              "why": "A list preserves elements including duplicates; uniqueness would need extra work."
+            },
+            {
+              "text": "HashSet<string>",
+              "why": "Correct. A set enforces uniqueness according to its equality comparer."
+            },
+            {
+              "text": "Dictionary<int, int>",
+              "why": "That maps integers to integers; it does not express a set of text names."
+            }
+          ],
+          "answer": 1,
+          "hint": "The key requirement is uniqueness, not ordering or key-to-value lookup.",
+          "explanation": "HashSet<string> stores unique strings. Its comparer determines whether differently cased names count as equal."
+        },
+        {
+          "id": "q07b",
+          "type": "choice",
+          "prompt": "What does this print?",
+          "options": [
+            {
+              "text": "1",
+              "why": "readOnly refers to the original list; it does not copy or freeze it."
+            },
+            {
+              "text": "2",
+              "why": "Correct. The list changes through items, and the read-only interface observes the same object."
+            },
+            {
+              "text": "Compilation fails at items.Add.",
+              "why": "items is still a List<int>, so its mutation methods remain available."
+            }
+          ],
+          "answer": 1,
+          "hint": "There is only one list object in this example.",
+          "explanation": "IReadOnlyList hides mutation methods through that variable. It does not promise that every reference to the object is read-only.",
+          "code": "var items = new List<int> { 1 };\nIReadOnlyList<int> readOnly = items;\nitems.Add(2);\nConsole.WriteLine(readOnly.Count);",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nvar items = new List<int> { 1 };\nIReadOnlyList<int> readOnly = items;\nitems.Add(2);\nConsole.WriteLine(readOnly.Count);",
+            "output": "2\n"
+          }
+        },
+        {
+          "id": "q07c",
+          "type": "fill",
+          "prompt": "Fill one keyword to declare a traditional extension method receiver.",
+          "code": "static class TextExtras\n{\n    public static string Twice(___ string text) => text + text;\n}",
+          "accepted": [
+            "this"
+          ],
+          "hint": "The parameter is still passed to a static method, but can appear before the dot at the call site.",
+          "explanation": "this marks the receiver parameter. \"ha\".Twice() can be written as TextExtras.Twice(\"ha\"); the string class is not modified.",
+          "verification": {
+            "program": "using System;\nConsole.WriteLine(\"ha\".Twice());\nstatic class TextExtras { public static string Twice(this string text) => text + text; }",
+            "output": "haha\n"
+          }
+        },
+        {
+          "id": "q07d",
+          "type": "choice",
+          "prompt": "Which declaration gives [] the target type it needs?",
+          "options": [
+            {
+              "text": "var colors = [\"red\", \"blue\"];",
+              "why": "A collection expression has no standalone natural type for var to infer here."
+            },
+            {
+              "text": "string[] colors = [\"red\", \"blue\"];",
+              "why": "Correct. The declared string[] supplies the target type for the collection expression."
+            },
+            {
+              "text": "int[] colors = [\"red\", \"blue\"];",
+              "why": "The target element type int is incompatible with these string values."
+            }
+          ],
+          "answer": 1,
+          "hint": "The collection expression needs the destination collection type.",
+          "explanation": "Use string[] colors = [...], List<string> colors = [...], or var colors = new[] { ... }. The last form infers an array from new[]."
+        }
+      ],
+      "reference": [
+        {
+          "term": "Generic notation",
+          "meaning": "List<string> chooses string for the type parameter T. Dictionary<string, int> has two parameters: key type and value type. The angle brackets are type arguments, not comparisons."
+        },
+        {
+          "term": "Lookup with TryGetValue",
+          "meaning": "if (prices.TryGetValue(\"pear\", out var price)) uses a value only when its key exists. Direct prices[\"missing\"] throws when the key is absent."
+        },
+        {
+          "term": "Comparer choices",
+          "meaning": "new HashSet<string>(StringComparer.OrdinalIgnoreCase) treats \"Red\" and \"red\" as the same key. Choose this deliberately; default string comparison distinguishes them."
+        },
+        {
+          "term": "Three bracket uses",
+          "meaning": "items[0] indexes; int[] items = [1, 2] creates a target-typed collection; items is [1, ..] tests a list pattern. Context changes the meaning of the same brackets."
+        },
+        {
+          "term": "Inference shapes",
+          "meaning": "List<int> values = new(); gets the construction type from the declaration. var values = new List<int>(); gets the variable type from the construction. var values = []; lacks the required target type."
+        }
+      ]
+    },
+    {
+      "id": "08-linq",
+      "title": "A query is a recipe, not its results",
+      "subtitle": "Track when iteration actually happens.",
+      "conceptIds": [
+        "linq",
+        "lambdas",
+        "generics",
+        "extension-methods"
+      ],
+      "rules": [
+        "Where filters; Any answers existence; Distinct removes duplicates; OrderByDescending sorts largest first. Comparers control equality or ordering where supplied.",
+        "FirstOrDefault returns the first item, or default(T): often null for references, zero for int. Default does not prove absence.",
+        "Many IEnumerable LINQ operations are deferred. foreach or a terminal operation executes the query; storing its variable does not cache results.",
+        "ToList and ToArray enumerate now and store a shallow snapshot. Re-enumerating a deferred query can repeat work and observe source changes.",
+        "Python generators also defer work, but a generator object is usually one-shot. A typical LINQ-to-Objects query can be enumerated again."
+      ],
+      "code": "var sizes = new List<int> { 1, 3, 3 };\nvar query = sizes.Where(size => size > 1).Distinct();\nvar snapshot = query.ToList();\nsizes.Add(4);\nConsole.WriteLine(string.Join(\",\", query.OrderByDescending(x => x)));\nConsole.WriteLine(string.Join(\",\", snapshot));\nConsole.WriteLine(query.Any());\nConsole.WriteLine(Array.Empty<int>().FirstOrDefault());",
+      "python": "sizes = [1, 3, 3]\ndef query():\n    return dict.fromkeys(size for size in sizes if size > 1)\nsnapshot = list(query())\nsizes.append(4)\nprint(\",\".join(map(str, sorted(query(), reverse=True))))\nprint(\",\".join(map(str, snapshot)))\nprint(bool(query()))\nprint(next(iter([]), 0))",
+      "pythonNote": "The function creates a fresh query each call to mirror re-enumeration. A single stored Python generator would be consumed.",
+      "trap": "Deferred does not mean async or background execution. Sorting still needs to examine its input when the query is enumerated.",
+      "agentConnection": "Generated stores filter and rank local data with LINQ; materialization determines whether work repeats and which data version is observed.",
+      "verification": {
+        "program": "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nvar sizes = new List<int> { 1, 3, 3 };\nvar query = sizes.Where(size => size > 1).Distinct();\nvar snapshot = query.ToList();\nsizes.Add(4);\nConsole.WriteLine(string.Join(\",\", query.OrderByDescending(x => x)));\nConsole.WriteLine(string.Join(\",\", snapshot));\nConsole.WriteLine(query.Any());\nConsole.WriteLine(Array.Empty<int>().FirstOrDefault());",
+        "output": "4,3\n3\nTrue\n0\n"
+      },
+      "questions": [
+        {
+          "id": "q08a",
+          "type": "choice",
+          "prompt": "What does the final line print?",
+          "options": [
+            {
+              "text": "1",
+              "why": "That was the count before the Add, but the deferred query was not stored as results then."
+            },
+            {
+              "text": "2",
+              "why": "Correct. Count enumerates after 4 was added, so it finds 3 and 4."
+            },
+            {
+              "text": "It fails because Where returns no collection.",
+              "why": "Where returns an enumerable query that Count can enumerate."
+            }
+          ],
+          "answer": 1,
+          "hint": "Find the operation that actually enumerates the query.",
+          "explanation": "Where stores the filtering recipe. Count executes it against the list as it exists at that time.",
+          "code": "var values = new List<int> { 1, 3 };\nvar query = values.Where(x => x > 1);\nvalues.Add(4);\nConsole.WriteLine(query.Count());",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nvar values = new List<int> { 1, 3 };\nvar query = values.Where(x => x > 1);\nvalues.Add(4);\nConsole.WriteLine(query.Count());",
+            "output": "2\n"
+          }
+        },
+        {
+          "id": "q08b",
+          "type": "fill",
+          "prompt": "Fill the LINQ method name to execute now and store a List<int>.",
+          "code": "var values = new List<int> { 1, 3 };\nList<int> saved = values.Where(x => x > 1).___();",
+          "accepted": [
+            "ToList"
+          ],
+          "hint": "It names the collection type requested on the left.",
+          "explanation": "ToList enumerates immediately and returns a new List<int>. Later structural changes to values do not change saved.",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nvar values = new List<int> { 1, 3 };\nList<int> saved = values.Where(x => x > 1).ToList();\nvalues.Add(4);\nConsole.WriteLine(saved.Count);",
+            "output": "1\n"
+          }
+        },
+        {
+          "id": "q08c",
+          "type": "choice",
+          "prompt": "What does FirstOrDefault return here?",
+          "options": [
+            {
+              "text": "null",
+              "why": "The element type is int, whose default value is zero. int? would be a different element type."
+            },
+            {
+              "text": "0",
+              "why": "Correct. default(int) is zero, so an empty integer sequence produces zero."
+            },
+            {
+              "text": "It throws because the sequence is empty.",
+              "why": "First throws on an empty sequence; FirstOrDefault returns the default value."
+            }
+          ],
+          "answer": 1,
+          "hint": "The default comes from the element type, not the variable name.",
+          "explanation": "An empty int sequence and a sequence beginning with zero both produce zero here. Use an explicit presence check when that distinction matters.",
+          "code": "int[] empty = [];\nConsole.WriteLine(empty.FirstOrDefault());",
+          "verification": {
+            "program": "using System;\nusing System.Linq;\nint[] empty = [];\nConsole.WriteLine(empty.FirstOrDefault());",
+            "output": "0\n"
+          }
+        },
+        {
+          "id": "q08d",
+          "type": "order",
+          "prompt": "Arrange the lines to take a snapshot before adding 4, then print snapshot size 1.",
+          "lines": [
+            "var values = new List<int> { 1, 3 };",
+            "var saved = values.Where(x => x > 1).ToArray();",
+            "values.Add(4);",
+            "Console.WriteLine(saved.Length);"
+          ],
+          "hint": "Materialize before changing the source, then inspect the saved array.",
+          "explanation": "ToArray stores the earlier result [3]. Adding to the original list later leaves this array’s length at one.",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nvar values = new List<int> { 1, 3 };\nvar saved = values.Where(x => x > 1).ToArray();\nvalues.Add(4);\nConsole.WriteLine(saved.Length);",
+            "output": "1\n"
+          }
+        }
+      ],
+      "reference": [
+        {
+          "term": "Select projects",
+          "meaning": "values.Select(x => x * 2) transforms each element when enumerated. Where selects which elements remain; Select chooses each result’s shape."
+        },
+        {
+          "term": "Any versus a count",
+          "meaning": "Any(predicate) stops after finding a match. Count(predicate) counts every match. Use Any when the question is only whether a match exists."
+        },
+        {
+          "term": "Distinct with a comparer",
+          "meaning": "names.Distinct(StringComparer.OrdinalIgnoreCase) treats differently cased versions as duplicates. The default string comparer treats them as different."
+        },
+        {
+          "term": "Source mutation and snapshots",
+          "meaning": "Changing a List before a later enumeration can change query results. Changing it while an active enumerator is traversing it may throw; a list is not a concurrent snapshot."
+        },
+        {
+          "term": "Default is type-dependent",
+          "meaning": "FirstOrDefault() returns null for an empty string sequence but 0 for an empty int sequence. First() throws instead; modern overloads can also accept an explicit fallback."
+        }
+      ]
+    }
+  ]
+}

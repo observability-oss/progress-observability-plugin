@@ -6,6 +6,10 @@ distributed skill payloads.
 
 ## Start here
 
+- [Simplified C# cheat sheet](./csharp-learning/cheat-sheet.html) and
+  [interactive learning game](./csharp-learning/learning-game.html) — small new
+  examples, Python comparisons, 16 lessons and 64 checkpoints.
+  [Learning-kit notes](./csharp-learning/README.md) explain offline use and saved progress.
 - [Current implementation and handoff — 8 September](./agent-builder-handoff-2026-09-08.md)
 - [Interactive C#/.NET walkthrough](./walkthroughs/agent-builder-2026-09-08.html)
   — open the HTML in a browser; it contains its own code, styles and source

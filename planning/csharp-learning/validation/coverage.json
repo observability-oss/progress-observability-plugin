@@ -1,0 +1,441 @@
+{
+  "sourceWalkthrough": "/Users/dipeykov/repos/progress-observability-plugin-build-custom-agent/planning/walkthroughs/agent-builder-2026-09-08.html",
+  "totalOriginalConcepts": 49,
+  "coveredOriginalConcepts": 49,
+  "coverage": [
+    {
+      "id": "build",
+      "title": "C#, .NET, SDK, runtime and ASP.NET Core",
+      "lessons": [
+        "01-basics",
+        "13-files-config"
+      ]
+    },
+    {
+      "id": "methods",
+      "title": "Read a method signature",
+      "lessons": [
+        "02-functions"
+      ]
+    },
+    {
+      "id": "classes",
+      "title": "Class, instance, constructor and sealed",
+      "lessons": [
+        "04-objects",
+        "06-contracts"
+      ]
+    },
+    {
+      "id": "primary-constructors",
+      "title": "Primary constructors",
+      "lessons": [
+        "04-objects"
+      ]
+    },
+    {
+      "id": "records",
+      "title": "Records and value/reference types",
+      "lessons": [
+        "05-records"
+      ]
+    },
+    {
+      "id": "fields",
+      "title": "Fields, properties and readonly",
+      "lessons": [
+        "04-objects"
+      ]
+    },
+    {
+      "id": "access",
+      "title": "public, private, internal, static and partial",
+      "lessons": [
+        "04-objects"
+      ]
+    },
+    {
+      "id": "using",
+      "title": "The two meanings of using",
+      "lessons": [
+        "01-basics",
+        "11-lifetimes",
+        "13-files-config"
+      ]
+    },
+    {
+      "id": "namespaces",
+      "title": "Namespaces and files",
+      "lessons": [
+        "01-basics",
+        "13-files-config"
+      ]
+    },
+    {
+      "id": "top-level",
+      "title": "Main and top-level statements",
+      "lessons": [
+        "01-basics"
+      ]
+    },
+    {
+      "id": "file-based",
+      "title": "File-based C# apps",
+      "lessons": [
+        "01-basics"
+      ]
+    },
+    {
+      "id": "nullable",
+      "title": "Nullable types: ?, !, null",
+      "lessons": [
+        "03-null"
+      ]
+    },
+    {
+      "id": "generics",
+      "title": "Generics, arrays and collection interfaces",
+      "lessons": [
+        "07-collections",
+        "08-linq"
+      ]
+    },
+    {
+      "id": "inference",
+      "title": "var, new() and collection expressions",
+      "lessons": [
+        "01-basics",
+        "07-collections"
+      ]
+    },
+    {
+      "id": "async",
+      "title": "async, await and Task<T>",
+      "lessons": [
+        "10-async"
+      ]
+    },
+    {
+      "id": "streams",
+      "title": "Async streams and yield return",
+      "lessons": [
+        "12-streams"
+      ]
+    },
+    {
+      "id": "cancellation",
+      "title": "CancellationToken and deadlines",
+      "lessons": [
+        "11-lifetimes"
+      ]
+    },
+    {
+      "id": "exceptions",
+      "title": "Exceptions, catch filters and finally",
+      "lessons": [
+        "11-lifetimes"
+      ]
+    },
+    {
+      "id": "lambdas",
+      "title": "Lambdas, delegates and captured variables",
+      "lessons": [
+        "02-functions",
+        "08-linq"
+      ]
+    },
+    {
+      "id": "interfaces",
+      "title": "Interfaces, inheritance and decorators",
+      "lessons": [
+        "06-contracts",
+        "16-boundaries"
+      ]
+    },
+    {
+      "id": "injection",
+      "title": "Dependencies and object lifetimes",
+      "lessons": [
+        "06-contracts",
+        "16-boundaries"
+      ]
+    },
+    {
+      "id": "patterns",
+      "title": "Patterns: is, switch, property and list tests",
+      "lessons": [
+        "03-null",
+        "09-data"
+      ]
+    },
+    {
+      "id": "linq",
+      "title": "LINQ and IEnumerable pipelines",
+      "lessons": [
+        "08-linq",
+        "12-streams"
+      ]
+    },
+    {
+      "id": "tuples",
+      "title": "Tuples and deconstruction",
+      "lessons": [
+        "05-records"
+      ]
+    },
+    {
+      "id": "with",
+      "title": "with expressions and immutability",
+      "lessons": [
+        "05-records"
+      ]
+    },
+    {
+      "id": "attributes",
+      "title": "Attributes and reflection",
+      "lessons": [
+        "14-json"
+      ]
+    },
+    {
+      "id": "source-generation",
+      "title": "Source generation and partial types",
+      "lessons": [
+        "14-json"
+      ]
+    },
+    {
+      "id": "json",
+      "title": "C# objects \u2194 JSON",
+      "lessons": [
+        "14-json"
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Configuration and precedence",
+      "lessons": [
+        "13-files-config"
+      ]
+    },
+    {
+      "id": "minimal-api",
+      "title": "Minimal APIs, binding and middleware",
+      "lessons": [
+        "15-web"
+      ]
+    },
+    {
+      "id": "model-tools",
+      "title": "Model tools and deterministic code",
+      "lessons": [
+        "16-boundaries"
+      ]
+    },
+    {
+      "id": "telemetry",
+      "title": "Activity, traces and metadata-only wrappers",
+      "lessons": [
+        "16-boundaries"
+      ]
+    },
+    {
+      "id": "tests",
+      "title": "Offline tests, live smokes and behavior checks",
+      "lessons": [
+        "16-boundaries"
+      ]
+    },
+    {
+      "id": "paths",
+      "title": "Filesystem paths and runtime content",
+      "lessons": [
+        "13-files-config"
+      ]
+    },
+    {
+      "id": "strings",
+      "title": "Strings, raw literals and StringBuilder",
+      "lessons": [
+        "09-data"
+      ]
+    },
+    {
+      "id": "expressions",
+      "title": "Expression bodies and short-circuit logic",
+      "lessons": [
+        "01-basics",
+        "03-null"
+      ]
+    },
+    {
+      "id": "numbers",
+      "title": "int, decimal, bool and DateOnly",
+      "lessons": [
+        "09-data"
+      ]
+    },
+    {
+      "id": "recursion",
+      "title": "Recursion and loops",
+      "lessons": [
+        "02-functions"
+      ]
+    },
+    {
+      "id": "processes",
+      "title": "Process, request and session lifetimes",
+      "lessons": [
+        "15-web"
+      ]
+    },
+    {
+      "id": "extension-methods",
+      "title": "Extension methods: instance-looking calls from library code",
+      "lessons": [
+        "07-collections",
+        "08-linq"
+      ]
+    },
+    {
+      "id": "argument-modifiers",
+      "title": "out, ref and params: what the caller supplies",
+      "lessons": [
+        "02-functions"
+      ]
+    },
+    {
+      "id": "initializers",
+      "title": "Initializers configure a newly constructed object",
+      "lessons": [
+        "04-objects",
+        "07-collections"
+      ]
+    },
+    {
+      "id": "local-functions",
+      "title": "Local functions: helper scope and captured state",
+      "lessons": [
+        "02-functions"
+      ]
+    },
+    {
+      "id": "ranges-spans",
+      "title": "Ranges and ^ indexes: slicing is not always a view",
+      "lessons": [
+        "09-data"
+      ]
+    },
+    {
+      "id": "regex-vs-patterns",
+      "title": "Regex patterns inspect text; C# patterns inspect values",
+      "lessons": [
+        "09-data"
+      ]
+    },
+    {
+      "id": "async-stream-cancellation",
+      "title": "Async streams: resumption context, tokens and disposal",
+      "lessons": [
+        "12-streams"
+      ]
+    },
+    {
+      "id": "weighted-aggregation",
+      "title": "Aggregate totals before dividing: weighted metrics",
+      "lessons": [
+        "09-data"
+      ]
+    },
+    {
+      "id": "generation-vs-mirroring",
+      "title": "JSON source generation is not package copying",
+      "lessons": [
+        "14-json"
+      ]
+    },
+    {
+      "id": "browser-server-boundary",
+      "title": "Browser fetch and NDJSON are separate from C# execution",
+      "lessons": [
+        "15-web"
+      ]
+    }
+  ],
+  "copilotSummaryCoverage": {
+    "syntax": [
+      "01-basics",
+      "02-functions",
+      "03-null"
+    ],
+    "LINQ": [
+      "08-linq"
+    ],
+    "interfaces-and-classes": [
+      "04-objects",
+      "06-contracts"
+    ],
+    "Tasks-and-async": [
+      "10-async",
+      "11-lifetimes",
+      "12-streams"
+    ],
+    "null-handling": [
+      "03-null"
+    ],
+    "hybrid-functional-OOP": [
+      "02-functions",
+      "06-contracts",
+      "16-boundaries"
+    ]
+  },
+  "reviewedCriticalDistinctions": [
+    "C# async Task method invocation begins work; Python coroutine invocation normally does not.",
+    "An already-completed await need not yield.",
+    "A Task does not guarantee a thread.",
+    "Nullable annotations and ! do not validate runtime input.",
+    "Ordinary primary-constructor class parameters are not synthesized properties.",
+    "readonly, IReadOnlyList and record with copies do not deeply freeze nested data.",
+    "Record equality uses each member type equality, so List members use reference equality.",
+    "Many LINQ sequences are deferred; a typical enumerable query can be re-enumerated, unlike one stored Python generator object.",
+    "Integer division truncates in C#; a cast after division cannot restore the discarded fraction.",
+    "Attributes attach metadata; registration and libraries decide what runs.",
+    "Dependency injection need not involve a container.",
+    "Model streaming and browser streaming are separate layers.",
+    "Offline fake tests do not prove live service connectivity or telemetry export."
+  ],
+  "additionalGeneratedCodeMechanics": {
+    "01-basics": [
+      "while",
+      "continue",
+      "break"
+    ],
+    "02-functions": [
+      "nameof"
+    ],
+    "03-null": [
+      "??="
+    ],
+    "04-objects": [
+      "const",
+      "protected"
+    ],
+    "05-records": [
+      "anonymous objects"
+    ],
+    "09-data": [
+      "enum"
+    ],
+    "10-async": [
+      "ValueTask<T>"
+    ],
+    "16-boundaries": [
+      "lock",
+      "Interlocked"
+    ]
+  },
+  "contentReviewSha256": {
+    "foundations.json": "235509d28b1434f80460a890a7b56a805c2453ecc2e233b7ed5636578855619a",
+    "runtime.json": "6581da8154147bdcc85bf640379b0598f16251975ac815ca0a1949d60e96268f"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "date": "2026-09-08",
+  "lessons": 16,
+  "questions": 64,
+  "walkthroughConcepts": 49,
+  "csharp": {
+    "cases": 57,
+    "distinctPrograms": 54,
+    "outputChecks": 54,
+    "expectedCompileFailures": 1,
+    "compileOnlyCases": 2,
+    "passed": 57,
+    "sdk": "10.0.203",
+    "framework": "10.0.7",
+    "warnings": 0
+  },
+  "browser": {
+    "checks": 358,
+    "fullChecks": 347,
+    "edgeChecks": 11,
+    "pageErrors": [],
+    "externalRequests": [],
+    "widths": [
+      1440,
+      768,
+      390,
+      320
+    ]
+  },
+  "sha256": {
+    "cheat-sheet.html": "7c2d04198096c645e8be2e1f525de3489087645a05ad1dd5700411dac86d70f5",
+    "cheat-sheet.md": "acadf8f76ae8bd5813101ff6e2bb975d9fe41e81f769fafebfda5e78019a8b33",
+    "learning-game.html": "38e4a353cbb92ab96a02b4ecf2f5ebbf5076e5184b9a236621427a7247db9cbf",
+    "authoring/foundations.json": "235509d28b1434f80460a890a7b56a805c2453ecc2e233b7ed5636578855619a",
+    "authoring/runtime.json": "6581da8154147bdcc85bf640379b0598f16251975ac815ca0a1949d60e96268f"
+  },
+  "limits": [
+    "C# snippets are compiler/output verified separately. The game uses authored answers; it does not run user-entered C#.",
+    "ASP.NET route examples were compiled, not exercised through live HTTP.",
+    "UI tests used a loopback static server; pages contain their own scripts, styles and content and no external runtime dependencies.",
+    "No generated agent, model provider, business integration or trace ingestion was exercised by these learning-kit checks."
+  ]
+}

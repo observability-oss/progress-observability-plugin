@@ -1,0 +1,1195 @@
+{
+  "lessons": [
+    {
+      "id": "09-data",
+      "title": "Text, numbers and small checks",
+      "subtitle": "Choose the right representation before calculating or matching.",
+      "conceptIds": [
+        "strings",
+        "numbers",
+        "patterns",
+        "ranges-spans",
+        "regex-vs-patterns",
+        "weighted-aggregation"
+      ],
+      "rules": [
+        "`int` and `long` are whole numbers; `double` uses binary floating point; `decimal` suits decimal arithmetic.",
+        "Integer division drops the fraction. Convert before dividing; combine totals before calculating a combined ratio.",
+        "`$\"Hi {name}\"` interpolates; `@\"a\\b\"` keeps backslashes; raw strings use three or more quotation marks.",
+        "`is` and `switch` patterns inspect values or shapes. Regular expressions inspect patterns inside text.",
+        "`values[^1]` means last. An array range copies elements; slicing a `Span<T>` creates a view."
+      ],
+      "code": "int doneA = 1, totalA = 2;\nint doneB = 9, totalB = 10;\ndecimal combined = (decimal)(doneA + doneB)\n    / (totalA + totalB);\nConsole.WriteLine(combined > 0.8m);",
+      "verification": {
+        "program": "using System;\nint doneA = 1, totalA = 2;\nint doneB = 9, totalB = 10;\ndecimal combined = (decimal)(doneA + doneB)\n    / (totalA + totalB);\nConsole.WriteLine(combined > 0.8m);",
+        "output": "True\n",
+        "expectedOutput": "True\n"
+      },
+      "python": "done_a, total_a = 1, 2\ndone_b, total_b = 9, 10\ncombined = (done_a + done_b) / (total_a + total_b)\nprint(combined > 0.8)\n# Python / keeps a fraction; use Decimal for decimal arithmetic.",
+      "reference": [
+        {
+          "term": "Numbers",
+          "meaning": "`int`: 32-bit signed; `long`: 64-bit signed, e.g. `9L`. `0.5` is double; `0.5m` is decimal. Neither makes every fraction exact."
+        },
+        {
+          "term": "DateOnly",
+          "meaning": "`new DateOnly(2026, 9, 8)` is a calendar date, with no time or timezone. Comparable to Python datetime.date."
+        },
+        {
+          "term": "StringBuilder",
+          "meaning": "`new StringBuilder().Append(\"a\").Append(\"b\").ToString()` builds text through a mutable buffer; useful for repeated additions."
+        },
+        {
+          "term": "Raw strings",
+          "meaning": "`\"\"\"{\"name\":\"Ava\"}\"\"\"` holds JSON text without escaping its internal quotes. Multiline raw strings use delimiter placement and indentation rules."
+        },
+        {
+          "term": "Property and list patterns",
+          "meaning": "`name is { Length: > 0 }` checks a non-null value and its property. `items is [1, ..]` checks a list starting with 1."
+        },
+        {
+          "term": "switch expression",
+          "meaning": "`count switch { 0 => \"none\", 1 => \"one\", _ => \"many\" }` selects a result; `_` is the fallback."
+        },
+        {
+          "term": "Regex",
+          "meaning": "`Regex.IsMatch(text, @\"\\A\\d+\\z\")` checks that the entire text contains one or more digits. The regex library interprets this string."
+        },
+        {
+          "term": "Ranges and spans",
+          "meaning": "`values[1..3]` includes indexes 1 and 2; the end is excluded. A mutable span view shares the original array storage."
+        },
+        {
+          "term": "Weighted ratios",
+          "meaning": "Averaging 1/2 and 9/10 gives 0.7. Combined progress is 10/12, about 0.8333. Check for a zero denominator."
+        },
+        {
+          "term": "enum",
+          "meaning": "`enum Size { Small, Large }` defines named constants in a distinct value type. Use `Size.Small`; an enum is not a string or a class instance."
+        }
+      ],
+      "trap": "Python integer / produces a fraction; C# int / int produces an integer. Casting the already-truncated answer is too late.",
+      "agentConnection": "The generated applications format text, match input shapes, parse dates and calculate evidence from totals using these ordinary operations.",
+      "questions": [
+        {
+          "id": "q09a",
+          "type": "choice",
+          "prompt": "What is printed?",
+          "options": [
+            {
+              "text": "2",
+              "why": "Correct: both operands are int, so division truncates the fraction."
+            },
+            {
+              "text": "2.5",
+              "why": "That needs a decimal or floating-point operand, such as 5m / 2."
+            },
+            {
+              "text": "A compiler error",
+              "why": "Integer division is legal; it just has different semantics from Python /."
+            }
+          ],
+          "answer": 0,
+          "hint": "Look at the operand types, not the variable name.",
+          "explanation": "C# calculates 5 / 2 using integer division. Use 5m / 2 or (decimal)5 / 2 for a decimal fraction.",
+          "code": "Console.WriteLine(5 / 2);",
+          "verification": {
+            "program": "using System;\nConsole.WriteLine(5 / 2);",
+            "output": "2\n",
+            "expectedOutput": "2\n"
+          }
+        },
+        {
+          "id": "q09b",
+          "type": "fill",
+          "prompt": "Which one-character prefix inserts the value of name into this string?",
+          "accepted": [
+            "$"
+          ],
+          "hint": "This is the C# counterpart of the prefix on a Python f-string.",
+          "explanation": "The $ prefix enables interpolation. Without it, braces are literal text. @ controls backslash handling instead.",
+          "code": "string name = \"Ava\";\nConsole.WriteLine(__\"Hi {name}\");",
+          "verification": {
+            "program": "using System;\nstring name = \"Ava\";\nConsole.WriteLine($\"Hi {name}\");",
+            "output": "Hi Ava\n",
+            "expectedOutput": "Hi Ava\n"
+          }
+        },
+        {
+          "id": "q09c",
+          "type": "choice",
+          "prompt": "Which value is printed after changing a copy and a view?",
+          "options": [
+            {
+              "text": "4",
+              "why": "The original second item starts as 4, but the span assignment changes it."
+            },
+            {
+              "text": "8",
+              "why": "8 was assigned to the separate array copy."
+            },
+            {
+              "text": "9",
+              "why": "Correct: the span shares storage with values, so view[0] changes values[1]."
+            }
+          ],
+          "answer": 2,
+          "hint": "The copy owns a new array; the span refers to the old array.",
+          "explanation": "An array range creates a shallow element copy. AsSpan creates a view. For int elements, editing the copy cannot change the original.",
+          "code": "int[] values = [2, 4, 6];\nint[] copy = values[1..];\nSpan<int> view = values.AsSpan(1);\ncopy[0] = 8;\nview[0] = 9;\nConsole.WriteLine(values[1]);",
+          "verification": {
+            "program": "using System;\nint[] values = [2, 4, 6];\nint[] copy = values[1..];\nSpan<int> view = values.AsSpan(1);\ncopy[0] = 8;\nview[0] = 9;\nConsole.WriteLine(values[1]);",
+            "output": "9\n",
+            "expectedOutput": "9\n"
+          }
+        },
+        {
+          "id": "q09d",
+          "type": "choice",
+          "prompt": "What do these two C# patterns print?",
+          "options": [
+            {
+              "text": "True, then True",
+              "why": "Correct: the list has two matching elements and the string has Length 4."
+            },
+            {
+              "text": "False, then True",
+              "why": "The > 3 relational pattern matches 4, so the list test succeeds too."
+            },
+            {
+              "text": "A regex error",
+              "why": "These are C# list/property patterns, not regex strings."
+            }
+          ],
+          "answer": 0,
+          "hint": "Square brackets here describe list shape; braces describe properties.",
+          "explanation": "[2, > 3] matches exactly two elements: 2 followed by a number greater than 3. { Length: 4 } checks a non-null object with that property value.",
+          "code": "int[] sizes = [2, 4];\nConsole.WriteLine(sizes is [2, > 3]);\nConsole.WriteLine(\"pear\" is { Length: 4 });",
+          "verification": {
+            "program": "using System;\nint[] sizes = [2, 4];\nConsole.WriteLine(sizes is [2, > 3]);\nConsole.WriteLine(\"pear\" is { Length: 4 });",
+            "output": "True\nTrue\n",
+            "expectedOutput": "True\nTrue\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "10-async",
+      "title": "A task is a promise of completion",
+      "subtitle": "Read asynchronous code without imagining a new thread for every call.",
+      "conceptIds": [
+        "async"
+      ],
+      "rules": [
+        "`Task` tracks completion, failure or cancellation. `Task<T>` also supplies a successful result of type T.",
+        "`async` enables `await`. Await obtains the result or propagates an exception; an incomplete await can suspend the method.",
+        "Calling a normal C# async method starts it immediately, until an incomplete await. A Python coroutine call behaves differently.",
+        "`Task.WhenAll` represents completion of every supplied task. It does not promise separate threads.",
+        "An already-completed task needs no suspension. Prefer await over blocking `.Result` or `.Wait()`."
+      ],
+      "code": "Task<int> pending = DoubleAsync(3);\nConsole.WriteLine(\"called\");\nConsole.WriteLine(await pending);\nstatic async Task<int> DoubleAsync(int number)\n{\n    Console.WriteLine(\"entered\");\n    await Task.CompletedTask;\n    return number * 2;\n}",
+      "verification": {
+        "program": "using System;\nusing System.Threading.Tasks;\nTask<int> pending = DoubleAsync(3);\nConsole.WriteLine(\"called\");\nConsole.WriteLine(await pending);\nstatic async Task<int> DoubleAsync(int number)\n{\n    Console.WriteLine(\"entered\");\n    await Task.CompletedTask;\n    return number * 2;\n}",
+        "output": "entered\ncalled\n6\n",
+        "expectedOutput": "entered\ncalled\n6\n"
+      },
+      "python": "import asyncio\n\nasync def double(number):\n    return number * 2\n\n# Inside async Python code:\npending = double(3)  # a coroutine; body has not started\nresult = await pending\n# asyncio.create_task(double(3)) schedules it to run.",
+      "reference": [
+        {
+          "term": "Execution order",
+          "meaning": "The example prints entered, called, 6. The call executes the method body; awaiting CompletedTask does not pause it."
+        },
+        {
+          "term": "Concurrency",
+          "meaning": "Start independent operations, then await Task.WhenAll(a, b). Their waits may overlap. CPU parallelism requires separate consideration."
+        },
+        {
+          "term": "WhenAll results",
+          "meaning": "For Task<T> inputs, the resulting array follows input task order, even if operations finish in another order."
+        },
+        {
+          "term": "Python comparison",
+          "meaning": "asyncio.gather waits for multiple awaitables. Python create_task schedules a coroutine; it does not synchronously run its body by default."
+        },
+        {
+          "term": "Not every Task is hot",
+          "meaning": "Normal async APIs return already-started operations. An explicitly constructed new Task(...) can be unstarted; that is not the pattern taught here."
+        },
+        {
+          "term": "ValueTask<T>",
+          "meaning": "A value-type awaitable used by some library APIs: `int n = await ReadAsync();`. Consume each returned ValueTask once; it may avoid a Task allocation for synchronous completion, but is not a universal optimization."
+        }
+      ],
+      "trap": "A task is neither its eventual value nor a dedicated thread. Await can resume immediately when the task is complete.",
+      "agentConnection": "Agent request methods await model calls and tool work; they can suspend while waiting without creating one thread per request.",
+      "questions": [
+        {
+          "id": "q10a",
+          "type": "choice",
+          "prompt": "Which statement correctly describes Task<int>?",
+          "options": [
+            {
+              "text": "It is always an int available immediately",
+              "why": "The result may not be available yet; the task also tracks failure or cancellation."
+            },
+            {
+              "text": "It represents completion and can produce an int",
+              "why": "Correct: await obtains the int when the task completes successfully."
+            },
+            {
+              "text": "It guarantees a separate worker thread",
+              "why": "A Task describes an operation, not a guaranteed thread."
+            }
+          ],
+          "answer": 1,
+          "hint": "Separate the container for completion from the successful value.",
+          "explanation": "Task<int> describes an asynchronous operation with an int result. The task can also complete unsuccessfully."
+        },
+        {
+          "id": "q10b",
+          "type": "fill",
+          "prompt": "Fill the keyword that obtains the int asynchronously.",
+          "accepted": [
+            "await"
+          ],
+          "hint": "The successful value is inside Task<int>.",
+          "explanation": "Await unwraps the successful result. If the task fails, await propagates its exception instead.",
+          "code": "Task<int> pending = Task.FromResult(7);\nint number = __ pending;\nConsole.WriteLine(number);",
+          "verification": {
+            "program": "using System;\nusing System.Threading.Tasks;\nTask<int> pending = Task.FromResult(7);\nint number = await pending;\nConsole.WriteLine(number);",
+            "output": "7\n",
+            "expectedOutput": "7\n"
+          }
+        },
+        {
+          "id": "q10c",
+          "type": "choice",
+          "prompt": "What is printed, and what does WhenAll guarantee?",
+          "options": [
+            {
+              "text": "2,5; both tasks have completed successfully",
+              "why": "Correct: the values follow the order supplied to WhenAll."
+            },
+            {
+              "text": "5,2; the order is always reversed",
+              "why": "WhenAll returns results in input order, not reverse order."
+            },
+            {
+              "text": "2,5; each operation has its own thread",
+              "why": "The output is right, but Task.WhenAll provides no thread-per-task guarantee."
+            }
+          ],
+          "answer": 0,
+          "hint": "The returned array follows input order.",
+          "explanation": "WhenAll waits for all supplied tasks. These example tasks are already completed; no background worker is needed.",
+          "code": "Task<int> first = Task.FromResult(2);\nTask<int> second = Task.FromResult(5);\nint[] values = await Task.WhenAll(first, second);\nConsole.WriteLine(string.Join(\",\", values));",
+          "verification": {
+            "program": "using System;\nusing System.Threading.Tasks;\nTask<int> first = Task.FromResult(2);\nTask<int> second = Task.FromResult(5);\nint[] values = await Task.WhenAll(first, second);\nConsole.WriteLine(string.Join(\",\", values));",
+            "output": "2,5\n",
+            "expectedOutput": "2,5\n"
+          }
+        },
+        {
+          "id": "q10d",
+          "type": "order",
+          "prompt": "Order these statements so each value exists before it is used.",
+          "lines": [
+            "Task<int> pending = Task.FromResult(4);",
+            "int number = await pending;",
+            "Console.WriteLine(number * 2);"
+          ],
+          "hint": "First create the task, then obtain its result, then use the result.",
+          "explanation": "The await depends on pending, and the output depends on number. This order prints 8.",
+          "verification": {
+            "program": "using System;\nusing System.Threading.Tasks;\nTask<int> pending = Task.FromResult(4);\nint number = await pending;\nConsole.WriteLine(number * 2);",
+            "output": "8\n",
+            "expectedOutput": "8\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "11-lifetimes",
+      "title": "Stop requests and clean up",
+      "subtitle": "Cancellation is cooperative; cleanup belongs to a clear scope.",
+      "conceptIds": [
+        "cancellation",
+        "exceptions",
+        "using"
+      ],
+      "rules": [
+        "`CancellationTokenSource` requests cancellation; its token lets work observe that request.",
+        "`CancelAfter` requests cancellation after a deadline. Linked sources combine multiple cancellation requests.",
+        "Pass the token into cancellable operations or call `ThrowIfCancellationRequested`; cancellation does not forcibly kill work.",
+        "`using var` disposes at scope exit. `await using` awaits asynchronous disposal. Garbage collection serves a different purpose.",
+        "`catch` handles exceptions; `when` filters a catch. `finally` runs when leaving the try/catch construct, after any matching catch."
+      ],
+      "code": "using var stop = new CancellationTokenSource();\nstop.Cancel();\ntry\n{\n    stop.Token.ThrowIfCancellationRequested();\n    Console.WriteLine(\"work\");\n}\ncatch (OperationCanceledException) when (stop.IsCancellationRequested)\n{\n    Console.WriteLine(\"cancelled\");\n}\nfinally { Console.WriteLine(\"cleanup\"); }",
+      "verification": {
+        "program": "using System;\nusing System.Threading;\nusing var stop = new CancellationTokenSource();\nstop.Cancel();\ntry\n{\n    stop.Token.ThrowIfCancellationRequested();\n    Console.WriteLine(\"work\");\n}\ncatch (OperationCanceledException) when (stop.IsCancellationRequested)\n{\n    Console.WriteLine(\"cancelled\");\n}\nfinally { Console.WriteLine(\"cleanup\"); }",
+        "output": "cancelled\ncleanup\n",
+        "expectedOutput": "cancelled\ncleanup\n"
+      },
+      "python": "try:\n    raise ValueError(\"stop this example\")\nexcept ValueError:\n    print(\"caught\")\nfinally:\n    print(\"cleanup\")\n# Python with / async with resemble scoped cleanup.\n# C# CancellationToken is not Python task.cancel().",
+      "reference": [
+        {
+          "term": "Linked cancellation",
+          "meaning": "`using var linked = CancellationTokenSource.CreateLinkedTokenSource(callerToken, deadlineToken);` creates a source cancelled when either input cancels."
+        },
+        {
+          "term": "Deadline",
+          "meaning": "`stop.CancelAfter(TimeSpan.FromSeconds(5))` schedules a request. Work that ignores its token can continue beyond that time."
+        },
+        {
+          "term": "Disposal versus memory",
+          "meaning": "Dispose releases resources or completes a scope promptly. The garbage collector later reclaims managed memory; using does not force collection."
+        },
+        {
+          "term": "Async disposal",
+          "meaning": "`await using var resource = ...;` awaits DisposeAsync at scope exit; the resource must support asynchronous disposal."
+        },
+        {
+          "term": "Exceptions across await",
+          "meaning": "A failing async method normally faults its task. Await rethrows the failure at the await expression; surrounding catch can handle it."
+        },
+        {
+          "term": "Exception filters",
+          "meaning": "`catch (OperationCanceledException) when (token.IsCancellationRequested)` handles that type only if the condition is true. Otherwise the search continues."
+        },
+        {
+          "term": "Rethrowing",
+          "meaning": "Inside catch, `throw;` rethrows while preserving the original exception stack. Do not catch errors merely to hide them."
+        }
+      ],
+      "trap": "Calling Cancel requests a stop; disposing a CancellationTokenSource cleans it up but does not itself request cancellation.",
+      "agentConnection": "Requests use deadlines and browser-disconnect tokens, while using/finally scopes close resources and tracing spans on success or failure.",
+      "questions": [
+        {
+          "id": "q11a",
+          "type": "choice",
+          "prompt": "You call stop.Cancel(), but a long loop never checks the token. What is guaranteed?",
+          "options": [
+            {
+              "text": "The loop ends immediately",
+              "why": "CancellationTokenSource does not forcibly interrupt arbitrary code."
+            },
+            {
+              "text": "The cancellation request is recorded",
+              "why": "Correct: the loop must cooperate by observing the token or using a cancellable API."
+            },
+            {
+              "text": "The entire process exits",
+              "why": "A cancellation request is not a process-termination command."
+            }
+          ],
+          "answer": 1,
+          "hint": "A token is a signal, not a kill switch.",
+          "explanation": "Cooperative work checks the token or passes it to operations that do. Without cooperation, the loop can continue."
+        },
+        {
+          "id": "q11b",
+          "type": "choice",
+          "prompt": "What is the order of the three output lines?",
+          "options": [
+            {
+              "text": "body → disposed → after",
+              "why": "Correct: using disposes Marker when control leaves its enclosing block."
+            },
+            {
+              "text": "disposed → body → after",
+              "why": "The resource is disposed after its use, not when created."
+            },
+            {
+              "text": "body → after → disposed",
+              "why": "The inner block ends before after is printed, so disposal happens first."
+            }
+          ],
+          "answer": 0,
+          "hint": "Find the closing brace of the scope containing using var.",
+          "explanation": "The compiler arranges disposal at scope exit, including normal exception unwinding. This does not depend on garbage collection.",
+          "code": "{\n    using var item = new Marker();\n    Console.WriteLine(\"body\");\n}\nConsole.WriteLine(\"after\");\nsealed class Marker : IDisposable\n{\n    public void Dispose() => Console.WriteLine(\"disposed\");\n}",
+          "verification": {
+            "program": "using System;\n{\n    using var item = new Marker();\n    Console.WriteLine(\"body\");\n}\nConsole.WriteLine(\"after\");\nsealed class Marker : IDisposable\n{\n    public void Dispose() => Console.WriteLine(\"disposed\");\n}",
+            "output": "body\ndisposed\nafter\n",
+            "expectedOutput": "body\ndisposed\nafter\n"
+          }
+        },
+        {
+          "id": "q11c",
+          "type": "fill",
+          "prompt": "Fill the method name that schedules a cancellation request after five seconds.",
+          "accepted": [
+            "CancelAfter"
+          ],
+          "hint": "This sets a deadline on the source; it does not sleep here.",
+          "explanation": "CancelAfter schedules cancellation. Passing stop.Token into work is still necessary for that work to observe it.",
+          "code": "using var stop = new CancellationTokenSource();\nstop.__(TimeSpan.FromSeconds(5));"
+        },
+        {
+          "id": "q11d",
+          "type": "choice",
+          "prompt": "What is printed when this task fails?",
+          "options": [
+            {
+              "text": "success → finished",
+              "why": "Await propagates the failure, so execution skips the success line."
+            },
+            {
+              "text": "caught → finished",
+              "why": "Correct: await throws the task failure into catch, then finally runs."
+            },
+            {
+              "text": "Nothing; Task failures cannot be caught",
+              "why": "Await makes failures observable through ordinary try/catch."
+            }
+          ],
+          "answer": 1,
+          "hint": "Follow the exception at the await expression.",
+          "explanation": "The faulted task throws InvalidOperationException when awaited. The matching catch handles it; finally runs afterward.",
+          "code": "try\n{\n    await Task.FromException(new InvalidOperationException());\n    Console.WriteLine(\"success\");\n}\ncatch (InvalidOperationException) { Console.WriteLine(\"caught\"); }\nfinally { Console.WriteLine(\"finished\"); }",
+          "verification": {
+            "program": "using System;\nusing System.Threading.Tasks;\ntry\n{\n    await Task.FromException(new InvalidOperationException());\n    Console.WriteLine(\"success\");\n}\ncatch (InvalidOperationException) { Console.WriteLine(\"caught\"); }\nfinally { Console.WriteLine(\"finished\"); }",
+            "output": "caught\nfinished\n",
+            "expectedOutput": "caught\nfinished\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "12-streams",
+      "title": "One value at a time",
+      "subtitle": "A sequence can do work when you ask for the next value.",
+      "conceptIds": [
+        "streams",
+        "async-stream-cancellation",
+        "linq"
+      ],
+      "rules": [
+        "An `IEnumerable<T>` iterator uses `yield return`; its body runs during enumeration, not when the iterator is obtained.",
+        "`IAsyncEnumerable<T>` allows waiting between elements. Consume it with `await foreach`.",
+        "`WithCancellation(token)` supplies an enumeration token; `[EnumeratorCancellation]` connects it to an async iterator parameter.",
+        "`ConfigureAwait(false)` avoids requesting the captured context. It does not choose or create a background thread.",
+        "`foreach` and `await foreach` dispose supported enumerators when their loops exit, including early break."
+      ],
+      "code": "await foreach (int number in CountAsync())\n    Console.WriteLine(number);\nstatic async IAsyncEnumerable<int> CountAsync()\n{\n    yield return 1;\n    await Task.CompletedTask;\n    yield return 2;\n}",
+      "verification": {
+        "program": "using System;\nusing System.Collections.Generic;\nusing System.Threading.Tasks;\nawait foreach (int number in CountAsync())\n    Console.WriteLine(number);\nstatic async IAsyncEnumerable<int> CountAsync()\n{\n    yield return 1;\n    await Task.CompletedTask;\n    yield return 2;\n}",
+        "output": "1\n2\n",
+        "expectedOutput": "1\n2\n"
+      },
+      "python": "import asyncio\n\nasync def count():\n    yield 1\n    await asyncio.sleep(0)\n    yield 2\n\n# Inside async Python code:\n# async for number in count():\n#     print(number)",
+      "reference": [
+        {
+          "term": "Async iterator timing",
+          "meaning": "Calling an async iterator obtains a sequence without executing its body. Enumeration drives that body, unlike a normal async Task method."
+        },
+        {
+          "term": "Lazy is not cached",
+          "meaning": "An iterator may rerun its body on each enumeration. Storing IEnumerable<T> does not materialize its results."
+        },
+        {
+          "term": "Incremental versus complete",
+          "meaning": "A stream can deliver values as they become available. A Task<List<T>> produces a complete list before the caller receives its result."
+        },
+        {
+          "term": "Cooperative async iterator",
+          "meaning": "Use `async IAsyncEnumerable<int> Read([EnumeratorCancellation] CancellationToken token = default)`. Check token or pass it to awaited work."
+        },
+        {
+          "term": "Consumer token",
+          "meaning": "`await foreach (var x in Read().WithCancellation(token))` passes the token to enumeration. The producer must consume it."
+        },
+        {
+          "term": "ConfigureAwait",
+          "meaning": "`await operation.ConfigureAwait(false)` controls continuation-context capture for that await. ASP.NET Core normally has no custom synchronization context."
+        },
+        {
+          "term": "Breaking an async loop",
+          "meaning": "The loop awaits asynchronous enumerator disposal. A producer finally block can run then. This does not finish producing remaining values."
+        }
+      ],
+      "trap": "An async iterator does not make the HTTP response streaming by itself. The server and browser must also exchange and consume chunks.",
+      "agentConnection": "Model updates and browser NDJSON can be consumed incrementally; other routes collect the stream before returning one complete response.",
+      "questions": [
+        {
+          "id": "q12a",
+          "type": "choice",
+          "prompt": "Which line appears first?",
+          "options": [
+            {
+              "text": "started",
+              "why": "Calling an iterator creates the enumerable; it does not run its iterator body yet."
+            },
+            {
+              "text": "made query",
+              "why": "Correct: enumeration begins only at foreach."
+            },
+            {
+              "text": "1",
+              "why": "The body prints started before yielding its first value."
+            }
+          ],
+          "answer": 1,
+          "hint": "Find the first statement that asks the sequence for an element.",
+          "explanation": "The full output is made query, started, 1. IEnumerable describes a sequence; enumeration performs the work.",
+          "code": "IEnumerable<int> numbers = Count();\nConsole.WriteLine(\"made query\");\nforeach (int number in numbers) Console.WriteLine(number);\nstatic IEnumerable<int> Count()\n{\n    Console.WriteLine(\"started\");\n    yield return 1;\n}",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nIEnumerable<int> numbers = Count();\nConsole.WriteLine(\"made query\");\nforeach (int number in numbers) Console.WriteLine(number);\nstatic IEnumerable<int> Count()\n{\n    Console.WriteLine(\"started\");\n    yield return 1;\n}",
+            "output": "made query\nstarted\n1\n",
+            "expectedOutput": "made query\nstarted\n1\n"
+          }
+        },
+        {
+          "id": "q12b",
+          "type": "fill",
+          "prompt": "Which keyword completes a loop over an IAsyncEnumerable<int>?",
+          "accepted": [
+            "await"
+          ],
+          "hint": "The next value may require an asynchronous wait.",
+          "explanation": "await foreach can await each move to the next value and asynchronously dispose the enumerator when the loop exits.",
+          "code": "__ foreach (int number in CountAsync())\n    Console.WriteLine(number);"
+        },
+        {
+          "id": "q12c",
+          "type": "choice",
+          "prompt": "What is printed when the consumer breaks after one value?",
+          "options": [
+            {
+              "text": "1 → 2 → closed",
+              "why": "break stops consumption; the producer does not continue to yield 2."
+            },
+            {
+              "text": "1 only",
+              "why": "The async iterator is disposed, so its finally block also runs."
+            },
+            {
+              "text": "1 → closed",
+              "why": "Correct: early exit disposes the enumerator and executes its cleanup."
+            }
+          ],
+          "answer": 2,
+          "hint": "A loop still performs enumerator cleanup when break exits it.",
+          "explanation": "The consumer sees 1, then breaks. await foreach disposes the async iterator, which executes finally without yielding 2.",
+          "code": "await foreach (int number in CountAsync())\n{\n    Console.WriteLine(number);\n    break;\n}\nstatic async IAsyncEnumerable<int> CountAsync()\n{\n    try { await Task.CompletedTask; yield return 1; yield return 2; }\n    finally { Console.WriteLine(\"closed\"); }\n}",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nusing System.Threading.Tasks;\nawait foreach (int number in CountAsync())\n{\n    Console.WriteLine(number);\n    break;\n}\nstatic async IAsyncEnumerable<int> CountAsync()\n{\n    try { await Task.CompletedTask; yield return 1; yield return 2; }\n    finally { Console.WriteLine(\"closed\"); }\n}",
+            "output": "1\nclosed\n",
+            "expectedOutput": "1\nclosed\n"
+          }
+        },
+        {
+          "id": "q12d",
+          "type": "choice",
+          "prompt": "What does ConfigureAwait(false) mean?",
+          "options": [
+            {
+              "text": "Always resume on a new background thread",
+              "why": "It does not promise any specific thread or create one."
+            },
+            {
+              "text": "Do not request resumption on the captured context",
+              "why": "Correct: it controls context capture, not the existence of a background worker."
+            },
+            {
+              "text": "Ignore cancellation and errors",
+              "why": "Cancellation and exceptions still propagate through await."
+            }
+          ],
+          "answer": 1,
+          "hint": "It configures the await continuation, not the operation result.",
+          "explanation": "ConfigureAwait(false) avoids requesting the captured context. If the awaitable is already complete, execution may simply continue synchronously."
+        }
+      ]
+    },
+    {
+      "id": "13-files-config",
+      "title": "Project files, paths and settings",
+      "subtitle": "Distinguish compilation, runtime files, and values chosen at startup.",
+      "conceptIds": [
+        "paths",
+        "namespaces",
+        "using",
+        "configuration",
+        "build"
+      ],
+      "rules": [
+        "Namespaces group type names. `using System.Text;` imports names for lookup; it does not create objects or dispose resources.",
+        "`Path.Combine` joins path parts. `AppContext.BaseDirectory` locates the application base, which can differ from the working directory.",
+        "The `.csproj` declares target framework, packages and copied content. NuGet supplies packages; using directives do not install them.",
+        "`IConfiguration` reads settings through providers. For the same key, the provider added later takes precedence.",
+        "Inspect the actual provider order. Keep credentials separate from ordinary settings, committed sample files and printed output."
+      ],
+      "code": "using Microsoft.Extensions.Configuration;\nvar first = new Dictionary<string, string?> { [\"Color\"] = \"blue\" };\nvar later = new Dictionary<string, string?> { [\"Color\"] = \"green\" };\nIConfiguration config = new ConfigurationBuilder()\n    .AddInMemoryCollection(first)\n    .AddInMemoryCollection(later)\n    .Build();\nConsole.WriteLine(config[\"Color\"]);",
+      "verification": {
+        "program": "using System;\nusing System.Collections.Generic;\nusing Microsoft.Extensions.Configuration;\nvar first = new Dictionary<string, string?> { [\"Color\"] = \"blue\" };\nvar later = new Dictionary<string, string?> { [\"Color\"] = \"green\" };\nIConfiguration config = new ConfigurationBuilder()\n    .AddInMemoryCollection(first)\n    .AddInMemoryCollection(later)\n    .Build();\nConsole.WriteLine(config[\"Color\"]);",
+        "output": "green\n",
+        "expectedOutput": "green\n",
+        "frameworkReference": "Microsoft.AspNetCore.App"
+      },
+      "python": "first = {\"Color\": \"blue\"}\nlater = {\"Color\": \"green\"}\nconfig = {**first, **later}\nprint(config[\"Color\"])\n# Analogy: later values replace matching earlier keys.\n# .NET providers are richer than this dictionary merge.",
+      "reference": [
+        {
+          "term": "SDK → build → run",
+          "meaning": "The SDK includes compiler and build tools. `dotnet build` compiles the project; `dotnet run` builds as needed and starts it."
+        },
+        {
+          "term": "Runtime and ASP.NET Core",
+          "meaning": ".NET runs compiled C# code. ASP.NET Core adds web hosting, HTTP routes and middleware; they are framework capabilities."
+        },
+        {
+          "term": "PackageReference",
+          "meaning": "A `.csproj` PackageReference names a NuGet dependency and version. Restore resolves it; a namespace import only shortens source names."
+        },
+        {
+          "term": "Content copying",
+          "meaning": "Inside ItemGroup, `<None Update=\"Data/*.json\" CopyToOutputDirectory=\"PreserveNewest\" />` copies matching existing project items into build output."
+        },
+        {
+          "term": "Publish separately",
+          "meaning": "Use CopyToPublishDirectory when content must be included in published output. Verify deployed paths; build output and publishing are different stages."
+        },
+        {
+          "term": "Runtime paths",
+          "meaning": "`Path.Combine(AppContext.BaseDirectory, \"Data\", \"colors.json\")` locates deployed content without assuming the shell started in the project folder."
+        },
+        {
+          "term": "Settings sources",
+          "meaning": "Providers may read JSON, environment variables, command-line arguments or other sources. Framework defaults and explicit Add... calls determine order."
+        },
+        {
+          "term": "Namespaces versus folders",
+          "meaning": "`namespace Learning;` assigns type names to a namespace. Folder names are a convention and do not automatically define namespaces."
+        },
+        {
+          "term": "Example context",
+          "meaning": "The example uses Microsoft.Extensions.Configuration from the ASP.NET Core shared framework; it reads only in-memory dictionaries."
+        }
+      ],
+      "trap": "Changing your current working directory can break relative file paths. Merely putting a data file beside source does not guarantee deployment.",
+      "agentConnection": "Generated apps copy their local data into output, resolve it at startup and load model/observability configuration through explicit provider calls.",
+      "questions": [
+        {
+          "id": "q13a",
+          "type": "choice",
+          "prompt": "Why does this configuration return green for Color?",
+          "options": [
+            {
+              "text": "The environment always wins",
+              "why": "The example has no environment provider, and precedence is determined by actual provider order."
+            },
+            {
+              "text": "The later provider supplies the same key",
+              "why": "Correct: the green provider was added after the blue provider."
+            },
+            {
+              "text": "Alphabetically later color names win",
+              "why": "Configuration compares keys, not alphabetic order of values."
+            }
+          ],
+          "answer": 1,
+          "hint": "Read the order of AddInMemoryCollection calls.",
+          "explanation": "Later-added providers override earlier values for the same key. There is no universal rule that a particular source always wins.",
+          "code": "using Microsoft.Extensions.Configuration;\nvar first = new Dictionary<string, string?> { [\"Color\"] = \"blue\" };\nvar later = new Dictionary<string, string?> { [\"Color\"] = \"green\" };\nIConfiguration config = new ConfigurationBuilder()\n    .AddInMemoryCollection(first)\n    .AddInMemoryCollection(later)\n    .Build();\nConsole.WriteLine(config[\"Color\"]);",
+          "verification": {
+            "program": "using System;\nusing System.Collections.Generic;\nusing Microsoft.Extensions.Configuration;\nvar first = new Dictionary<string, string?> { [\"Color\"] = \"blue\" };\nvar later = new Dictionary<string, string?> { [\"Color\"] = \"green\" };\nIConfiguration config = new ConfigurationBuilder()\n    .AddInMemoryCollection(first)\n    .AddInMemoryCollection(later)\n    .Build();\nConsole.WriteLine(config[\"Color\"]);",
+            "output": "green\n",
+            "expectedOutput": "green\n",
+            "frameworkReference": "Microsoft.AspNetCore.App"
+          }
+        },
+        {
+          "id": "q13b",
+          "type": "fill",
+          "prompt": "Fill the property for a path relative to the application base, independent of the shell working directory.",
+          "accepted": [
+            "BaseDirectory"
+          ],
+          "hint": "This is a property of AppContext.",
+          "explanation": "AppContext.BaseDirectory identifies the application base. Path.Combine joins it with portable path segments; the file still must be deployed.",
+          "code": "string path = Path.Combine(AppContext.__, \"Data\", \"colors.json\");"
+        },
+        {
+          "id": "q13c",
+          "type": "choice",
+          "prompt": "What does using System.Text; do?",
+          "options": [
+            {
+              "text": "Downloads a NuGet package",
+              "why": "Package references and restore handle dependencies, not using directives."
+            },
+            {
+              "text": "Imports a namespace for shorter type names",
+              "why": "Correct: you can write StringBuilder instead of System.Text.StringBuilder."
+            },
+            {
+              "text": "Disposes all strings at scope exit",
+              "why": "That confuses a namespace using directive with a using resource declaration."
+            }
+          ],
+          "answer": 1,
+          "hint": "Compare using System.Text; with using var resource = ...;.",
+          "explanation": "The same keyword has distinct roles. A using directive controls name lookup; a using declaration schedules resource disposal."
+        },
+        {
+          "id": "q13d",
+          "type": "order",
+          "prompt": "Order the minimum workflow for building and running a C# project from source.",
+          "lines": [
+            "Declare project target and dependencies in the .csproj.",
+            "Restore dependencies and compile the source with dotnet build.",
+            "Execute the compiled application with the .NET runtime."
+          ],
+          "hint": "The build needs project information; execution needs compiled output.",
+          "explanation": "dotnet build normally includes restore. dotnet run can perform the build stage for you, then launch the result; these are still different stages."
+        }
+      ]
+    },
+    {
+      "id": "14-json",
+      "title": "Objects cross the JSON boundary",
+      "subtitle": "A typed shape helps you read data; validation decides whether to accept it.",
+      "conceptIds": [
+        "json",
+        "attributes",
+        "source-generation",
+        "generation-vs-mirroring"
+      ],
+      "rules": [
+        "`Serialize` turns an object into JSON text; `Deserialize<T>` attempts to build a T from JSON.",
+        "A DTO is a data-transfer shape, often a record. It is not automatically a complete validation policy.",
+        "Nullable annotations guide compiler analysis. Runtime input still needs explicit checks and appropriate serializer options.",
+        "Attributes attach metadata. Reflection lets code inspect types, methods and metadata; libraries decide how to use it.",
+        "JSON source generation creates serializer support during compilation. `partial` lets generated and handwritten declarations form one type."
+      ],
+      "code": "using System.Text.Json;\nstring json = \"\"\"{\"Name\":\"Mira\",\"Age\":7}\"\"\";\nPerson? person = JsonSerializer.Deserialize<Person>(json);\nif (person is null || string.IsNullOrWhiteSpace(person.Name)\n    || person.Age < 0)\n    throw new ArgumentException(\"Invalid person\");\nConsole.WriteLine(person.Name);\nrecord Person(string Name, int Age);",
+      "verification": {
+        "program": "using System;\nusing System.Text.Json;\nstring json = \"\"\"{\"Name\":\"Mira\",\"Age\":7}\"\"\";\nPerson? person = JsonSerializer.Deserialize<Person>(json);\nif (person is null || string.IsNullOrWhiteSpace(person.Name)\n    || person.Age < 0)\n    throw new ArgumentException(\"Invalid person\");\nConsole.WriteLine(person.Name);\nrecord Person(string Name, int Age);",
+        "output": "Mira\n",
+        "expectedOutput": "Mira\n"
+      },
+      "python": "import json\n\nperson = json.loads('{\"Name\":\"Mira\",\"Age\":7}')\nif not person.get(\"Name\") or person[\"Age\"] < 0:\n    raise ValueError(\"Invalid person\")\nprint(person[\"Name\"])\n# Python returns a dictionary here, not a typed C# record.",
+      "reference": [
+        {
+          "term": "Serialization",
+          "meaning": "`JsonSerializer.Serialize(new Person(\"Mira\", 7))` creates JSON text. Property naming and enum handling depend on configured options."
+        },
+        {
+          "term": "Nullable enforcement",
+          "meaning": "System.Text.Json can opt into limited RespectNullableAnnotations checks. That still does not validate every missing value or business rule."
+        },
+        {
+          "term": "Attributes",
+          "meaning": "`[Description(\"Counts beads\")]` describes a method. It cannot execute the method, validate its arguments or expose it as a tool by itself."
+        },
+        {
+          "term": "Reflection",
+          "meaning": "`typeof(Counter).GetMethods()` inspects method metadata at runtime. A library may use it to build tool descriptions or invoke registered methods."
+        },
+        {
+          "term": "Source-generated JSON",
+          "meaning": "`[JsonSerializable(typeof(Person))] partial class PeopleJson : JsonSerializerContext { }` requests generated JSON metadata/support."
+        },
+        {
+          "term": "Actually using the context",
+          "meaning": "Pass `PeopleJson.Default.Person` to the appropriate JsonSerializer overload. Declaring a context alone does not redirect every serializer call."
+        },
+        {
+          "term": "Two meanings of generated",
+          "meaning": "The C# compiler can generate serializer source. A packaging script can copy skill files. These are separate operations with different owners."
+        }
+      ],
+      "trap": "A property declared string can still receive invalid external data. Types, serializer settings and application validation each do different jobs.",
+      "agentConnection": "Browser DTOs and model tool arguments cross JSON boundaries; attributes describe tools and generated serializer contexts support selected data types.",
+      "questions": [
+        {
+          "id": "q14a",
+          "type": "choice",
+          "prompt": "A method has [Description(\"Adds two numbers\")]. What does the attribute do by itself?",
+          "options": [
+            {
+              "text": "Attaches descriptive metadata",
+              "why": "Correct: another piece of code must inspect or use that metadata."
+            },
+            {
+              "text": "Automatically registers a model tool",
+              "why": "Tool exposure requires explicit framework or application registration."
+            },
+            {
+              "text": "Rejects all invalid arguments",
+              "why": "DescriptionAttribute is descriptive, not an argument-validation rule."
+            }
+          ],
+          "answer": 0,
+          "hint": "An attribute is information attached to a declaration.",
+          "explanation": "Libraries can read Description metadata when constructing tool definitions. The C# attribute alone neither runs the method nor validates its input."
+        },
+        {
+          "id": "q14b",
+          "type": "choice",
+          "prompt": "What is printed when the JSON value itself is null?",
+          "options": [
+            {
+              "text": "True",
+              "why": "Correct: deserializing JSON null into this reference type produces a null reference."
+            },
+            {
+              "text": "False",
+              "why": "A DTO declaration does not force the JSON value to contain an object."
+            },
+            {
+              "text": "The name of the record",
+              "why": "No Person object with a name is created from JSON null."
+            }
+          ],
+          "answer": 0,
+          "hint": "The input is the JSON null value, not an empty object.",
+          "explanation": "Deserialize<Person> can return null. Checking the result remains necessary before accessing members.",
+          "code": "Person? person = JsonSerializer.Deserialize<Person>(\"null\");\nConsole.WriteLine(person is null);\nrecord Person(string Name);",
+          "verification": {
+            "program": "using System;\nusing System.Text.Json;\nPerson? person = JsonSerializer.Deserialize<Person>(\"null\");\nConsole.WriteLine(person is null);\nrecord Person(string Name);",
+            "output": "True\n",
+            "expectedOutput": "True\n"
+          }
+        },
+        {
+          "id": "q14c",
+          "type": "order",
+          "prompt": "Order this safe input path before using a value supplied from outside.",
+          "lines": [
+            "Parse JSON into the expected DTO shape.",
+            "Validate presence, allowed values and domain constraints.",
+            "Use the validated data in the operation."
+          ],
+          "hint": "Parsing tells you the shape; validation determines acceptance.",
+          "explanation": "A successfully parsed object can still have invalid contents. Validation belongs before the operation that relies on those contents."
+        },
+        {
+          "id": "q14d",
+          "type": "fill",
+          "prompt": "Which modifier allows a generator to contribute the rest of this context type?",
+          "accepted": [
+            "partial"
+          ],
+          "hint": "The declaration is one part of the final type.",
+          "explanation": "partial declarations combine at compilation. The JSON generator supplies additional implementation for the same type; this is not file-copy packaging.",
+          "code": "[JsonSerializable(typeof(Person))]\n__ class PeopleJson : JsonSerializerContext { }",
+          "verification": {
+            "program": "using System;\nusing System.Text.Json;\nusing System.Text.Json.Serialization;\nConsole.WriteLine(JsonSerializer.Serialize(new Person(\"Mira\"), PeopleJson.Default.Person));\nrecord Person(string Name);\n[JsonSerializable(typeof(Person))]\npartial class PeopleJson : JsonSerializerContext { }",
+            "output": "{\"Name\":\"Mira\"}\n",
+            "expectedOutput": "{\"Name\":\"Mira\"}\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "15-web",
+      "title": "The browser talks HTTP",
+      "subtitle": "Separate browser JavaScript, server C#, and the format on the wire.",
+      "conceptIds": [
+        "minimal-api",
+        "browser-server-boundary",
+        "processes"
+      ],
+      "rules": [
+        "ASP.NET Core maps HTTP routes to handlers. Binding turns request values into handler arguments.",
+        "Validate input before acting. `Results.Ok` creates a 200 response; `Results.BadRequest` creates a 400 response.",
+        "Middleware surrounds request handling and can continue to the next step or return a response early.",
+        "Browser JavaScript uses fetch to send HTTP requests. The browser does not directly call an ordinary C# method.",
+        "A process can serve many requests. Session state spans requests only when the application deliberately stores and identifies it."
+      ],
+      "code": "// ASP.NET Core: register a route; this excerpt starts no server.\nvar builder = WebApplication.CreateBuilder();\nvar app = builder.Build();\napp.MapGet(\"/square/{value:int}\", (int value) =>\n{\n    if (value < 0 || value > 100)\n        return Results.BadRequest(new { error = \"Use 0 to 100\" });\n    return Results.Ok(new { answer = value * value });\n});",
+      "verification": {
+        "program": "using Microsoft.AspNetCore.Builder;\nusing Microsoft.AspNetCore.Http;\n// ASP.NET Core: register a route; this excerpt starts no server.\nvar builder = WebApplication.CreateBuilder();\nvar app = builder.Build();\napp.MapGet(\"/square/{value:int}\", (int value) =>\n{\n    if (value < 0 || value > 100)\n        return Results.BadRequest(new { error = \"Use 0 to 100\" });\n    return Results.Ok(new { answer = value * value });\n});",
+        "output": "",
+        "expectedOutput": "",
+        "compileOnly": true,
+        "frameworkReference": "Microsoft.AspNetCore.App"
+      },
+      "python": "# Analogy inside a Python web framework:\n# @app.get(\"/square/{value}\")\n# def square(value: int):\n#     ...validate value...\n#     return {\"answer\": value * value}\n# Routing and HTTP responses come from the framework,\n# not Python or C# syntax alone.",
+      "reference": [
+        {
+          "term": "Binding",
+          "meaning": "A route placeholder can bind an int; a POST body can bind a DTO; registered services can be injected as parameters."
+        },
+        {
+          "term": "Route constraints",
+          "meaning": "In /square/{value:int}, the int route constraint helps choose a matching route. It does not enforce the allowed 0–100 range."
+        },
+        {
+          "term": "Results",
+          "meaning": "Returning Results.Ok(new { answer = 9 }) lets the framework execute an HTTP result and serialize its body. A return value is not automatically a network write at that exact line."
+        },
+        {
+          "term": "Middleware",
+          "meaning": "`app.Use(async (context, next) => { /* before */ await next(context); /* after */ });` illustrates code around the next request stage."
+        },
+        {
+          "term": "Browser JSON",
+          "meaning": "`const response = await fetch(url); const data = await response.json();` waits for the response body and parses one JSON document. Check response.ok explicitly."
+        },
+        {
+          "term": "NDJSON",
+          "meaning": "Newline-delimited JSON sends one JSON value per line. Browser code must buffer chunks until complete lines arrive; chunk boundaries need not match lines."
+        },
+        {
+          "term": "Provider SSE",
+          "meaning": "Server-sent events have their own text framing, such as data: lines and blank-line separators. A provider SSE stream and a browser NDJSON stream are separate protocols."
+        },
+        {
+          "term": "Three lifetimes",
+          "meaning": "Startup-created objects may live for the process. Local handler variables live for that request. Conversation/session data needs an explicit storage policy."
+        },
+        {
+          "term": "Example context",
+          "meaning": "This ASP.NET Core excerpt only registers a handler. A complete web app calls app.Run() to listen; the learning game starts no server."
+        }
+      ],
+      "trap": "Streaming inside the server does not guarantee streaming to the browser. The HTTP route and JavaScript consumer decide that boundary.",
+      "agentConnection": "The agent UIs use fetch; server endpoints validate DTOs, execute request-specific work and return JSON or explicitly framed incremental results.",
+      "questions": [
+        {
+          "id": "q15a",
+          "type": "choice",
+          "prompt": "Which response should this handler return for /square/-2?",
+          "options": [
+            {
+              "text": "200 with answer 4",
+              "why": "The request matches the int route, but the explicit range validation rejects -2."
+            },
+            {
+              "text": "400 with an error body",
+              "why": "Correct: the handler returns Results.BadRequest for negative values."
+            },
+            {
+              "text": "A C# compiler error in the browser",
+              "why": "C# runs on the server; the browser sends an HTTP request."
+            }
+          ],
+          "answer": 1,
+          "hint": "A value can be a valid int but still outside your permitted range.",
+          "explanation": "Binding and validation are different. The route supplies -2 as an int; the handler checks its range and creates a 400 result.",
+          "code": "// ASP.NET Core: register a route; this excerpt starts no server.\nvar builder = WebApplication.CreateBuilder();\nvar app = builder.Build();\napp.MapGet(\"/square/{value:int}\", (int value) =>\n{\n    if (value < 0 || value > 100)\n        return Results.BadRequest(new { error = \"Use 0 to 100\" });\n    return Results.Ok(new { answer = value * value });\n});",
+          "verification": {
+            "program": "using Microsoft.AspNetCore.Builder;\nusing Microsoft.AspNetCore.Http;\n// ASP.NET Core: register a route; this excerpt starts no server.\nvar builder = WebApplication.CreateBuilder();\nvar app = builder.Build();\napp.MapGet(\"/square/{value:int}\", (int value) =>\n{\n    if (value < 0 || value > 100)\n        return Results.BadRequest(new { error = \"Use 0 to 100\" });\n    return Results.Ok(new { answer = value * value });\n});",
+            "output": "",
+            "expectedOutput": "",
+            "compileOnly": true,
+            "frameworkReference": "Microsoft.AspNetCore.App"
+          }
+        },
+        {
+          "id": "q15b",
+          "type": "choice",
+          "prompt": "An NDJSON response arrives in chunks that split a JSON line in half. What should the browser do?",
+          "options": [
+            {
+              "text": "Parse every network chunk as a complete JSON object",
+              "why": "Chunks can cut through a JSON token or contain several complete lines."
+            },
+            {
+              "text": "Buffer partial text until it has a complete line, then parse that line",
+              "why": "Correct: NDJSON framing depends on complete lines, not network chunk boundaries."
+            },
+            {
+              "text": "Run the C# JSON serializer in the browser automatically",
+              "why": "Ordinary browser JavaScript does not automatically execute server C# serializers."
+            }
+          ],
+          "answer": 1,
+          "hint": "Transport chunks and logical records are different boundaries.",
+          "explanation": "The consumer retains incomplete text between reads and parses complete NDJSON lines. Provider-side SSE requires its own framing parser."
+        },
+        {
+          "id": "q15c",
+          "type": "order",
+          "prompt": "Order the normal single-JSON browser request path.",
+          "lines": [
+            "Browser JavaScript sends an HTTP request with fetch.",
+            "Server binds and validates the request, then performs the handler work.",
+            "Server returns an HTTP response containing JSON.",
+            "Browser parses the response and updates the page."
+          ],
+          "hint": "Separate the two programs and the messages between them.",
+          "explanation": "The browser and server communicate across HTTP. Updating the browser page is JavaScript work after the response arrives."
+        },
+        {
+          "id": "q15d",
+          "type": "choice",
+          "prompt": "A local list is created inside each route-handler call. Will it automatically remember the previous request?",
+          "options": [
+            {
+              "text": "Yes; every variable in a web app is a session variable",
+              "why": "A local variable is not automatically shared across handler calls."
+            },
+            {
+              "text": "No; persistent state requires deliberate storage and lifetime",
+              "why": "Correct: new handler calls create their own locals unless code explicitly shares state."
+            },
+            {
+              "text": "Yes; async makes all variables global",
+              "why": "async changes how a method waits, not the scope of its variables."
+            }
+          ],
+          "answer": 1,
+          "hint": "Think about calling an ordinary function twice.",
+          "explanation": "Process, request and session lifetimes are distinct. State must be placed and keyed intentionally if it should survive across requests."
+        }
+      ]
+    },
+    {
+      "id": "16-boundaries",
+      "title": "Small functions, clear dependencies",
+      "subtitle": "Keep calculation understandable; put external systems around it.",
+      "conceptIds": [
+        "model-tools",
+        "injection",
+        "telemetry",
+        "tests",
+        "interfaces"
+      ],
+      "rules": [
+        "A model tool is an ordinary function exposed through library registration and metadata. Tool execution is application code.",
+        "Passing a dependency into a constructor or method is dependency injection; a container can automate constructing and supplying it.",
+        "Container lifetimes choose reuse: singleton per container, scoped per scope, transient per resolution.",
+        "`ActivitySource.StartActivity` may return null. Use scoped disposal and record useful metadata without secrets or sensitive content.",
+        "Offline tests prove local behavior with controlled dependencies. Live smokes check real integration; neither proves every possible outcome."
+      ],
+      "code": "ICounter counter = new FixedCounter();\nConsole.WriteLine(Describe(counter));\nstatic string Describe(ICounter counter) => $\"{counter.Count()} beads\";\ninterface ICounter { int Count(); }\nsealed class FixedCounter : ICounter\n{\n    public int Count() => 3;\n}",
+      "verification": {
+        "program": "using System;\nICounter counter = new FixedCounter();\nConsole.WriteLine(Describe(counter));\nstatic string Describe(ICounter counter) => $\"{counter.Count()} beads\";\ninterface ICounter { int Count(); }\nsealed class FixedCounter : ICounter\n{\n    public int Count() => 3;\n}",
+        "output": "3 beads\n",
+        "expectedOutput": "3 beads\n"
+      },
+      "python": "def describe(count):\n    return f\"{count()} beads\"\n\nprint(describe(lambda: 3))\n# Python can inject a function directly.\n# C# also supports delegates; ICounter demonstrates\n# an explicit contract with a replaceable object.",
+      "reference": [
+        {
+          "term": "Deterministic core",
+          "meaning": "`static int Add(int a, int b) => a + b;` is ordinary calculation. A tool wrapper adds a callable schema, arguments and dispatch around it."
+        },
+        {
+          "term": "IChatClient analogy",
+          "meaning": "The real agents depend on a chat-client interface. ICounter is a tiny stand-in for the same principle: supply an implementation of a contract."
+        },
+        {
+          "term": "Manual versus container",
+          "meaning": "`new Greeter(counter)` is manual injection. Registering ICounter and resolving Greeter lets a DI container supply that constructor argument."
+        },
+        {
+          "term": "Singleton",
+          "meaning": "One instance is reused per container. In a web app it can be used by simultaneous requests; the lifetime does not make mutable code thread-safe."
+        },
+        {
+          "term": "Scoped and transient",
+          "meaning": "Scoped means one instance per explicit scope, commonly one HTTP request. Transient means a fresh instance each time the container resolves it."
+        },
+        {
+          "term": "Telemetry scope",
+          "meaning": "`using var activity = source.StartActivity(\"count\"); activity?.SetTag(\"item.count\", 3);` marks a bounded operation when tracing is enabled."
+        },
+        {
+          "term": "Privacy and evidence",
+          "meaning": "Counts, durations and status can explain work without logging raw prompts, private text or credentials. A created Activity does not prove remote export."
+        },
+        {
+          "term": "Test seam",
+          "meaning": "The example supplies FixedCounter. An offline test can assert Describe returns 3 beads without calling a service; a live service check is separate."
+        },
+        {
+          "term": "lock",
+          "meaning": "`lock (gate) { count++; }` protects a critical section from other threads using the same gate. Keep it short; C# forbids await inside lock."
+        },
+        {
+          "term": "Interlocked",
+          "meaning": "`Interlocked.Increment(ref count)` makes that single increment atomic. Ordinary count++ is not atomic; an atomic increment does not protect a larger sequence of operations."
+        }
+      ],
+      "trap": "An interface or model-tool attribute does not add intelligence or reliability by itself. The implementation, validation and tests still determine behavior.",
+      "agentConnection": "The generated agents combine deterministic tools with replaceable clients and metadata tracing. Their offline tests and live model checks cover different boundaries.",
+      "questions": [
+        {
+          "id": "q16a",
+          "type": "choice",
+          "prompt": "What turns an ordinary Add method into a callable model tool?",
+          "options": [
+            {
+              "text": "Naming the method with the word Tool",
+              "why": "Names alone cannot expose methods to an external model."
+            },
+            {
+              "text": "Registering a wrapper/schema and dispatching model arguments to it",
+              "why": "Correct: framework/application code connects the model call to the ordinary method."
+            },
+            {
+              "text": "The C# compiler automatically calls every public method",
+              "why": "Public access does not automatically register or invoke methods."
+            }
+          ],
+          "answer": 1,
+          "hint": "The model needs a description and the application needs a dispatch path.",
+          "explanation": "The deterministic function still runs as C#. Library registration supplies a tool definition and invocation plumbing; C# has no magic model-tool keyword."
+        },
+        {
+          "id": "q16b",
+          "type": "choice",
+          "prompt": "Which DI lifetime normally provides one service instance per HTTP request scope?",
+          "options": [
+            {
+              "text": "Singleton",
+              "why": "A singleton is reused across scopes in that container, potentially across many requests."
+            },
+            {
+              "text": "Scoped",
+              "why": "Correct: ASP.NET Core normally creates a DI scope for each HTTP request."
+            },
+            {
+              "text": "Transient",
+              "why": "Transient creates a new instance per resolution, including multiple resolutions within one request."
+            }
+          ],
+          "answer": 1,
+          "hint": "The request is a common example of a scope.",
+          "explanation": "Scoped services are reused within their scope. Singleton and transient represent different reuse policies, not different inheritance rules."
+        },
+        {
+          "id": "q16c",
+          "type": "choice",
+          "prompt": "A local test supplies a fake counter that always returns 3, and the assertion passes. What does that establish?",
+          "options": [
+            {
+              "text": "The tested code behaves correctly with that controlled dependency",
+              "why": "Correct: the fake makes the dependency predictable for this local assertion."
+            },
+            {
+              "text": "A real external service is reachable and authenticated",
+              "why": "A fake never contacted that service, so the test supplies no such evidence."
+            },
+            {
+              "text": "Every production input will succeed",
+              "why": "A bounded test checks its chosen cases, not all future outcomes."
+            }
+          ],
+          "answer": 0,
+          "hint": "Ask which boundary the test actually crossed.",
+          "explanation": "Offline tests make local behavior repeatable. Real connectivity, credentials and provider behavior require separate integration evidence."
+        },
+        {
+          "id": "q16d",
+          "type": "fill",
+          "prompt": "Fill the two-character operator that safely calls SetTag only when activity is non-null.",
+          "accepted": [
+            "?."
+          ],
+          "hint": "StartActivity is allowed to return null when no activity is requested by listeners.",
+          "explanation": "?. conditionally accesses the method. A using declaration can also safely contain a null disposable; the example only records a count.",
+          "code": "using var activity = source.StartActivity(\"count\");\nactivity__SetTag(\"item.count\", 3);",
+          "verification": {
+            "program": "using System;\nusing System.Diagnostics;\nusing var source = new ActivitySource(\"Learning\");\nusing var activity = source.StartActivity(\"count\");\nactivity?.SetTag(\"item.count\", 3);\nConsole.WriteLine(\"finished\");",
+            "output": "finished\n",
+            "expectedOutput": "finished\n"
+          }
+        }
+      ]
+    }
+  ]
+}
