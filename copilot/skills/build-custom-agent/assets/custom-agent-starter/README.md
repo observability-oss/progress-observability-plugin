@@ -74,8 +74,8 @@ important decisions.
 The builder may customize `AgentDefinition.cs`, `Tools.cs`, the `Content`,
 `Agent`, and `Smoke` values in `appsettings.json`, supported files under `docs/`
 and `data/`, and an optional `INTEGRATION_PLAN.md`. Every content file must have
-one exact `Content:Sources` entry whose value is `mock` or `supplied`; startup
-fails rather than reading undeclared files or falling back to the working
+one exact `Content:Sources` entry whose value is `mock` or `supplied`; the fixed
+content loader rejects undeclared files and does not fall back to the working
 directory. The runtime, web routes, UI shell, smoke engine, project dependencies,
 and observability wiring stay fixed.
 
@@ -93,7 +93,8 @@ sample logic from the original full scope and deferred developer work.
 Connecting the real system is a separate step, not part of this build. Other
 local-file-only prototypes do not need that plan.
 
-The project validator checks the fixed starter, allowed shape, declared content,
-and obvious disallowed capabilities as defense in depth. It is not a sandbox or
-a proof that arbitrary editable C# is safe; review `AgentDefinition.cs` and
-`Tools.cs` before running code from an untrusted source.
+The project validator checks the fixed starter, allowed shape, configuration,
+declared content, and smoke expectations. Startup requires one to three
+`AIFunction` tools. The validator does not analyze editable C#; review
+`AgentDefinition.cs` and `Tools.cs` for the accepted local/mock scope, source
+paths, and unwanted external effects before building or running them.

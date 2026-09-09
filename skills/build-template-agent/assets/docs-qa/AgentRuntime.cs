@@ -22,6 +22,8 @@ public sealed class AgentRuntime(IChatClient chatClient, DocumentStore store, st
         Activity activity;
         try
         {
+            // Keep one Progress-exported workflow root for UI/smoke correlation. SDK 1.2.2
+            // does not export the surrounding ASP.NET request; a trace ID is not ingestion proof.
             Activity.Current = null;
             activity = ObservabilityActivitySource.Instance.StartActivity($"docs-qa.{operationId}", ActivityKind.Internal)
                 ?? new Activity($"docs-qa.{operationId}").SetIdFormat(ActivityIdFormat.W3C).Start();

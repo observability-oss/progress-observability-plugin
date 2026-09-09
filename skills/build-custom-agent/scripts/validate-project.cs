@@ -31,17 +31,6 @@ static class ProjectValidator
         "appsettings.json",
     };
 
-    private static readonly (string Label, string Pattern)[] ForbiddenCodePatterns =
-    [
-        ("network access", @"\bSystem\s*\.\s*Net\b|\b(?:HttpClient|WebRequest|WebClient|Socket|TcpClient)\b"),
-        ("process execution", @"\bSystem\s*\.\s*Diagnostics\s*\.\s*Process\b|\bnew\s+Process\s*\(|\bProcess\s*\.\s*Start\b|\bProcessStartInfo\b"),
-        ("direct filesystem access", @"\bSystem\s*\.\s*IO\b|\b(?:File|Directory)\s*\.|\b(?:FileInfo|DirectoryInfo|FileStream|StreamWriter|StreamReader)\b"),
-        ("environment or secret access", @"\bEnvironment\s*\.|\b(?:ConnectionString|ApiKey|Password|Credential)\b"),
-        ("reflection or native code", @"\bDllImport\b|\bSystem\s*\.\s*Reflection\b|\bAssembly\s*\.\s*Load\b|\bType\s*\.\s*GetType\b|\b(?:Activator|Marshal|NativeLibrary)\s*\."),
-        ("additional model client", @"\b(?:AzureOpenAIClient|OpenAIClient|IChatClient)\b"),
-        ("alias or unsafe syntax", @"\busing\s+(?:static\b|[A-Za-z_][A-Za-z0-9_]*\s*=)|\bextern\s+alias\b|\bglobal\s*::|\bunsafe\b|\bstackalloc\b"),
-    ];
-
     public static int Run(string[] args)
     {
         try
@@ -60,7 +49,6 @@ static class ProjectValidator
             ValidateFixedFiles(asset, target, files);
             ValidateRequiredEditableFiles(files);
             var content = ValidateAllowedFiles(target, files);
-            ValidateEditableCode(target, files);
             ValidateSettings(asset, target, files, smokeBaseline);
             Console.WriteLine(
                 $"VALIDATION_OK target={target} content_files={content.Count} content_bytes={content.TotalBytes}");
@@ -223,53 +211,10 @@ static class ProjectValidator
         return false;
     }
 
-    private static void ValidateEditableCode(string target, IReadOnlyDictionary<string, string> files)
-    {
-        foreach (var relative in new[] { "AgentDefinition.cs", "Tools.cs" })
-        {
-            var code = File.ReadAllText(Path.Combine(target, relative));
-            var codeWithoutComments = StripComments(code);
-            ValidateLocalSourceReferences(codeWithoutComments, relative, files);
-            var executableCode = MaskNonCode(code);
-            foreach (var (label, pattern) in ForbiddenCodePatterns)
-            {
-                if (Regex.IsMatch(
-                        executableCode,
-                        pattern,
-                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-                {
-                    throw new InvalidDataException($"Forbidden capability '{label}' in {relative}.");
-                }
-            }
-        }
-
-        var definition = File.ReadAllText(Path.Combine(target, "AgentDefinition.cs"));
-        var definitionWithoutComments = StripComments(definition);
-        const string signature = @"public\s+IList\s*<\s*AITool\s*>\s+CreateTools\s*\(\s*KnowledgeBase\s+knowledgeBase\s*\)";
-        if (Regex.Matches(definitionWithoutComments, signature, RegexOptions.CultureInvariant).Count != 1)
-            throw new InvalidDataException("AgentDefinition.cs must contain exactly one bounded CreateTools method.");
-
-        var method = Regex.Match(
-            definitionWithoutComments,
-            signature + @"\s*\{\s*var\s+tools\s*=\s*new\s+AssistantTools\s*\(\s*knowledgeBase\s*\)\s*;\s*return\s*\[(?<entries>.*?)\]\s*;\s*\}",
-            RegexOptions.CultureInvariant | RegexOptions.Singleline);
-        if (!method.Success)
-            throw new InvalidDataException("CreateTools must use the bounded direct-registration form from the starter.");
-
-        var entries = method.Groups["entries"].Value;
-        const string registration = @"AIFunctionFactory\s*\.\s*Create\s*\(\s*tools\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*\)\s*,?";
-        var registrations = Regex.Matches(entries, registration, RegexOptions.CultureInvariant).Count;
-        var remainder = Regex.Replace(entries, registration, "", RegexOptions.CultureInvariant);
-        if (!string.IsNullOrWhiteSpace(remainder))
-            throw new InvalidDataException("CreateTools may contain only direct AssistantTools registrations.");
-        if (registrations is < 1 or > 3)
-            throw new InvalidDataException("AgentDefinition.cs must register one to three tools.");
-    }
-
     private static void ValidateLocalSourceReferences(
         string text, string relative, IReadOnlyDictionary<string, string> files)
     {
-        // Catch invented literal citation paths; dynamic tool behavior still needs review.
+        // Validate source labels in configuration text; editable C# is reviewed separately.
         foreach (Match match in Regex.Matches(text,
                      @"\b(?:docs|data)/[^\s""'`<>;:\\]+",
                      RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
@@ -489,122 +434,6 @@ static class ProjectValidator
         return values.Select(value => value.GetString()!.Trim()).ToArray();
     }
 
-    private static string StripComments(string source) => MaskSource(source, maskLiterals: false);
-
-    private static string MaskNonCode(string source) => MaskSource(source, maskLiterals: true);
-
-    // This is a defense-in-depth lexical lint, not a sandbox for arbitrary C#.
-    // It keeps line structure stable while excluding prose from API-name checks.
-    private static string MaskSource(string source, bool maskLiterals)
-    {
-        var result = source.ToCharArray();
-        var state = LexicalState.Code;
-        var rawDelimiterLength = 0;
-        for (var index = 0; index < source.Length; index++)
-        {
-            var current = source[index];
-            var next = index + 1 < source.Length ? source[index + 1] : '\0';
-            switch (state)
-            {
-                case LexicalState.Code when current == '/' && next == '/':
-                    result[index] = result[index + 1] = ' ';
-                    index++;
-                    state = LexicalState.LineComment;
-                    break;
-                case LexicalState.Code when current == '/' && next == '*':
-                    result[index] = result[index + 1] = ' ';
-                    index++;
-                    state = LexicalState.BlockComment;
-                    break;
-                case LexicalState.Code when current == '@' && next == '"':
-                    if (maskLiterals) result[index] = result[index + 1] = ' ';
-                    index++;
-                    state = LexicalState.VerbatimString;
-                    break;
-                case LexicalState.Code when current == '"' && CountRun(source, index, '"') >= 3:
-                    rawDelimiterLength = CountRun(source, index, '"');
-                    if (maskLiterals) Mask(result, index, rawDelimiterLength);
-                    index += rawDelimiterLength - 1;
-                    state = LexicalState.RawString;
-                    break;
-                case LexicalState.Code when current == '"':
-                    if (maskLiterals) result[index] = ' ';
-                    state = LexicalState.String;
-                    break;
-                case LexicalState.Code when current == '\'':
-                    if (maskLiterals) result[index] = ' ';
-                    state = LexicalState.Character;
-                    break;
-                case LexicalState.LineComment:
-                    if (current is '\r' or '\n') state = LexicalState.Code;
-                    else result[index] = ' ';
-                    break;
-                case LexicalState.BlockComment:
-                    result[index] = current is '\r' or '\n' ? current : ' ';
-                    if (current == '*' && next == '/')
-                    {
-                        result[index + 1] = ' ';
-                        index++;
-                        state = LexicalState.Code;
-                    }
-                    break;
-                case LexicalState.String:
-                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
-                    if (current == '\\' && index + 1 < source.Length)
-                    {
-                        index++;
-                        if (maskLiterals && source[index] is not ('\r' or '\n')) result[index] = ' ';
-                    }
-                    else if (current == '"') state = LexicalState.Code;
-                    break;
-                case LexicalState.VerbatimString:
-                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
-                    if (current == '"' && next == '"')
-                    {
-                        index++;
-                        if (maskLiterals) result[index] = ' ';
-                    }
-                    else if (current == '"') state = LexicalState.Code;
-                    break;
-                case LexicalState.Character:
-                    if (maskLiterals && current is not ('\r' or '\n')) result[index] = ' ';
-                    if (current == '\\' && index + 1 < source.Length)
-                    {
-                        index++;
-                        if (maskLiterals && source[index] is not ('\r' or '\n')) result[index] = ' ';
-                    }
-                    else if (current == '\'') state = LexicalState.Code;
-                    break;
-                case LexicalState.RawString:
-                    var quoteRun = current == '"' ? CountRun(source, index, '"') : 0;
-                    if (quoteRun >= rawDelimiterLength)
-                    {
-                        if (maskLiterals) Mask(result, index, quoteRun);
-                        index += quoteRun - 1;
-                        state = LexicalState.Code;
-                    }
-                    else if (maskLiterals && current is not ('\r' or '\n'))
-                    {
-                        result[index] = ' ';
-                    }
-                    break;
-            }
-        }
-        return new string(result);
-
-        static int CountRun(string text, int start, char value)
-        {
-            var count = 0;
-            while (start + count < text.Length && text[start + count] == value) count++;
-            return count;
-        }
-
-        static void Mask(char[] text, int start, int length)
-        {
-            for (var offset = 0; offset < length; offset++) text[start + offset] = ' ';
-        }
-    }
-
     private static void RejectSymlinkPathComponents(string path, string label)
     {
         var fullPath = Path.GetFullPath(path);
@@ -667,6 +496,5 @@ static class ProjectValidator
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;
 
-    private enum LexicalState { Code, LineComment, BlockComment, String, VerbatimString, RawString, Character }
     private sealed record ContentSummary(int Count, long TotalBytes);
 }

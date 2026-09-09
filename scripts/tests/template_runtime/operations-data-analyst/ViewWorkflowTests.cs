@@ -148,11 +148,24 @@ internal static class ViewWorkflowTests
             "explicit click selection stays exact even when model proposes a different patch");
         Check(client.Contexts[^1].GetProperty("fixedView").GetBoolean(), "agent knows clicked view is fixed");
 
+        client.Plan = _ => new() { ["metric"] = "errors", ["grouping"] = "service" };
+        const string negatedPreservation = "Show errors by service; do not keep the view unchanged";
+        var changed = await workflow.AskAsync(new(negatedPreservation, initial));
+        Check(changed.View == initial with { Metric = "errors", Grouping = "service" }
+            && !client.Contexts[^1].GetProperty("fixedView").GetBoolean()
+            && client.Contexts[^1].GetProperty("question").GetString() == negatedPreservation,
+            "negated preservation reaches the model unchanged and permits the requested chart change");
+        var fixedOverride = await workflow.AskAsync(new(negatedPreservation, initial, ApprovedView: focused));
+        Check(fixedOverride.View == focused && client.Contexts[^1].GetProperty("fixedView").GetBoolean(),
+            "an explicit typed view override stays fixed regardless of free-form wording");
+
+        client.Plan = _ => new();
         foreach (var question in new[] { "Explain requests. Keep the current view unchanged.", "Explain without changing the selected view." })
         {
             var preserved = await workflow.AskAsync(new(question, focused));
-            Check(preserved.View == focused && client.Contexts[^1].GetProperty("fixedView").GetBoolean(),
-                "explicit preserve-view command rejects model-proposed changes: " + question);
+            Check(preserved.View == focused && !client.Contexts[^1].GetProperty("fixedView").GetBoolean()
+                && client.Contexts[^1].GetProperty("question").GetString() == question,
+                "natural-language preservation is passed to the model without becoming a fixed UI override: " + question);
         }
         client.Plan = _ => new() { ["metric"] = "errors" };
         var datesOnly = await workflow.AskAsync(new("Show errors; keep the current dates unchanged.", focused));

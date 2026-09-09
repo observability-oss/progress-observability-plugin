@@ -106,7 +106,8 @@ a model call. `POST /api/analyze` returns the complete agent result.
 `POST /api/analyze/stream` streams newline-delimited JSON events: `view`, `text`,
 then `done` (or `error`). Analysis accepts `{question,view,lastQuestion?,approvedView?}`.
 The optional `approvedView` fixes the selection made by a UI control; it is
-revalidated by the server. If explanation fails after data arrives, the UI keeps
+revalidated by the server. Free-form requests to preserve or change the view are
+interpreted by the model. If explanation fails after data arrives, the UI keeps
 the calculated view and reports that the explanation could not finish.
 
 The three live smoke cases are `known-aggregate`, `comparison-spike`, and

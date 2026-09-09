@@ -127,50 +127,30 @@ static class HelperTests
             File.AppendAllText(Path.Combine(fixedEdit, "Program.cs"), "\n// changed\n");
             ExpectExit(2, validator, "--target", fixedEdit);
 
-            var unsafeEdit = CopyFresh(copier, root, "unsafe-edit");
-            File.AppendAllText(
-                Path.Combine(unsafeEdit, "Tools.cs"),
-                "\npublic sealed class UnsafeProbe { public bool Exists(string path) => new FileInfo(path).Exists; }\n");
-            ExpectExit(2, validator, "--target", unsafeEdit);
-
-            var harmlessText = CopyFresh(copier, root, "harmless-text");
-            File.AppendAllText(Path.Combine(harmlessText, "Tools.cs"), """"
-
-                public static class HarmlessText
-                {
-                    public const string Ordinary = "HttpClient, Credential, File.Open, and Process.Start are prose.";
-                    public const string Verbatim = @"System.Net and Environment.GetEnvironmentVariable are prose.";
-                    public const string Raw = """
-                        global::System.IO.File and unsafe stackalloc are prose.
-                        """;
-                }
-                """");
-            ExpectExit(0, validator, "--target", harmlessText);
-            ExpectBuild(Path.Combine(harmlessText, "CustomAgent.csproj"));
-
-            foreach (var (name, code) in new[]
-            {
-                ("alias-bypass", "\nusing IO = System.IO;\n"),
-                ("static-bypass", "\nusing static System.IO.File;\n"),
-                ("global-bypass", "\npublic static class Probe { public static bool Read() => global::System.IO.File.Exists(\"x\"); }\n"),
-                ("unsafe-bypass", "\npublic unsafe static class Probe { public static int* Read() => stackalloc int[1]; }\n"),
-            })
-            {
-                var bypass = CopyFresh(copier, root, name);
-                File.AppendAllText(Path.Combine(bypass, "Tools.cs"), code);
-                ExpectExit(2, validator, "--target", bypass);
-            }
+            var alternateCode = CopyFresh(copier, root, "alternate-code");
+            var alternateDefinition = Path.Combine(alternateCode, "AgentDefinition.cs");
+            File.WriteAllText(alternateDefinition, File.ReadAllText(alternateDefinition)
+                .Replace("var tools = new AssistantTools", "var actions = new AssistantTools", StringComparison.Ordinal)
+                .Replace("Create(tools.", "Create(actions.", StringComparison.Ordinal));
+            File.AppendAllText(Path.Combine(alternateCode, "Tools.cs"),
+                "\npublic sealed record LocalCredentialDescription(string Credential);\n");
+            ExpectExit(0, validator, "--target", alternateCode);
+            ExpectBuild(Path.Combine(alternateCode, "CustomAgent.csproj"));
 
             var inventedSource = CopyFresh(copier, root, "invented-source");
-            File.AppendAllText(Path.Combine(inventedSource, "Tools.cs"),
-                "\npublic static class SourceProbe { public const string Citation = \"data/nonexistent-issues.json\"; }\n");
+            var inventedSettingsPath = Path.Combine(inventedSource, "appsettings.json");
+            var inventedSettings = JsonNode.Parse(File.ReadAllText(inventedSettingsPath))!;
+            inventedSettings["Agent"]!["Examples"]![0] = "Read data/nonexistent-issues.json.";
+            File.WriteAllText(inventedSettingsPath, inventedSettings.ToJsonString());
             ExpectExit(2, validator, "--target", inventedSource);
 
             var completeSource = CopyFresh(copier, root, "complete-source");
             File.WriteAllText(Path.Combine(completeSource, "docs", "policy.md-v2.md"), "# Revised policy\n\nExample only.");
             DeclareSource(Path.Combine(completeSource, "appsettings.json"), "docs/policy.md-v2.md", "mock");
-            File.AppendAllText(Path.Combine(completeSource, "Tools.cs"),
-                "\npublic static class SourceProbe { public const string Citation = \"docs/policy.md-v2.md\"; }\n");
+            var completeSettingsPath = Path.Combine(completeSource, "appsettings.json");
+            var completeSettings = JsonNode.Parse(File.ReadAllText(completeSettingsPath))!;
+            completeSettings["Agent"]!["Examples"]![0] = "Read docs/policy.md-v2.md.";
+            File.WriteAllText(completeSettingsPath, completeSettings.ToJsonString());
             ExpectExit(0, validator, "--target", completeSource);
 
             var unicodeSource = CopyFresh(copier, root, "unicode-source");
@@ -277,15 +257,29 @@ static class HelperTests
             File.WriteAllText(diagnosticSettings, diagnosticJson.ToJsonString());
             ExpectExit(2, validator, "--target", diagnosticSmoke);
 
-            var toolOverflow = CopyFresh(copier, root, "tool-overflow");
-            var definitionPath = Path.Combine(toolOverflow, "AgentDefinition.cs");
-            File.WriteAllText(
-                definitionPath,
-                File.ReadAllText(definitionPath).Replace(
-                    "AIFunctionFactory.Create(tools.LookupLocalRecord),",
-                    "AIFunctionFactory.Create(tools.LookupLocalRecord),\n            AIFunctionFactory.Create(tools.SearchLocalContent),",
-                    StringComparison.Ordinal));
-            ExpectExit(2, validator, "--target", toolOverflow);
+            foreach (var toolShape in new[] { "empty", "overflow", "null-entry" })
+            {
+                var invalidTools = CopyFresh(copier, root, $"tools-{toolShape}");
+                var definitionPath = Path.Combine(invalidTools, "AgentDefinition.cs");
+                var definition = File.ReadAllText(definitionPath);
+                definition = toolShape switch
+                {
+                    "empty" => definition
+                        .Replace("AIFunctionFactory.Create(tools.SearchLocalContent),", "", StringComparison.Ordinal)
+                        .Replace("AIFunctionFactory.Create(tools.ReadLocalSource),", "", StringComparison.Ordinal)
+                        .Replace("AIFunctionFactory.Create(tools.LookupLocalRecord),", "", StringComparison.Ordinal),
+                    "overflow" => definition.Replace(
+                        "AIFunctionFactory.Create(tools.LookupLocalRecord),",
+                        "AIFunctionFactory.Create(tools.LookupLocalRecord),\n            AIFunctionFactory.Create(tools.SearchLocalContent),",
+                        StringComparison.Ordinal),
+                    _ => definition.Replace("AIFunctionFactory.Create(tools.ReadLocalSource)", "null!", StringComparison.Ordinal),
+                };
+                File.WriteAllText(definitionPath, definition);
+                // The validator checks project shape; startup checks the actual returned tools.
+                ExpectExit(0, validator, "--target", invalidTools);
+                ExpectBuild(Path.Combine(invalidTools, "CustomAgent.csproj"));
+                ExpectToolStartupRejection(invalidTools);
+            }
 
             var realParent = Path.Combine(root, "real-parent");
             Directory.CreateDirectory(realParent);
@@ -414,6 +408,34 @@ static class HelperTests
         process.WaitForExit();
         if (process.ExitCode != 0)
             throw new InvalidOperationException($"Generated starter build failed.\n{stdout}{stderr}");
+    }
+
+    private static void ExpectToolStartupRejection(string projectDirectory)
+    {
+        var start = new ProcessStartInfo("dotnet")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        start.ArgumentList.Add(Path.Combine(projectDirectory, "bin", "Release", "net10.0", "CustomAgent.dll"));
+        // Invalid tool lists must fail before endpoint validation or any SDK/model call.
+        start.Environment["AzureOpenAI__Endpoint"] = "http://127.0.0.1:1/";
+
+        using var process = Process.Start(start)
+            ?? throw new InvalidOperationException("Could not start generated agent.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(15_000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new InvalidOperationException("Invalid tool list did not stop startup within 15 seconds.");
+        }
+        var output = stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult();
+        Expect(process.ExitCode != 0 && output.Contains(
+            "Custom agent must register one to three AIFunction tools.", StringComparison.Ordinal),
+            "Startup must reject the actual tool list before configuring the model.\n" + output);
     }
 
     private static string CurrentFile([CallerFilePath] string path = "") => path;

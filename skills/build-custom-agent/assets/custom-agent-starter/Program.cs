@@ -28,6 +28,13 @@ public static class Program
 
         var definition = AgentDefinition.Load(builder.Configuration);
         var presentation = AgentPresentation.Load(builder.Configuration);
+        var knowledgeBase = new KnowledgeBase(
+            AppContext.BaseDirectory,
+            builder.Configuration.GetSection("Content:Sources"));
+        var tools = definition.CreateTools(knowledgeBase);
+        if (tools is null || tools.Count is < 1 or > 3 || tools.Any(tool => tool is not AIFunction))
+            throw new InvalidOperationException("Custom agent must register one to three AIFunction tools.");
+
         var endpointValue = Require(builder.Configuration, "AzureOpenAI:Endpoint");
         if (!Uri.TryCreate(endpointValue, UriKind.Absolute, out var azureEndpoint) ||
             azureEndpoint.Scheme != Uri.UriSchemeHttps)
@@ -56,9 +63,6 @@ public static class Program
 
         try
         {
-            var knowledgeBase = new KnowledgeBase(
-                AppContext.BaseDirectory,
-                builder.Configuration.GetSection("Content:Sources"));
             var azureClient = string.IsNullOrWhiteSpace(azureKey)
                 ? new AzureOpenAIClient(azureEndpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(azureEndpoint, new AzureKeyCredential(azureKey));
@@ -93,7 +97,7 @@ public static class Program
                 ChatOptions = new ChatOptions
                 {
                     Instructions = definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
-                    Tools = definition.CreateTools(knowledgeBase).AddToolObservability(),
+                    Tools = tools.AddToolObservability(),
                     MaxOutputTokens = 800,
                     AllowMultipleToolCalls = false,
                 },

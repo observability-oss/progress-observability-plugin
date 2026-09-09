@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace OperationsDataAnalyst;
 
 public sealed class ViewWorkflow(AgentRuntime runtime, MetricsStore metrics)
@@ -14,11 +12,8 @@ public sealed class ViewWorkflow(AgentRuntime runtime, MetricsStore metrics)
         if (request.LastQuestion?.Length > 2_000) throw new ArgumentException("last_question_too_long");
         var current = Rules.Validate(request.View ?? Rules.Default);
         var selected = request.ApprovedView is null ? current : Rules.Validate(request.ApprovedView);
-        // Explicit preservation is a fixed view command, just like a clicked selection.
-        var preserve = request.ApprovedView is not null || Regex.IsMatch(question,
-            @"\bkeep\s+(?:(?:the|this|that|my|current|selected)\s+)*view\s+unchanged\b|\bwithout\s+changing\s+(?:(?:the|this|that|my|current|selected)\s+)*view\b",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        return runtime.RunAsync(request with { Question = question, ApprovedView = preserve ? selected : null },
+        // Only a structured UI/API selection fixes the view; the agent interprets free-form text.
+        return runtime.RunAsync(request with { Question = question, ApprovedView = request.ApprovedView is null ? null : selected },
             selected, Rules, cancellationToken, onView, onText);
     }
 }

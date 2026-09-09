@@ -23,6 +23,8 @@ public sealed class AgentRuntime(IChatClient chatClient, TicketStore store, stri
         string traceId = "";
         try
         {
+            // Keep one Progress-exported workflow root for UI/smoke correlation. SDK 1.2.2
+            // does not export the surrounding ASP.NET request; a trace ID is not ingestion proof.
             Activity.Current = null;
             activity = ObservabilityActivitySource.Instance.StartActivity(
                 $"ticket-triage.{operationId}", ActivityKind.Internal);

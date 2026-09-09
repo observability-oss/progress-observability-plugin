@@ -63,8 +63,8 @@ public sealed class AgentRuntime
         Activity? activity;
         try
         {
-            // Own a Progress-exported root whose trace ID can be checked exactly
-            // after smoke. Do not inherit the ASP.NET request activity.
+            // Keep one Progress-exported workflow root for UI/smoke correlation. SDK 1.2.2
+            // does not export the surrounding ASP.NET request; a trace ID is not ingestion proof.
             Activity.Current = null;
             activity = ObservabilityActivitySource.Instance.StartActivity(
                 $"{_serviceSlug}.{operationId}",

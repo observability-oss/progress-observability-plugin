@@ -64,10 +64,11 @@ Do not ask domain/design questions or route to the custom builder.
    and UI actions call configured Azure OpenAI. A successful run used available
    app configuration; never infer that credentials or model access are unnecessary.
 
-4. Start the already-built web app on an OS-assigned loopback port:
+4. From the copied project directory, start the already-built web app on an
+   OS-assigned loopback port:
 
    ```bash
-   dotnet run --project <target>/<catalog-project> --no-build -- --urls http://127.0.0.1:0
+   dotnet run --project <catalog-project> --no-build -- --urls http://127.0.0.1:0
    ```
 
    Keep that process running and actively read its own standard

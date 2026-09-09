@@ -579,10 +579,11 @@ Do not ask domain/design questions or route to the custom builder.
    and UI actions call configured Azure OpenAI. A successful run used available
    app configuration; never infer that credentials or model access are unnecessary.
 
-4. Start the already-built web app on an OS-assigned loopback port:
+4. From the copied project directory, start the already-built web app on an
+   OS-assigned loopback port:
 
    ```bash
-   dotnet run --project <target>/<catalog-project> --no-build -- --urls http://127.0.0.1:0
+   dotnet run --project <catalog-project> --no-build -- --urls http://127.0.0.1:0
    ```
 
    Keep that process running and actively read its own standard
@@ -725,9 +726,9 @@ HTTP/UI/health, project/packages, and smoke engine. Add no dependencies. Generat
 no external calls, process execution, file writes, secret reads, live effects,
 or background control loops. Do not use an installed adapter, connector, or MCP
 tool during intake, build, or smoke. Azure OpenAI and Progress runtime settings
-remain as documented user-secrets. The validator checks the fixed shape and
-obvious forbidden capabilities as defense in depth; it is not a sandbox for
-arbitrary C#.
+remain as documented user-secrets. The validator checks project structure,
+configuration, declared content, and smoke expectations; it does not analyze
+editable C# or establish its safety.
 
 The SDK uses `RecordInputs = false` and `RecordOutputs = false` for LLM message
 content. In SDK 1.2.2, tool arguments/results and exception text can still be
@@ -738,6 +739,12 @@ instructions, answers, and handoff. `INTEGRATION_PLAN.md` contains only the
 separate developer continuation; never execute it during this build.
 
 ### Required gates
+
+Before building, review `AgentDefinition.cs` and `Tools.cs`: confirm the accepted
+local/mock scope, one to three local functions, and that literal `docs/` and
+`data/` paths resolve. Check for external calls, process execution, file writes,
+secret access, live effects, or background loops and remove any that were added.
+Do not treat a validator pass as a substitute for this review.
 
 Validate before building. Once that passes, copy the current
 `appsettings.json` to a temporary `smoke-baseline.json` outside the project,
