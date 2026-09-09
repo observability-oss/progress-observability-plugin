@@ -42,82 +42,105 @@ internal static class TelemetryPrivacyTests
                 .GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static)!
                 .GetValue(null);
 
-            IChatClient providerClient = new SyntheticClient();
-            IChatClient tracedClient = providerClient.AddObservability(options =>
+            foreach (var recordContent in new[] { false, true })
             {
-                options.AppName = "privacy-test";
+                exporter.Spans.Clear();
+                using var tracedClient = new SyntheticClient().AddObservability(options =>
+                {
+                    options.AppName = "privacy-test";
+                    options.RecordInputs = recordContent;
+                    options.RecordOutputs = recordContent;
+                });
+                var agent = CreateAgent(tracedClient, AIFunctionFactory.Create(EchoPrivate));
+                var reply = await new AgentRuntime(agent, "privacy-test").RunAsync(
+                    [
+                        new ChatMessage(ChatRole.User, Private + "_HISTORY_QUESTION"),
+                        new ChatMessage(ChatRole.Assistant, Private + "_HISTORY_ANSWER"),
+                        new ChatMessage(ChatRole.User, Private + "_CURRENT_QUESTION"),
+                    ],
+                    "privacy");
+
+                var spans = exporter.Spans.ToList();
+                var workflow = spans.Single(span => span.Name == "privacy-test.privacy");
+                var chats = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
+                var tool = spans.Single(span => span.Name.StartsWith("execute_tool ", StringComparison.Ordinal));
+                Check(chats.Length == 2 && workflow.TraceId == reply.TraceId
+                    && !spans.Any(span => span.Name == "gen_ai.execute_tool")
+                    && chats.Append(tool).All(span =>
+                        span.TraceId == reply.TraceId
+                        && spans.Any(parent => parent.SpanId == span.ParentSpanId && parent.TraceId == span.TraceId)),
+                    "workflow contains the actual provider calls and one native tool span without a duplicate SDK span");
+                Check(tool.Tags["gen_ai.tool.name"]?.ToString() == nameof(EchoPrivate)
+                    && tool.Status != ActivityStatusCode.Error
+                    && reply.Answer == Private + "_PROVIDER_ANSWER",
+                    "native instrumentation identifies the selected tool and the agent successfully answers");
+                Check(chats.Select(span => Convert.ToInt64(span.Tags["gen_ai.usage.input_tokens"]))
+                        .SequenceEqual(new long[] { 11, 23 }),
+                    "provider-reported token metadata is retained");
+                Check(chats.Any(span => span.Tags.Any(tag => tag.Key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
+                        && tag.Value?.ToString()?.Contains(Private + "_CURRENT_QUESTION", StringComparison.Ordinal) == true)) == recordContent
+                    && chats.Any(span => span.Tags.Any(tag => tag.Key.StartsWith("gen_ai.completion", StringComparison.Ordinal)
+                        && tag.Value?.ToString()?.Contains(Private + "_PROVIDER_ANSWER", StringComparison.Ordinal) == true)) == recordContent,
+                    $"SDK LLM prompt/completion content follows RecordInputs/RecordOutputs={recordContent}");
+                if (!recordContent)
+                    Check(spans.All(span => !span.Tags.Keys.Any(key =>
+                            key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
+                            || key.StartsWith("gen_ai.completion", StringComparison.Ordinal))),
+                        "disabled SDK content flags omit all LLM prompt and completion attributes, including history");
+                Check(!tool.Tags.Keys.Any(key => key is "gen_ai.tool.call.arguments" or "gen_ai.tool.call.result"
+                        or "gen_ai.tool.input" or "gen_ai.tool.output"),
+                    $"native tool payloads remain omitted with Progress content flags={recordContent}; its flags do not enable FICC capture");
+            }
+
+            exporter.Spans.Clear();
+            using var failingClient = new SyntheticClient(nameof(FailPrivate)).AddObservability(options =>
+            {
                 options.RecordInputs = false;
                 options.RecordOutputs = false;
             });
-            var boundedClient = new FunctionInvokingChatClient(tracedClient)
-            {
-                MaximumIterationsPerRequest = 3,
-                MaximumConsecutiveErrorsPerRequest = 0,
-                AllowConcurrentInvocation = false,
-                IncludeDetailedErrors = false,
-            };
-            var tools = new List<AITool> { AIFunctionFactory.Create(EchoPrivate) }.AddToolObservability();
-            var agent = boundedClient.AsAIAgent(new ChatClientAgentOptions
-            {
-                Name = "privacy-test",
-                UseProvidedChatClientAsIs = true,
-                ChatOptions = new ChatOptions
-                {
-                    Instructions = "Use the tool, then answer.",
-                    Tools = tools,
-                    MaxOutputTokens = 800,
-                    AllowMultipleToolCalls = false,
-                },
-            });
-            var reply = await new AgentRuntime(agent, "privacy-test").RunAsync(
-                [
-                    new ChatMessage(ChatRole.User, Private + "_HISTORY_QUESTION"),
-                    new ChatMessage(ChatRole.Assistant, Private + "_HISTORY_ANSWER"),
-                    new ChatMessage(ChatRole.User, Private + "_CURRENT_QUESTION"),
-                ],
-                "privacy");
-
-            var spans = exporter.Spans.ToList();
-            var workflow = spans.Single(span => span.Name == "privacy-test.privacy");
-            var chats = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
-            var tool = spans.Single(span => span.Name == "gen_ai.execute_tool");
-            Check(chats.Length == 2 && workflow.TraceId == reply.TraceId
-                && chats.Append(tool).All(span =>
-                    span.TraceId == reply.TraceId
-                    && spans.Any(parent => parent.SpanId == span.ParentSpanId && parent.TraceId == span.TraceId)),
-                "workflow contains the actual provider and tool spans");
-            Check(tool.Tags["gen_ai.tool.name"]?.ToString() == nameof(EchoPrivate) &&
-                  tool.Status == ActivityStatusCode.Ok,
-                "SDK instrumentation identifies the selected tool and successful outcome");
-            Check(chats.Select(span => Convert.ToInt64(span.Tags["gen_ai.usage.input_tokens"]))
-                    .SequenceEqual(new long[] { 11, 23 }),
-                "provider-reported token metadata is retained");
-
-            exporter.Spans.Clear();
-            var failing = (AIFunction)new List<AITool> { AIFunctionFactory.Create(FailPrivate) }.AddToolObservability().Single();
+            var failingAgent = CreateAgent(failingClient, AIFunctionFactory.Create(FailPrivate));
             try
             {
-                await failing.InvokeAsync();
+                await new AgentRuntime(failingAgent, "privacy-test").RunAsync(Private + "_QUESTION", "failure");
                 throw new InvalidOperationException("Expected private tool failure.");
             }
-            catch (Exception error) when (error.Message != "Expected private tool failure.") { }
-            Check(exporter.Spans.Single() is
-            { Status: ActivityStatusCode.Error },
-                "SDK tool instrumentation retains failure status and exception propagation");
-            spans.AddRange(exporter.Spans);
-
-            Check(spans.All(span => !span.Tags.Keys.Any(key =>
-                    key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
-                    || key.StartsWith("gen_ai.completion", StringComparison.Ordinal))),
-                "SDK content flags suppress LLM prompt and completion attributes");
-            // Tool arguments/results and exception events are outside SDK 1.2.2's
-            // LLM content controls; this test makes no blanket privacy guarantee.
+            catch (AgentRunException error)
+            {
+                var failedTool = exporter.Spans.Single(span => span.Name == "execute_tool " + nameof(FailPrivate));
+                Check(failedTool.Status == ActivityStatusCode.Error && failedTool.TraceId == error.TraceId
+                    && exporter.Spans.Any(parent => parent.SpanId == failedTool.ParentSpanId && parent.TraceId == error.TraceId)
+                    && !exporter.Spans.Any(span => span.Name == "gen_ai.execute_tool"),
+                    "an actual native tool failure retains its error status and parent in the failed workflow");
+            }
         }
         finally
         {
             providerField.SetValue(null, null);
         }
         return assertions;
+    }
+
+    private static AIAgent CreateAgent(IChatClient client, AIFunction tool)
+    {
+        var boundedClient = new FunctionInvokingChatClient(client)
+        {
+            MaximumIterationsPerRequest = 3,
+            MaximumConsecutiveErrorsPerRequest = 0,
+            AllowConcurrentInvocation = false,
+            IncludeDetailedErrors = false,
+        };
+        return boundedClient.AsAIAgent(new ChatClientAgentOptions
+        {
+            Name = "privacy-test",
+            UseProvidedChatClientAsIs = true,
+            ChatOptions = new ChatOptions
+            {
+                Instructions = "Use the tool, then answer.",
+                Tools = [tool],
+                MaxOutputTokens = 800,
+                AllowMultipleToolCalls = false,
+            },
+        });
     }
 
     private static string EchoPrivate(string value) => Private + "_TOOL_RESULT_" + value;
@@ -156,7 +179,7 @@ internal static class TelemetryPrivacyTests
         }
     }
 
-    private sealed class SyntheticClient : IChatClient
+    private sealed class SyntheticClient(string toolName = nameof(EchoPrivate)) : IChatClient
     {
         private int _calls;
 
@@ -172,8 +195,10 @@ internal static class TelemetryPrivacyTests
                     ChatRole.Assistant,
                     [new FunctionCallContent(
                         "private-call",
-                        nameof(EchoPrivate),
-                        new Dictionary<string, object?> { ["value"] = Private + "_TOOL_ARGUMENT" })]))
+                        toolName,
+                        toolName == nameof(EchoPrivate)
+                            ? new Dictionary<string, object?> { ["value"] = Private + "_TOOL_ARGUMENT" }
+                            : new Dictionary<string, object?>())]))
                 { FinishReason = ChatFinishReason.ToolCalls }
                 : new ChatResponse(new ChatMessage(ChatRole.Assistant, Private + "_PROVIDER_ANSWER"))
                 { FinishReason = ChatFinishReason.Stop };

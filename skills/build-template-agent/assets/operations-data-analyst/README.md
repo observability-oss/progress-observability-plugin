@@ -116,12 +116,26 @@ view and asserting exact tool-derived numeric results. Free-form questions and
 changes of view are covered separately by protocol tests and browser checks. `SMOKE_REPORT=<json>` includes case status and
 trace IDs; model and Integration settings are required.
 
-Tracing uses the Progress SDK's standard `AddObservability()` setup in
-`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
-span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
-content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
-can still be recorded. These settings do not guarantee content-free telemetry
-or full privacy.
+Tracing uses the Progress SDK's `AddObservability()` setup in `Program.cs`.
+`FunctionInvokingChatClient` already supplies tool tracing, so no additional tool
+wrapper is needed ([SDK documentation](https://www.telerik.com/ai-observability-platform/documentation/sdk/dotnet#tool-observability)).
+Static template identifiers use `AdditionalTags` for filtering.
+
+`Progress:Observability:RecordInputs` and `Progress:Observability:RecordOutputs`
+default to `true` for the local demo: LLM inputs and outputs are sent to Progress
+when tracing is enabled. To disable the SDK's LLM message recording for one run,
+replace the normal run command with these overrides for that process:
+
+```bash
+PROGRESS__OBSERVABILITY__RECORDINPUTS=false \
+PROGRESS__OBSERVABILITY__RECORDOUTPUTS=false \
+dotnet run --no-build -- --urls http://127.0.0.1:0
+```
+
+The overrides do not persist. These flags control the SDK's LLM message
+recording; they do not independently control the function-invocation middleware's
+native tool contents or fully exclude exception text. Even with both flags
+`false`, do not assume content-free telemetry or full privacy with SDK 1.2.2.
 Trace IDs prove local execution, **not backend ingestion**; inspect
 the [Progress Tracing page](https://observability.progress.com/observations)
 separately. This is a small example, not a production monitoring system.

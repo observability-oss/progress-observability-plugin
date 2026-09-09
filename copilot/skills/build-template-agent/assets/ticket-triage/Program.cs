@@ -29,6 +29,8 @@ public static class Program
         var appName = builder.Configuration["Progress:Observability:AppName"] ?? "ticket-triage";
         var observabilityKey = builder.Configuration["Progress:Observability:ApiKey"];
         var tracingEnabled = !string.IsNullOrWhiteSpace(observabilityKey);
+        var telemetryRecordInputs = builder.Configuration.GetValue("Progress:Observability:RecordInputs", true);
+        var telemetryRecordOutputs = builder.Configuration.GetValue("Progress:Observability:RecordOutputs", true);
         if (smokeMode && !tracingEnabled)
         {
             Console.Error.WriteLine("Smoke tests require Progress:Observability:ApiKey (the Integration key). No secret value was printed.");
@@ -49,9 +51,9 @@ public static class Program
                 {
                     options.AppName = appName;
                     options.ApiKey = observabilityKey!;
-                    options.RecordInputs = false;
-                    options.RecordOutputs = false;
-                    options.AdditionalAttributes["agent.template.id"] = "ticket-triage";
+                    options.RecordInputs = telemetryRecordInputs;
+                    options.RecordOutputs = telemetryRecordOutputs;
+                    options.AdditionalTags.Add("agent.template.id:ticket-triage");
                 });
             var runtime = new AgentRuntime(chatClient, store, appName);
             if (smokeMode) return await new SmokeRunner(runtime, builder.Configuration).RunAsync();
@@ -59,7 +61,7 @@ public static class Program
             var app = builder.Build();
             app.UseDefaultFiles();
             app.UseStaticFiles();
-            MapEndpoints(app, store, runtime, tracingEnabled);
+            MapEndpoints(app, store, runtime, tracingEnabled, telemetryRecordInputs, telemetryRecordOutputs);
             app.MapFallbackToFile("index.html");
             await app.RunAsync();
             return 0;
@@ -74,7 +76,13 @@ public static class Program
             options.SerializerOptions.UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow;
         });
 
-    public static void MapEndpoints(WebApplication app, TicketStore store, AgentRuntime runtime, bool tracingEnabled)
+    public static void MapEndpoints(
+        WebApplication app,
+        TicketStore store,
+        AgentRuntime runtime,
+        bool tracingEnabled,
+        bool telemetryRecordInputs = true,
+        bool telemetryRecordOutputs = true)
     {
         app.MapGet("/api/health", () => Results.Ok(new
         {
@@ -83,8 +91,8 @@ public static class Program
             documentsLoaded = 1,
             mockData = true,
             tracingEnabled,
-            telemetryRecordInputs = false,
-            telemetryRecordOutputs = false,
+            telemetryRecordInputs,
+            telemetryRecordOutputs,
         }));
         app.MapGet("/api/tickets", () => Results.Ok(new { tickets = store.Tickets, mockData = true }));
         app.MapPost("/api/triage", async (TriageRequest? request, CancellationToken cancellationToken) =>

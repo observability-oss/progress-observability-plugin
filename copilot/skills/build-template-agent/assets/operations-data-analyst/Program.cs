@@ -26,6 +26,8 @@ public static class Program
         var azureKey = builder.Configuration["AzureOpenAI:ApiKey"];
         var observabilityKey = builder.Configuration["Progress:Observability:ApiKey"];
         var tracingEnabled = !string.IsNullOrWhiteSpace(observabilityKey);
+        var telemetryRecordInputs = builder.Configuration.GetValue("Progress:Observability:RecordInputs", true);
+        var telemetryRecordOutputs = builder.Configuration.GetValue("Progress:Observability:RecordOutputs", true);
         var appName = builder.Configuration["Progress:Observability:AppName"] ?? "operations-data-analyst";
         if (smokeMode && !tracingEnabled)
         {
@@ -51,9 +53,9 @@ public static class Program
                 {
                     options.AppName = appName;
                     options.ApiKey = observabilityKey!;
-                    options.RecordInputs = false;
-                    options.RecordOutputs = false;
-                    options.AdditionalAttributes["agent.template.id"] = "operations-data-analyst";
+                    options.RecordInputs = telemetryRecordInputs;
+                    options.RecordOutputs = telemetryRecordOutputs;
+                    options.AdditionalTags.Add("agent.template.id:operations-data-analyst");
                 });
             var runtime = new AgentRuntime(client, metrics, appName);
             var workflow = new ViewWorkflow(runtime, metrics);
@@ -74,8 +76,8 @@ public static class Program
                 services = metrics.Services,
                 syntheticData = true,
                 tracingEnabled,
-                telemetryRecordInputs = false,
-                telemetryRecordOutputs = false,
+                telemetryRecordInputs,
+                telemetryRecordOutputs,
             }));
             app.MapPost("/api/analyze", async (AnalysisRequest? request, CancellationToken cancellationToken) =>
             {

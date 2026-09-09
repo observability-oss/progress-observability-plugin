@@ -70,12 +70,26 @@ emitted trace IDs do not independently prove backend ingestion; open the
 [Progress Tracing page](https://observability.progress.com/observations) to
 confirm that the traces arrived.
 
-Tracing uses the Progress SDK's standard `AddObservability()` setup in
-`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
-span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
-content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
-can still be recorded. These settings do not guarantee content-free telemetry
-or full privacy.
+Tracing uses the Progress SDK's `AddObservability()` setup in `Program.cs`.
+`FunctionInvokingChatClient` already supplies tool tracing, so no additional tool
+wrapper is needed ([SDK documentation](https://www.telerik.com/ai-observability-platform/documentation/sdk/dotnet#tool-observability)).
+Static template identifiers use `AdditionalTags` for filtering.
+
+`Progress:Observability:RecordInputs` and `Progress:Observability:RecordOutputs`
+default to `true` for the local demo: LLM inputs and outputs are sent to Progress
+when tracing is enabled. To disable the SDK's LLM message recording for one run,
+replace the normal run command with these overrides for that process:
+
+```bash
+PROGRESS__OBSERVABILITY__RECORDINPUTS=false \
+PROGRESS__OBSERVABILITY__RECORDOUTPUTS=false \
+dotnet run --no-build -- --urls http://127.0.0.1:0
+```
+
+The overrides do not persist. These flags control the SDK's LLM message
+recording; they do not independently control the function-invocation middleware's
+native tool contents or fully exclude exception text. Even with both flags
+`false`, do not assume content-free telemetry or full privacy with SDK 1.2.2.
 
 The workflow span also records `agent.tool.count`, `agent.source.count` and
 `agent.readiness.status`, so traces can be filtered by verdict and by how much

@@ -20,10 +20,12 @@ internal static class PrivacyTests
         {
             var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "privacy-sources", template + ".cs"));
             Check(source.Contains(".AddObservability(", StringComparison.Ordinal)
-                && source.Contains("RecordInputs = false", StringComparison.Ordinal)
-                && source.Contains("RecordOutputs = false", StringComparison.Ordinal)
+                && source.Contains("GetValue(\"Progress:Observability:RecordInputs\", true)", StringComparison.Ordinal)
+                && source.Contains("GetValue(\"Progress:Observability:RecordOutputs\", true)", StringComparison.Ordinal)
+                && source.Contains("RecordInputs = telemetryRecordInputs", StringComparison.Ordinal)
+                && source.Contains("RecordOutputs = telemetryRecordOutputs", StringComparison.Ordinal)
                 && !source.Contains("MetadataOnlyChatClient", StringComparison.Ordinal),
-                "shipped app uses SDK model tracing with both content flags disabled: " + template);
+                "shipped app forwards configurable SDK content flags with defaults enabled: " + template);
         }
 
         // Use the pinned SDK's real listener with a no-export provider: no SDK
@@ -43,37 +45,51 @@ internal static class PrivacyTests
         {
             _ = assembly.GetType("Progress.Observability.Extensions.AI.ObservabilityActivityListener", throwOnError: true)!
                 .GetField("Instance", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null);
-            using var providerClient = new SyntheticClient();
-            using var client = providerClient.AddObservability(options =>
+            foreach (var recordContent in new[] { false, true })
             {
-                options.AppName = "privacy-test";
-                options.RecordInputs = false;
-                options.RecordOutputs = false;
-            });
-            var response = await new AgentRuntime(client, store, "privacy-test").RunAsync(
-                new AskRequest(Marker + "_QUESTION audit logs", new(Marker + "_PRIOR_QUESTION", Marker + "_PRIOR_ANSWER")), "privacy");
-            Check(providerClient.Calls == 3 && response.ToolCalls.SequenceEqual(new[] { "SearchDocuments", "ReadSection" })
-                && response.Citations.Single().SourceId == "retention#audit-history", "SDK-instrumented MAF workflow executes retrieval and citation tools");
-            var workflowSpan = spans.Single(span => span.Name == "docs-qa.privacy");
-            var toolSpans = spans.Where(span => span.Name == "gen_ai.execute_tool").ToArray();
-            var chatSpans = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
-            Check(chatSpans.Length == providerClient.Calls && workflowSpan.TraceId == response.TraceId
-                && chatSpans.Concat(toolSpans).All(span => span.TraceId == response.TraceId
-                    && spans.Any(parent => parent.SpanId == span.ParentSpanId && parent.TraceId == span.TraceId))
-                && toolSpans.All(span => span.TraceId == response.TraceId)
-                && toolSpans.Select(span => span.Tags["gen_ai.tool.name"]?.ToString())
-                    .SequenceEqual(new[] { "SearchDocuments", "ReadSection" }),
-                "SDK emits actual model/tool spans with parents present in the workflow trace");
-            Check(workflowSpan.Tags["agent.tool.count"]?.ToString() == "2" && workflowSpan.Tags["agent.source.count"]?.ToString() == "1",
-                "workflow records actual metadata counts");
-            Check(spans.All(span => !span.Tags.Keys.Any(key =>
-                    key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
-                    || key.StartsWith("gen_ai.completion", StringComparison.Ordinal))),
-                "SDK content flags omit LLM prompts and completions, including chat history");
-            Check(chatSpans.Select(span => Convert.ToInt64(span.Tags["gen_ai.usage.input_tokens"]))
-                    .SequenceEqual(new long[] { 11, 22, 33 })
-                && chatSpans.All(span => span.Status == ActivityStatusCode.Ok),
-                "SDK preserves provider token counts and successful call status");
+                spans.Clear();
+                using var providerClient = new SyntheticClient();
+                using var client = providerClient.AddObservability(options =>
+                {
+                    options.AppName = "privacy-test";
+                    options.RecordInputs = recordContent;
+                    options.RecordOutputs = recordContent;
+                });
+                var response = await new AgentRuntime(client, store, "privacy-test").RunAsync(
+                    new AskRequest(Marker + "_QUESTION audit logs", new(Marker + "_PRIOR_QUESTION", Marker + "_PRIOR_ANSWER")), "privacy");
+                Check(providerClient.Calls == 3 && response.ToolCalls.SequenceEqual(new[] { "SearchDocuments", "ReadSection" })
+                    && response.Citations.Single().SourceId == "retention#audit-history", "SDK-instrumented MAF workflow executes retrieval and citation tools");
+                var workflowSpan = spans.Single(span => span.Name == "docs-qa.privacy");
+                var toolSpans = spans.Where(span => span.Name.StartsWith("execute_tool ", StringComparison.Ordinal)).ToArray();
+                var chatSpans = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
+                Check(chatSpans.Length == providerClient.Calls && workflowSpan.TraceId == response.TraceId
+                    && !spans.Any(span => span.Name == "gen_ai.execute_tool")
+                    && chatSpans.Concat(toolSpans).All(span => span.TraceId == response.TraceId
+                        && spans.Any(parent => parent.SpanId == span.ParentSpanId && parent.TraceId == span.TraceId))
+                    && toolSpans.Select(span => span.Tags["gen_ai.tool.name"]?.ToString())
+                        .SequenceEqual(new[] { "SearchDocuments", "ReadSection" }),
+                    "each real tool execution has one native span and a parent in the workflow trace");
+                Check(workflowSpan.Tags["agent.tool.count"]?.ToString() == "2" && workflowSpan.Tags["agent.source.count"]?.ToString() == "1",
+                    "workflow records actual metadata counts");
+                Check(chatSpans.Any(span => span.Tags.Any(tag => tag.Key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
+                        && tag.Value?.ToString()?.Contains(Marker + "_QUESTION", StringComparison.Ordinal) == true)) == recordContent
+                    && chatSpans.Any(span => span.Tags.Any(tag => tag.Key.StartsWith("gen_ai.completion", StringComparison.Ordinal)
+                        && tag.Value?.ToString()?.Contains(Marker + "_ANSWER", StringComparison.Ordinal) == true)) == recordContent,
+                    $"SDK LLM prompt/completion content follows RecordInputs/RecordOutputs={recordContent}");
+                if (!recordContent)
+                    Check(spans.All(span => !span.Tags.Keys.Any(key =>
+                            key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
+                            || key.StartsWith("gen_ai.completion", StringComparison.Ordinal))),
+                        "disabled SDK content flags omit all LLM prompt and completion attributes, including history");
+                Check(toolSpans.All(span => span.Status != ActivityStatusCode.Error
+                        && !span.Tags.Keys.Any(key => key is "gen_ai.tool.call.arguments" or "gen_ai.tool.call.result"
+                            or "gen_ai.tool.input" or "gen_ai.tool.output")),
+                    $"native tool payloads remain omitted with Progress content flags={recordContent}; its flags do not enable FICC capture");
+                Check(chatSpans.Select(span => Convert.ToInt64(span.Tags["gen_ai.usage.input_tokens"]))
+                        .SequenceEqual(new long[] { 11, 22, 33 })
+                    && chatSpans.All(span => span.Status == ActivityStatusCode.Ok),
+                    "SDK preserves provider token counts and successful call status");
+            }
             spans.Clear();
             using var failing = new SyntheticClient(fail: true).AddObservability(options =>
             {

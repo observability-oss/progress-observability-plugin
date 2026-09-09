@@ -74,7 +74,7 @@ public sealed class AgentRuntime(IChatClient chatClient, DocumentStore store, st
                     {
                         AIFunctionFactory.Create(documentTools.SearchDocuments),
                         AIFunctionFactory.Create(documentTools.ReadSection),
-                    }.AddToolObservability(),
+                    },
                 },
             });
             var session = await agent.CreateSessionAsync(cancellationToken: deadline.Token);

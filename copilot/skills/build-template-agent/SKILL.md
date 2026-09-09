@@ -64,6 +64,13 @@ Do not ask domain/design questions or route to the custom builder.
    and UI actions call configured Azure OpenAI. A successful run used available
    app configuration; never infer that credentials or model access are unnecessary.
 
+   `Progress:Observability:RecordInputs` and `Progress:Observability:RecordOutputs`
+   default to `true` for the local demo, recording LLM inputs and outputs when
+   tracing is enabled. If the user requests disabling LLM message capture, use
+   the README's process-specific `false` environment overrides. The flags do
+   not independently control native tool contents or fully exclude exception
+   text in SDK 1.2.2; do not promise content-free telemetry or full privacy.
+
 4. From the copied project directory, start the already-built web app on an
    OS-assigned loopback port:
 

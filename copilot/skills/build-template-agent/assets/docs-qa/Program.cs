@@ -29,6 +29,8 @@ public static class Program
         var azureKey = builder.Configuration["AzureOpenAI:ApiKey"];
         var tracingKey = builder.Configuration["Progress:Observability:ApiKey"];
         var tracingEnabled = !string.IsNullOrWhiteSpace(tracingKey);
+        var telemetryRecordInputs = builder.Configuration.GetValue("Progress:Observability:RecordInputs", true);
+        var telemetryRecordOutputs = builder.Configuration.GetValue("Progress:Observability:RecordOutputs", true);
         var appName = builder.Configuration["Progress:Observability:AppName"] ?? "docs-qa";
         if (smoke && !tracingEnabled)
         {
@@ -48,9 +50,9 @@ public static class Program
                 {
                     options.AppName = appName;
                     options.ApiKey = tracingKey!;
-                    options.RecordInputs = false;
-                    options.RecordOutputs = false;
-                    options.AdditionalAttributes["agent.template.id"] = "docs-qa";
+                    options.RecordInputs = telemetryRecordInputs;
+                    options.RecordOutputs = telemetryRecordOutputs;
+                    options.AdditionalTags.Add("agent.template.id:docs-qa");
                 });
             var runtime = new AgentRuntime(chatClient, store, appName);
             if (smoke) return await new SmokeRunner(runtime, builder.Configuration).RunAsync();
@@ -63,8 +65,8 @@ public static class Program
                 documentsLoaded = store.DocumentCount,
                 sectionsLoaded = store.Sections.Count,
                 tracingEnabled,
-                telemetryRecordInputs = false,
-                telemetryRecordOutputs = false,
+                telemetryRecordInputs,
+                telemetryRecordOutputs,
             }));
             app.MapGet("/api/documents", () => Results.Ok(store.Sections));
             app.MapPost("/api/ask", async (AskRequest? request, CancellationToken token) =>

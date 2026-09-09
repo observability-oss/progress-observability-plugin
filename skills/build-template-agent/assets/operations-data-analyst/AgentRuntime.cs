@@ -64,7 +64,7 @@ public sealed class AgentRuntime(IChatClient chatClient, MetricsStore metrics, s
                     {
                         AIFunctionFactory.Create(tools.ExploreMetrics),
                         AIFunctionFactory.Create(tools.ExplainLimitation),
-                    }.AddToolObservability(),
+                    },
                     ToolMode = ChatToolMode.RequireAny,
                     AllowMultipleToolCalls = false,
                     MaxOutputTokens = 500,

@@ -91,7 +91,7 @@ public sealed class AgentRuntime(IChatClient chatClient, KnowledgeBase knowledge
                     {
                         AIFunctionFactory.Create(tools.SearchKnowledgeBase),
                         AIFunctionFactory.Create(tools.CheckReleaseReadiness),
-                    }.AddToolObservability(),
+                    },
                 },
             });
             var session = await agent.CreateSessionAsync(cancellationToken: deadline.Token);

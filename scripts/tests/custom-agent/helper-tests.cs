@@ -27,9 +27,13 @@ static class HelperTests
                 "Copied projects must not contain .env.example.");
             var copiedProgram = File.ReadAllText(Path.Combine(valid, "Program.cs"));
             Expect(copiedProgram.Contains("AddObservability", StringComparison.Ordinal) &&
-                   copiedProgram.Contains("AddToolObservability", StringComparison.Ordinal) &&
-                   copiedProgram.Contains("RecordInputs = false", StringComparison.Ordinal) &&
-                   copiedProgram.Contains("RecordOutputs = false", StringComparison.Ordinal) &&
+                   !copiedProgram.Contains("AddToolObservability", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("GetValue(\"Progress:Observability:RecordInputs\", true)", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("GetValue(\"Progress:Observability:RecordOutputs\", true)", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("RecordInputs = telemetryRecordInputs", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("RecordOutputs = telemetryRecordOutputs", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("options.AdditionalTags.Add(", StringComparison.Ordinal) &&
+                   !copiedProgram.Contains("options.AdditionalAttributes", StringComparison.Ordinal) &&
                    copiedProgram.Contains("new FunctionInvokingChatClient", StringComparison.Ordinal) &&
                    copiedProgram.Contains("MaximumIterationsPerRequest = 3", StringComparison.Ordinal) &&
                    copiedProgram.Contains("MaxOutputTokens = 800", StringComparison.Ordinal) &&

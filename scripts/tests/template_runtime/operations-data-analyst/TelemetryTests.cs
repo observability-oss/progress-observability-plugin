@@ -62,16 +62,17 @@ internal static class TelemetryTests
             var spans = exporter.Spans.ToArray();
             var root = spans.Single(span => span.Name == "operations-data-analyst.ask");
             var calls = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
-            var toolCall = spans.Single(span => span.Name == "gen_ai.execute_tool");
+            var toolCall = spans.Single(span => span.Name.StartsWith("execute_tool ", StringComparison.Ordinal));
             Check(calls.Length == handler.Requests.Count
+                && !spans.Any(span => span.Name == "gen_ai.execute_tool")
                 && calls.Append(toolCall).All(span => span.TraceId == reply.TraceId
                     && spans.Any(parentSpan => parentSpan.SpanId == span.ParentSpanId && parentSpan.TraceId == span.TraceId))
                 && root.ParentSpanId == "0000000000000000" && root.TraceId != parent.TraceId.ToHexString() && Activity.Current == parent,
                 "export contains one real workflow with correctly parented provider and tool calls and restores caller context");
-            Check(toolCall is { Status: ActivityStatusCode.Ok }
+            Check(toolCall.Status != ActivityStatusCode.Error
                 && toolCall.Tags["gen_ai.operation.name"]?.ToString() == "execute_tool"
                 && toolCall.Tags["gen_ai.tool.name"]?.ToString() == "ExploreMetrics",
-                "the SDK records the actual model-selected tool and its successful outcome");
+                "one native span records the successful model-selected tool without duplicate SDK tool spans");
             Check(calls.All(span => span.Kind == ActivityKind.Client && span.Status == ActivityStatusCode.Ok
                 && span.Tags["gen_ai.operation.name"]?.ToString() == "chat"
                 && span.Tags["gen_ai.provider.name"]?.ToString() == "azure"
@@ -123,13 +124,6 @@ internal static class TelemetryTests
                 "SDK streaming failures preserve the exception and mark the model span failed");
 
             exporter.Spans.Clear();
-            var failingTool = (AIFunction)new List<AITool> { AIFunctionFactory.Create(Boom) }.AddToolObservability().Single();
-            try { await failingTool.InvokeAsync(); throw new Exception("tool failure expected"); }
-            catch (Exception error) when (error.Message != "tool failure expected") { }
-            Check(exporter.Spans.Single().Status == ActivityStatusCode.Error,
-                "SDK tool instrumentation retains failure status and exception propagation");
-
-            exporter.Spans.Clear();
             using var cancellation = new CancellationTokenSource();
             try
             {
@@ -148,8 +142,6 @@ internal static class TelemetryTests
         finally { providerField.SetValue(null, null); }
         return checks;
     }
-
-    private static string Boom() => throw new InvalidOperationException(Private + "_TOOL_ERROR");
 
     private sealed record Span(string Name, string TraceId, string SpanId, string ParentSpanId, ActivityKind Kind,
         ActivityStatusCode Status, string? Description, Dictionary<string, object?> Tags, ActivityEvent[] Events);

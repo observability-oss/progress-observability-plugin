@@ -113,19 +113,24 @@ class BuilderConfigContractTests(unittest.TestCase):
                 )
                 self.assertIn(f"Use the `{name}` skill", command)
 
-    def test_every_template_keeps_secret_and_ui_runtime_contract(self) -> None:
-        for item in TEMPLATES:
-            with self.subTest(template=item["id"]):
-                source = TEMPLATE_SKILL / "assets" / item["id"]
+    def test_every_starter_keeps_secret_and_ui_runtime_contract(self) -> None:
+        sources = [TEMPLATE_SKILL / "assets" / item["id"] for item in TEMPLATES]
+        sources.append(ROOT / "skills/build-custom-agent/assets/custom-agent-starter")
+        for source in sources:
+            with self.subTest(starter=source.name):
                 program = (source / "Program.cs").read_text(encoding="utf-8")
                 self.assertNotIn("Microsoft.Hosting.Lifetime", program)
                 self.assertIn(".AddObservability(", program)
                 self.assertFalse((source / "MetadataOnlyChatClient.cs").exists())
                 self.assertFalse((source / "MetadataOnlyTool.cs").exists())
-                self.assertIn("telemetryRecordInputs = false", program)
-                self.assertIn("telemetryRecordOutputs = false", program)
-                self.assertIn("RecordInputs = false", program)
-                self.assertIn("RecordOutputs = false", program)
+                self.assertIn('GetValue("Progress:Observability:RecordInputs", true)', program)
+                self.assertIn('GetValue("Progress:Observability:RecordOutputs", true)', program)
+                self.assertIn("RecordInputs = telemetryRecordInputs", program)
+                self.assertIn("RecordOutputs = telemetryRecordOutputs", program)
+                self.assertIn("options.AdditionalTags.Add(", program)
+                self.assertNotIn("options.AdditionalAttributes", program)
+                runtime = (source / "AgentRuntime.cs").read_text(encoding="utf-8")
+                self.assertNotIn("AddToolObservability", program + runtime)
                 self.assertIn('"/api/health"', program)
                 self.assertFalse(any(source.glob(".env*")))
 

@@ -47,6 +47,8 @@ public static class Program
         var azureKey = builder.Configuration["AzureOpenAI:ApiKey"];
         var observabilityKey = builder.Configuration["Progress:Observability:ApiKey"];
         var tracingEnabled = !string.IsNullOrWhiteSpace(observabilityKey);
+        var telemetryRecordInputs = builder.Configuration.GetValue("Progress:Observability:RecordInputs", true);
+        var telemetryRecordOutputs = builder.Configuration.GetValue("Progress:Observability:RecordOutputs", true);
 
         if (smokeMode && !tracingEnabled)
         {
@@ -74,13 +76,10 @@ public static class Program
                 {
                     options.AppName = definition.ServiceSlug;
                     options.ApiKey = observabilityKey!;
-                    options.RecordInputs = false;
-                    options.RecordOutputs = false;
-                    options.AdditionalAttributes = new Dictionary<string, object>
-                    {
-                        ["agent.template.id"] = "custom-agent-local-prototype",
-                        ["agent.service.slug"] = definition.ServiceSlug,
-                    };
+                    options.RecordInputs = telemetryRecordInputs;
+                    options.RecordOutputs = telemetryRecordOutputs;
+                    options.AdditionalTags.Add("agent.template.id:custom-agent-local-prototype");
+                    options.AdditionalTags.Add($"agent.service.slug:{definition.ServiceSlug}");
                 });
             }
             var boundedClient = new FunctionInvokingChatClient(chatClient)
@@ -97,7 +96,7 @@ public static class Program
                 ChatOptions = new ChatOptions
                 {
                     Instructions = definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
-                    Tools = tools.AddToolObservability(),
+                    Tools = tools,
                     MaxOutputTokens = 800,
                     AllowMultipleToolCalls = false,
                 },
@@ -127,8 +126,8 @@ public static class Program
                 status = knowledgeBase.SourceCount > 0 ? "ready" : "degraded",
                 sourcesLoaded = knowledgeBase.SourceCount,
                 tracingEnabled,
-                telemetryRecordInputs = false,
-                telemetryRecordOutputs = false,
+                telemetryRecordInputs,
+                telemetryRecordOutputs,
                 mode = "local_prototype",
             }));
 

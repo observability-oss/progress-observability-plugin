@@ -107,9 +107,14 @@ remain as documented user-secrets. The validator checks project structure,
 configuration, declared content, and smoke expectations; it does not analyze
 editable C# or establish its safety.
 
-The SDK uses `RecordInputs = false` and `RecordOutputs = false` for LLM message
-content. In SDK 1.2.2, tool arguments/results and exception text can still be
-recorded; do not promise content-free telemetry or full privacy.
+The fixed `AddObservability()` and `FunctionInvokingChatClient` setup already
+traces tools; add no separate tool wrapper. `Progress:Observability:RecordInputs`
+and `Progress:Observability:RecordOutputs` default to `true` for the local demo,
+recording LLM inputs and outputs when tracing is enabled. If the user requests
+disabling LLM message capture, use the README's process-specific `false`
+environment overrides. The flags do not independently control native tool
+contents or fully exclude exception text in SDK 1.2.2; do not promise
+content-free telemetry or full privacy.
 
 For mock PoCs, keep the reduced scope and mock limitation visible in Purpose,
 instructions, answers, and handoff. `INTEGRATION_PLAN.md` contains only the

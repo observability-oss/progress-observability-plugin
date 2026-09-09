@@ -38,6 +38,8 @@ public static class Program
                       ?? "release-evidence-reviewer";
         var observabilityKey = builder.Configuration["Progress:Observability:ApiKey"];
         var tracingEnabled = !string.IsNullOrWhiteSpace(observabilityKey);
+        var telemetryRecordInputs = builder.Configuration.GetValue("Progress:Observability:RecordInputs", true);
+        var telemetryRecordOutputs = builder.Configuration.GetValue("Progress:Observability:RecordOutputs", true);
 
         if (smokeMode && !tracingEnabled)
         {
@@ -65,9 +67,9 @@ public static class Program
                 {
                     options.AppName = appName;
                     options.ApiKey = observabilityKey!;
-                    options.RecordInputs = false;
-                    options.RecordOutputs = false;
-                    options.AdditionalAttributes["agent.template.id"] = "release-evidence-reviewer";
+                    options.RecordInputs = telemetryRecordInputs;
+                    options.RecordOutputs = telemetryRecordOutputs;
+                    options.AdditionalTags.Add("agent.template.id:release-evidence-reviewer");
                 });
 
             var runtime = new AgentRuntime(chatClient, knowledgeBase, appName);
@@ -84,8 +86,8 @@ public static class Program
                 status = knowledgeBase.DocumentCount > 0 ? "ready" : "degraded",
                 documentsLoaded = knowledgeBase.DocumentCount,
                 tracingEnabled,
-                telemetryRecordInputs = false,
-                telemetryRecordOutputs = false,
+                telemetryRecordInputs,
+                telemetryRecordOutputs,
             }));
 
             app.MapPost("/api/chat", async (
