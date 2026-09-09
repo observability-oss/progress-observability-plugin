@@ -794,6 +794,12 @@ not a generated setting and changes no required gate.
 
 ### Handoff
 
+After all checks, including optional behavior checks, leave the app running
+(in a background terminal in VS Code). If it was stopped, relaunch using the
+persistent-start procedure above. Immediately before the final response, verify
+both `/` and `/api/health` at its current URL, then include a clickable UI link.
+Do not stop the app as test cleanup or substitute a launch command for a live link.
+
 Report success only after copy, both validations, build, all smokes, and health.
 Include the absolute project path, verified UI URL, three smoke results with
 their emitted trace IDs, and exactly one link:
