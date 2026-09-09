@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Microsoft.Extensions.AI;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -11,14 +10,6 @@ using TicketTriage;
 internal static class TelemetryTests
 {
     private const string Private = "SYNTHETIC_PRIVATE_CONTENT";
-
-    // Only the metadata an operator needs may leave the process.
-    private static readonly HashSet<string> Allowed = new(StringComparer.Ordinal)
-    {
-        "observability.span.kind", "gen_ai.operation.name", "gen_ai.provider.name", "gen_ai.agent.name",
-        "gen_ai.request.model", "gen_ai.response.model", "gen_ai.tool.name", "gen_ai.usage.input_tokens",
-        "gen_ai.usage.output_tokens", "gen_ai.usage.total_tokens", "agent.template.id", "agent.operation.id",
-    };
 
     public static async Task<int> RunAsync(TicketStore store)
     {
@@ -42,15 +33,21 @@ internal static class TelemetryTests
                 .GetField("Instance", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
             using var caller = new Activity("unexported-http-request").SetIdFormat(ActivityIdFormat.W3C).Start();
 
-            using var client = new MetadataOnlyChatClient(new SyntheticClient(), "offline-deployment", "telemetry-test");
+            using var client = new SyntheticClient().AddObservability(options =>
+            {
+                options.AppName = "telemetry-test";
+                options.RecordInputs = false;
+                options.RecordOutputs = false;
+            });
             var reply = await new AgentRuntime(client, store, "telemetry-test").RunAsync("T-1001", "telemetry");
 
-            var spans = exporter.Spans;
+            var spans = exporter.Spans.ToList();
             var workflow = spans.Single(span => span.Name == "ticket-triage.telemetry");
             var chats = spans.Where(span => span.Name == "gen_ai.chat").ToArray();
             var tools = spans.Where(span => span.Name == "gen_ai.execute_tool").ToArray();
             Check(chats.Length == 2 && tools.Length == 1
-                && chats.Concat(tools).All(span => span.ParentSpanId == workflow.SpanId && span.TraceId == reply.TraceId)
+                && chats.Concat(tools).All(span => span.TraceId == reply.TraceId
+                    && spans.Any(parent => parent.SpanId == span.ParentSpanId && parent.TraceId == span.TraceId))
                 && workflow.ParentSpanId == "0000000000000000" && workflow.TraceId != caller.TraceId.ToHexString()
                 && Activity.Current == caller,
                 "a triage exports one workflow with its real provider and tool calls, restoring caller context");
@@ -60,25 +57,23 @@ internal static class TelemetryTests
                 "the model-selected tool is visible by name with a success status");
             Check(chats.Select(span => Convert.ToInt64(span.Tags["gen_ai.usage.input_tokens"])).SequenceEqual(new long[] { 11, 23 })
                 && chats.All(span => span.Tags["gen_ai.request.model"]?.ToString() == "offline-deployment")
-                && !workflow.Tags.Keys.Any(key => key.StartsWith("gen_ai.usage", StringComparison.Ordinal)),
-                "exact provider token counts export once per call without duplicate workflow usage");
+                && chats.All(span => span.Status == ActivityStatusCode.Ok),
+                "each SDK model span keeps the provider token count, model and successful status");
 
             exporter.Spans.Clear();
-            var failing = (AIFunction)MetadataOnlyTool.Wrap("telemetry-test", AIFunctionFactory.Create(Boom)).Single();
+            var failing = (AIFunction)new List<AITool> { AIFunctionFactory.Create(Boom) }.AddToolObservability().Single();
             try { await failing.InvokeAsync(); throw new Exception("tool failure expected"); }
             catch (Exception error) when (error.Message != "tool failure expected") { }
-            Check(exporter.Spans.Single() is { Status: ActivityStatusCode.Error, Description: "tool_call_failed" },
-                "tool failures export a safe status without raw exception text");
+            Check(exporter.Spans.Single() is { Status: ActivityStatusCode.Error },
+                "SDK tool instrumentation preserves failure status and exception propagation");
             spans.AddRange(exporter.Spans);
 
-            var payload = JsonSerializer.Serialize(spans.Select(span =>
-                new { span.Name, Tags = span.Tags, span.Description, Events = span.EventCount }));
-            Check(spans.All(span => span.EventCount == 0 && span.Tags.Keys.All(Allowed.Contains)),
-                "exported payload contains only the explicit metadata allowlist and no events");
-            Check(!payload.Contains(Private, StringComparison.Ordinal) && !payload.Contains("T-1001", StringComparison.Ordinal)
-                && !payload.Contains("gen_ai.tool.input", StringComparison.Ordinal)
-                && !payload.Contains("gen_ai.tool.output", StringComparison.Ordinal),
-                "exported payload omits the ticket, answer, evidence and tool arguments or results");
+            Check(spans.All(span => !span.Tags.Keys.Any(key =>
+                    key.StartsWith("gen_ai.prompt", StringComparison.Ordinal)
+                    || key.StartsWith("gen_ai.completion", StringComparison.Ordinal))),
+                "SDK content flags suppress LLM prompt and completion attributes");
+            // SDK 1.2.2 still records tool arguments/results and exception events.
+            // Those are not controlled by the LLM content flags.
         }
         finally { providerField.SetValue(null, null); }
         return checks;
@@ -120,7 +115,9 @@ internal static class TelemetryTests
         }
         public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
             CancellationToken cancellationToken = default) => throw new NotSupportedException("Streaming only.");
-        public object? GetService(Type type, object? key = null) => key is null && type.IsInstanceOfType(this) ? this : null;
+        public object? GetService(Type type, object? key = null) => key is not null ? null
+            : type == typeof(ChatClientMetadata) ? new ChatClientMetadata("azure", null, "offline-deployment")
+            : type.IsInstanceOfType(this) ? this : null;
         public void Dispose() { }
     }
 }

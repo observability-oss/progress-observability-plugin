@@ -46,21 +46,7 @@ public static class Program
             return 2;
         }
 
-        if (tracingEnabled)
-        {
-            ObservabilityTracer.Initialize(new ObservabilityOptions
-            {
-                AppName = appName,
-                ApiKey = observabilityKey!,
-                RecordInputs = false,
-                RecordOutputs = false,
-                AdditionalAttributes = new Dictionary<string, object>
-                {
-                    ["agent.template.id"] = "release-evidence-reviewer",
-                },
-            });
-        }
-        else
+        if (!tracingEnabled)
         {
             Console.Error.WriteLine(
                 "Progress Observability tracing is disabled because Progress:Observability:ApiKey is not configured.");
@@ -74,9 +60,15 @@ public static class Program
                 : new AzureOpenAIClient(azureEndpoint, new AzureKeyCredential(azureKey));
 
             IChatClient chatClient = azureClient.GetChatClient(deployment).AsIChatClient();
-            // SDK 1.2.2 captures prompts and tool arguments even with content recording
-            // disabled. This wrapper records only provider-call timing, model and usage.
-            if (tracingEnabled) chatClient = new MetadataOnlyChatClient(chatClient, deployment, appName);
+            if (tracingEnabled)
+                chatClient = chatClient.AddObservability(options =>
+                {
+                    options.AppName = appName;
+                    options.ApiKey = observabilityKey!;
+                    options.RecordInputs = false;
+                    options.RecordOutputs = false;
+                    options.AdditionalAttributes["agent.template.id"] = "release-evidence-reviewer";
+                });
 
             var runtime = new AgentRuntime(chatClient, knowledgeBase, appName);
 
@@ -92,7 +84,8 @@ public static class Program
                 status = knowledgeBase.DocumentCount > 0 ? "ready" : "degraded",
                 documentsLoaded = knowledgeBase.DocumentCount,
                 tracingEnabled,
-                telemetryContentCaptureEnabled = false,
+                telemetryRecordInputs = false,
+                telemetryRecordOutputs = false,
             }));
 
             app.MapPost("/api/chat", async (

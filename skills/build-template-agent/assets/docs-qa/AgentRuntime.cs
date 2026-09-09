@@ -68,8 +68,11 @@ public sealed class AgentRuntime(IChatClient chatClient, DocumentStore store, st
                     question, explicitly say what is missing. Do not invent sources or facts.
                     The application displays structured sources automatically; do not fabricate links.
                     """,
-                    Tools = MetadataOnlyTool.Wrap(appName,
-                        AIFunctionFactory.Create(documentTools.SearchDocuments), AIFunctionFactory.Create(documentTools.ReadSection)),
+                    Tools = new List<AITool>
+                    {
+                        AIFunctionFactory.Create(documentTools.SearchDocuments),
+                        AIFunctionFactory.Create(documentTools.ReadSection),
+                    }.AddToolObservability(),
                 },
             });
             var session = await agent.CreateSessionAsync(cancellationToken: deadline.Token);

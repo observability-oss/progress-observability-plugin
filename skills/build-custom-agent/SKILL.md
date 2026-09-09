@@ -98,7 +98,7 @@ honest missing evidence. Keep conditional rules within their source's scope;
 a requirement for one case must not become a requirement for all cases.
 Every literal `docs/` or `data/` reference must resolve.
 
-All other files are fixed, including runtime, metadata-only telemetry wrappers,
+All other files are fixed, including runtime and standard SDK instrumentation,
 HTTP/UI/health, project/packages, and smoke engine. Add no dependencies. Generate
 no external calls, process execution, file writes, secret reads, live effects,
 or background control loops. Do not use an installed adapter, connector, or MCP
@@ -106,6 +106,10 @@ tool during intake, build, or smoke. Azure OpenAI and Progress runtime settings
 remain as documented user-secrets. The validator checks the fixed shape and
 obvious forbidden capabilities as defense in depth; it is not a sandbox for
 arbitrary C#.
+
+The SDK uses `RecordInputs = false` and `RecordOutputs = false` for LLM message
+content. In SDK 1.2.2, tool arguments/results and exception text can still be
+recorded; do not promise content-free telemetry or full privacy.
 
 For mock PoCs, keep the reduced scope and mock limitation visible in Purpose,
 instructions, answers, and handoff. `INTEGRATION_PLAN.md` contains only the

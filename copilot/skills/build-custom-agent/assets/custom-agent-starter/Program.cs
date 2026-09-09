@@ -48,22 +48,7 @@ public static class Program
             return 2;
         }
 
-        if (tracingEnabled)
-        {
-            ObservabilityTracer.Initialize(new ObservabilityOptions
-            {
-                AppName = definition.ServiceSlug,
-                ApiKey = observabilityKey!,
-                RecordInputs = false,
-                RecordOutputs = false,
-                AdditionalAttributes = new Dictionary<string, object>
-                {
-                    ["agent.template.id"] = "custom-agent-local-prototype",
-                    ["agent.service.slug"] = definition.ServiceSlug,
-                },
-            });
-        }
-        else
+        if (!tracingEnabled)
         {
             Console.Error.WriteLine(
                 "Progress Observability tracing is disabled because Progress:Observability:ApiKey is not configured.");
@@ -78,11 +63,23 @@ public static class Program
                 ? new AzureOpenAIClient(azureEndpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(azureEndpoint, new AzureKeyCredential(azureKey));
 
-            IChatClient providerClient = azureClient.GetChatClient(deployment).AsIChatClient();
-            IChatClient tracedClient = tracingEnabled
-                ? new MetadataOnlyChatClient(providerClient, deployment, definition.ServiceSlug)
-                : providerClient;
-            var boundedClient = new FunctionInvokingChatClient(tracedClient)
+            IChatClient chatClient = azureClient.GetChatClient(deployment).AsIChatClient();
+            if (tracingEnabled)
+            {
+                chatClient = chatClient.AddObservability(options =>
+                {
+                    options.AppName = definition.ServiceSlug;
+                    options.ApiKey = observabilityKey!;
+                    options.RecordInputs = false;
+                    options.RecordOutputs = false;
+                    options.AdditionalAttributes = new Dictionary<string, object>
+                    {
+                        ["agent.template.id"] = "custom-agent-local-prototype",
+                        ["agent.service.slug"] = definition.ServiceSlug,
+                    };
+                });
+            }
+            var boundedClient = new FunctionInvokingChatClient(chatClient)
             {
                 MaximumIterationsPerRequest = 3,
                 MaximumConsecutiveErrorsPerRequest = 0,
@@ -96,9 +93,7 @@ public static class Program
                 ChatOptions = new ChatOptions
                 {
                     Instructions = definition.Instructions + "\n\n" + AgentRuntime.ResponsePolicy,
-                    Tools = MetadataOnlyTool.Wrap(
-                        definition.ServiceSlug,
-                        definition.CreateTools(knowledgeBase)),
+                    Tools = definition.CreateTools(knowledgeBase).AddToolObservability(),
                     MaxOutputTokens = 800,
                     AllowMultipleToolCalls = false,
                 },
@@ -128,7 +123,8 @@ public static class Program
                 status = knowledgeBase.SourceCount > 0 ? "ready" : "degraded",
                 sourcesLoaded = knowledgeBase.SourceCount,
                 tracingEnabled,
-                telemetryContentCaptureEnabled = false,
+                telemetryRecordInputs = false,
+                telemetryRecordOutputs = false,
                 mode = "local_prototype",
             }));
 

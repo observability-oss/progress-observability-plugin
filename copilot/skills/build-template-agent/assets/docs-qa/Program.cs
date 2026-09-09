@@ -35,16 +35,7 @@ public static class Program
             Console.Error.WriteLine("Smoke requires Progress:Observability:ApiKey (Integration key). No secret value was printed.");
             return 2;
         }
-        if (tracingEnabled)
-            ObservabilityTracer.Initialize(new ObservabilityOptions
-            {
-                AppName = appName,
-                ApiKey = tracingKey!,
-                RecordInputs = false,
-                RecordOutputs = false,
-                AdditionalAttributes = new Dictionary<string, object> { ["agent.template.id"] = "docs-qa" },
-            });
-        else Console.Error.WriteLine("Progress tracing is disabled: Integration key is not configured.");
+        if (!tracingEnabled) Console.Error.WriteLine("Progress tracing is disabled: Integration key is not configured.");
         try
         {
             var store = new DocumentStore(Path.Combine(AppContext.BaseDirectory, "docs"));
@@ -52,9 +43,15 @@ public static class Program
                 ? new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(endpoint, new AzureKeyCredential(azureKey));
             IChatClient chatClient = azure.GetChatClient(deployment).AsIChatClient();
-            // SDK 1.2.2 captures prompts and tool arguments even with content recording
-            // disabled. This wrapper records only provider-call timing, model and usage.
-            if (tracingEnabled) chatClient = new MetadataOnlyChatClient(chatClient, deployment, appName);
+            if (tracingEnabled)
+                chatClient = chatClient.AddObservability(options =>
+                {
+                    options.AppName = appName;
+                    options.ApiKey = tracingKey!;
+                    options.RecordInputs = false;
+                    options.RecordOutputs = false;
+                    options.AdditionalAttributes["agent.template.id"] = "docs-qa";
+                });
             var runtime = new AgentRuntime(chatClient, store, appName);
             if (smoke) return await new SmokeRunner(runtime, builder.Configuration).RunAsync();
             var app = builder.Build();
@@ -66,7 +63,8 @@ public static class Program
                 documentsLoaded = store.DocumentCount,
                 sectionsLoaded = store.Sections.Count,
                 tracingEnabled,
-                telemetryContentCaptureEnabled = false,
+                telemetryRecordInputs = false,
+                telemetryRecordOutputs = false,
             }));
             app.MapGet("/api/documents", () => Results.Ok(store.Sections));
             app.MapPost("/api/ask", async (AskRequest? request, CancellationToken token) =>

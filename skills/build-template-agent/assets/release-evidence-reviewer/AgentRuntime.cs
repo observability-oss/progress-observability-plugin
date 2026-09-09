@@ -87,9 +87,11 @@ public sealed class AgentRuntime(IChatClient chatClient, KnowledgeBase knowledge
                         both documented. There are at most six tool calls; do not repeat a
                         successful call. Do not claim writes, approvals or live system access.
                         """,
-                    Tools = MetadataOnlyTool.Wrap(appName,
+                    Tools = new List<AITool>
+                    {
                         AIFunctionFactory.Create(tools.SearchKnowledgeBase),
-                        AIFunctionFactory.Create(tools.CheckReleaseReadiness)),
+                        AIFunctionFactory.Create(tools.CheckReleaseReadiness),
+                    }.AddToolObservability(),
                 },
             });
             var session = await agent.CreateSessionAsync(cancellationToken: deadline.Token);

@@ -62,14 +62,14 @@ identifies its submitted question, prior question (if any), and source scope.
 `--smoke` runs exactly `grounded-answer`, `two-sources`, `unknown-not-found`,
 checking actual tool calls, source IDs, known fixture values and W3C trace IDs.
 It requires model access and a Progress Integration key, and prints one
-`SMOKE_REPORT=<json>` line. Each run exports one trace shaped like the agent's real execution: a workflow
-span, a `gen_ai.chat` span per model request, and a `gen_ai.execute_tool` span
-per tool the model selected. Progress receives explicit metadata only — span
-timing and status, the model and its provider-reported token counts, and the
-declared tool name. The SDK's automatic `AddObservability()` instrumentation is
-omitted because pinned SDK 1.2.2 captures prompts and tool arguments despite its
-content flags; the wrappers in `MetadataOnlyChatClient.cs` and
-`MetadataOnlyTool.cs` produce the same span shape without prompts, answers, tool
-arguments, results or exception text.
+`SMOKE_REPORT=<json>` line.
+
+Tracing uses the Progress SDK's standard `AddObservability()` setup in
+`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
+span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
+content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
+can still be recorded. These settings do not guarantee content-free telemetry
+or full privacy.
+
 A passing local smoke is not proof of backend ingestion: verify those exact
 trace IDs on the [Progress Tracing page](https://observability.progress.com/observations).

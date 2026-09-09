@@ -81,16 +81,14 @@ real model run; local deterministic/scripted tests do not prove this live execut
 Emitted trace IDs do not independently prove backend ingestion: confirm them in
 [Progress Tracing](https://observability.progress.com/observations).
 
-Each run exports one trace shaped like the agent's real execution: a workflow
-span, a `gen_ai.chat` span per model request, and a `gen_ai.execute_tool` span
-per tool the model selected. Progress receives explicit metadata only — span
-timing and status, the model and its provider-reported token counts, and the
-declared tool name. The SDK's automatic `AddObservability()` instrumentation is
-omitted because pinned SDK 1.2.2 captures prompts and tool arguments despite its
-content flags; the wrappers in `MetadataOnlyChatClient.cs` and
-`MetadataOnlyTool.cs` produce the same span shape without prompts, answers, tool
-arguments, results or exception text.
-Failures expose only allowlisted internal reason codes and a trace ID, never raw
-provider exceptions or credential values.
+Tracing uses the Progress SDK's standard `AddObservability()` setup in
+`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
+span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
+content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
+can still be recorded. These settings do not guarantee content-free telemetry
+or full privacy.
+
+HTTP error responses expose only allowlisted internal reason codes and a trace
+ID, never raw provider exceptions or credential values.
 The bundled policy is illustrative, not a production SLA. Add real intake,
 authentication, and reviewed operational policy separately before production use.

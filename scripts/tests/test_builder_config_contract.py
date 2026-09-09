@@ -119,6 +119,11 @@ class BuilderConfigContractTests(unittest.TestCase):
                 source = TEMPLATE_SKILL / "assets" / item["id"]
                 program = (source / "Program.cs").read_text(encoding="utf-8")
                 self.assertNotIn("Microsoft.Hosting.Lifetime", program)
+                self.assertIn(".AddObservability(", program)
+                self.assertFalse((source / "MetadataOnlyChatClient.cs").exists())
+                self.assertFalse((source / "MetadataOnlyTool.cs").exists())
+                self.assertIn("telemetryRecordInputs = false", program)
+                self.assertIn("telemetryRecordOutputs = false", program)
                 self.assertIn("RecordInputs = false", program)
                 self.assertIn("RecordOutputs = false", program)
                 self.assertIn('"/api/health"', program)

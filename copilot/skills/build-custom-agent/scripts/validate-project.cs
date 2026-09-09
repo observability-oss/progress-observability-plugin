@@ -18,8 +18,6 @@ static class ProjectValidator
         "ChatHistory.cs",
         "CustomAgent.csproj",
         "KnowledgeBase.cs",
-        "MetadataOnlyChatClient.cs",
-        "MetadataOnlyTool.cs",
         "Program.cs",
         "README.md",
         "SmokeRunner.cs",

@@ -70,15 +70,13 @@ emitted trace IDs do not independently prove backend ingestion; open the
 [Progress Tracing page](https://observability.progress.com/observations) to
 confirm that the traces arrived.
 
-Each run exports one trace shaped like the agent's real execution: a workflow
-span, a `gen_ai.chat` span per model request, and a `gen_ai.execute_tool` span
-per tool the model selected. Progress receives explicit metadata only — span
-timing and status, the model and its provider-reported token counts, and the
-declared tool name. The SDK's automatic `AddObservability()` instrumentation is
-omitted because pinned SDK 1.2.2 captures prompts and tool arguments despite its
-content flags; the wrappers in `MetadataOnlyChatClient.cs` and
-`MetadataOnlyTool.cs` produce the same span shape without prompts, answers, tool
-arguments, results or exception text. The workflow span also records
-`agent.tool.count`, `agent.source.count` and `agent.readiness.status`, so traces
-can be filtered by verdict and by how much evidence backed it without exposing
-the evidence itself.
+Tracing uses the Progress SDK's standard `AddObservability()` setup in
+`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
+span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
+content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
+can still be recorded. These settings do not guarantee content-free telemetry
+or full privacy.
+
+The workflow span also records `agent.tool.count`, `agent.source.count` and
+`agent.readiness.status`, so traces can be filtered by verdict and by how much
+evidence backed it.

@@ -41,12 +41,12 @@ exactly the `knowledge`, `tool`, and `not-found` cases configured in
 at 45 seconds, three tool iterations, 800 output tokens, and 8,000 streamed
 characters.
 
-Progress receives explicit metadata only: span timing and status, model names,
-provider-reported token counts, and declared tool names. The pinned SDK's
-automatic `AddObservability()` wrapper is intentionally not used because it can
-capture prompts and tool arguments despite its content flags. The fixed
-metadata-only wrappers omit prompts, answers, tool arguments, results, and
-exception text.
+Tracing uses the Progress SDK's standard `AddObservability()` setup in
+`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
+span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
+content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
+can still be recorded. These settings do not guarantee content-free telemetry
+or full privacy.
 
 A passing smoke run checks execution and expected answer fragments, without
 telling the model those expected answers. It does not prove reasoning quality,

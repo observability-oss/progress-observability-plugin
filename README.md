@@ -250,6 +250,10 @@ just ask in natural language.
 - The MCP workflows do not write back to the platform. Generated agents can
   send traces with their separate Integration API key, but the builders do not
   query those traces back, so they report Progress ingestion as unverified.
+- Both builders use standard SDK instrumentation with `RecordInputs = false`
+  and `RecordOutputs = false` for LLM message content. In pinned SDK 1.2.2, tool
+  arguments/results and exception text can still be recorded; this is not a
+  guarantee of content-free telemetry or full privacy.
 - `build-template-agent` defaults to GitHub Copilot agent mode. Its copy helper
   needs the .NET 10 SDK; live smoke cases also need the model and Integration
   settings documented in the copied README. It returns the local app link,

@@ -26,13 +26,18 @@ static class HelperTests
             Expect(!File.Exists(Path.Combine(valid, ".env.example")),
                 "Copied projects must not contain .env.example.");
             var copiedProgram = File.ReadAllText(Path.Combine(valid, "Program.cs"));
-            Expect(!copiedProgram.Contains("AddObservability", StringComparison.Ordinal) &&
-                   copiedProgram.Contains("new MetadataOnlyChatClient", StringComparison.Ordinal) &&
+            Expect(copiedProgram.Contains("AddObservability", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("AddToolObservability", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("RecordInputs = false", StringComparison.Ordinal) &&
+                   copiedProgram.Contains("RecordOutputs = false", StringComparison.Ordinal) &&
                    copiedProgram.Contains("new FunctionInvokingChatClient", StringComparison.Ordinal) &&
                    copiedProgram.Contains("MaximumIterationsPerRequest = 3", StringComparison.Ordinal) &&
                    copiedProgram.Contains("MaxOutputTokens = 800", StringComparison.Ordinal) &&
                    copiedProgram.Contains("AllowMultipleToolCalls = false", StringComparison.Ordinal),
-                "The fixed runtime must use metadata-only telemetry and explicit model/tool bounds.");
+                "The fixed runtime must configure SDK tracing and preserve explicit model/tool bounds.");
+            Expect(!File.Exists(Path.Combine(valid, "MetadataOnlyChatClient.cs")) &&
+                   !File.Exists(Path.Combine(valid, "MetadataOnlyTool.cs")),
+                "Copied projects must not contain replacement SDK wrappers.");
             ExpectExit(0, validator, "--target", valid);
             var settingsPath = Path.Combine(valid, "appsettings.json");
             File.WriteAllText(

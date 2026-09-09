@@ -79,10 +79,12 @@ public sealed class AgentRuntime(IChatClient chatClient, TicketStore store, stri
                 ChatOptions = new ChatOptions
                 {
                     Instructions = instructions,
-                    Tools = MetadataOnlyTool.Wrap(appName,
+                    Tools = new List<AITool>
+                    {
                         AIFunctionFactory.Create(tools.GetTicket),
                         AIFunctionFactory.Create(tools.ReadTriagePolicy),
-                        AIFunctionFactory.Create(tools.SuggestTriage)),
+                        AIFunctionFactory.Create(tools.SuggestTriage),
+                    }.AddToolObservability(),
                 },
             });
             var session = await agent.CreateSessionAsync(cancellationToken: deadline.Token);

@@ -115,15 +115,12 @@ view and asserting exact tool-derived numeric results. Free-form questions and
 changes of view are covered separately by protocol tests and browser checks. `SMOKE_REPORT=<json>` includes case status and
 trace IDs; model and Integration settings are required.
 
-Each question exports one trace shaped like the agent's real execution: an
-`operations-data-analyst.ask` workflow span, a `gen_ai.chat` span per model
-request, and a `gen_ai.execute_tool` span for the tool the model selected.
-Progress receives explicit metadata only — span timing and status, the model and
-its provider-reported token counts, and the declared tool name. The SDK's
-automatic `AddObservability()` instrumentation is omitted because pinned SDK
-1.2.2 captures prompts and tool arguments despite its content flags; the wrappers
-in `MetadataOnlyChatClient.cs` and `MetadataOnlyTool.cs` produce the same span
-shape without questions, answers, tool arguments, results or exception text.
+Tracing uses the Progress SDK's standard `AddObservability()` setup in
+`Program.cs` and `AddToolObservability()` for tools, under the existing workflow
+span. `RecordInputs = false` and `RecordOutputs = false` disable LLM message
+content recording. In pinned SDK 1.2.2, tool arguments/results and exception text
+can still be recorded. These settings do not guarantee content-free telemetry
+or full privacy.
 Trace IDs prove local execution, **not backend ingestion**; inspect
 the [Progress Tracing page](https://observability.progress.com/observations)
 separately. This is a small example, not a production monitoring system.

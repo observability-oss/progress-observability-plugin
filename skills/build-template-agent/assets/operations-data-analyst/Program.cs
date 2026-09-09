@@ -32,16 +32,7 @@ public static class Program
             Console.Error.WriteLine("Smoke tests require Progress:Observability:ApiKey (the Integration key). No secret values are printed.");
             return 2;
         }
-        if (tracingEnabled)
-            ObservabilityTracer.Initialize(new ObservabilityOptions
-            {
-                AppName = appName,
-                ApiKey = observabilityKey!,
-                RecordInputs = false,
-                RecordOutputs = false,
-                AdditionalAttributes = new Dictionary<string, object> { ["agent.template.id"] = "operations-data-analyst" },
-            });
-        else Console.Error.WriteLine("Progress Observability tracing is disabled: Progress:Observability:ApiKey is not configured.");
+        if (!tracingEnabled) Console.Error.WriteLine("Progress Observability tracing is disabled: Progress:Observability:ApiKey is not configured.");
 
         try
         {
@@ -55,9 +46,15 @@ public static class Program
                 ? new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
                 : new AzureOpenAIClient(endpoint, new AzureKeyCredential(azureKey));
             IChatClient client = azure.GetChatClient(deployment).AsIChatClient();
-            // SDK 1.2.2 captures tool arguments even with content recording disabled.
-            // This wrapper records only actual provider-call timing, model and usage.
-            if (tracingEnabled) client = new MetadataOnlyChatClient(client, deployment, appName);
+            if (tracingEnabled)
+                client = client.AddObservability(options =>
+                {
+                    options.AppName = appName;
+                    options.ApiKey = observabilityKey!;
+                    options.RecordInputs = false;
+                    options.RecordOutputs = false;
+                    options.AdditionalAttributes["agent.template.id"] = "operations-data-analyst";
+                });
             var runtime = new AgentRuntime(client, metrics, appName);
             var workflow = new ViewWorkflow(runtime, metrics);
             if (smokeMode) return await new SmokeRunner(workflow).RunAsync();
@@ -77,7 +74,8 @@ public static class Program
                 services = metrics.Services,
                 syntheticData = true,
                 tracingEnabled,
-                telemetryContentCaptureEnabled = false,
+                telemetryRecordInputs = false,
+                telemetryRecordOutputs = false,
             }));
             app.MapPost("/api/analyze", async (AnalysisRequest? request, CancellationToken cancellationToken) =>
             {
