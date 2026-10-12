@@ -1,6 +1,6 @@
 # Python — `progress-observability`
 
-Verified against `progress-observability` 1.5.0 on PyPI (wraps
+Verified against `progress-observability` 1.5.3 on PyPI (wraps
 `traceloop-sdk` 0.62.3; OpenTelemetry underneath). Prefer the published
 package over this file where they disagree.
 
@@ -8,7 +8,16 @@ package over this file where they disagree.
 pip install progress-observability  # requires Python >= 3.10
 ```
 
-**Do not add `httpx`.** The SDK declares `httpx>=0.23.0` itself.
+**Do not add `httpx` or `requests`.** The SDK declares both itself, pinned
+exactly: `httpx==0.28.1`, `requests==2.34.2`. An app that pins either to
+another version fails to resolve at install; loosen the app's pin, and if the
+app cannot move, say so rather than pinning around it.
+
+**Do not pin the SDK below 1.5.3.** Earlier releases do not declare
+`requests`, which `traceloop-sdk` imports at load; since OpenTelemetry 1.45
+stopped installing it transitively, a clean install of 1.5.0 or 1.5.1 fails on
+the first import with `ModuleNotFoundError: No module named 'requests'`. Leave
+the requirement unpinned or use `>=1.5.3`.
 
 Match the project's manager: `uv add` · `poetry add` · `pipenv install`.
 Current published version:

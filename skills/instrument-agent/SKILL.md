@@ -8,8 +8,8 @@ metadata:
   languages: "Python, TypeScript, .NET"
   source: observability-oss/observability-skills
   verified-against:
-    pypi: progress-observability@1.5.0
-    npm: "@progress/observability@3.1.0"
+    pypi: progress-observability@1.5.3
+    npm: "@progress/observability@3.1.3"
     nuget: Progress.Observability.Instrumentation@1.4.0
 ---
 
