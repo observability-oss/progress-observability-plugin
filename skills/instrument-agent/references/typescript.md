@@ -1,6 +1,6 @@
 # TypeScript / JavaScript — `@progress/observability`
 
-Verified against `@progress/observability` 3.1.0 on npm (wraps
+Verified against `@progress/observability` 3.1.3 on npm (wraps
 `@traceloop/node-server-sdk` 0.27.0; OpenTelemetry 2.x underneath). Prefer the
 published package over this file where they disagree.
 
@@ -92,6 +92,16 @@ Adding `@langchain/core` to `dependencies` when it is missing is a required
 edit, and in a monorepo the process must start from the directory that holds
 that `package.json`.
 
+**LangChain over OpenAI records each model call twice in 3.x — keep the
+wiring above and say so in the handoff.** `@langchain/openai` drives the
+`openai` package, which detection finds and instruments alongside the
+LangChain patch, and that provider span has no parent: every `chat <model>`
+inside `RunnableSequence` gets a twin that is the root of its own trace, so
+calls, tokens and cost read double on the platform. This is an SDK defect,
+not a wiring fault. `blockInstruments` with `OPENAI` removes the twin but
+also hides every direct `openai` call the app makes — offer it in the
+handoff only for an app that has none, and leave the choice to the user.
+
 `instruments` and `blockInstruments` remain:
 
 - `instruments` is an **allow-list** — pass it and anything omitted is off,
@@ -100,6 +110,10 @@ that `package.json`.
   reports its own model calls *and* drives an instrumented provider SDK
   records each call twice. Block the provider, keep the framework — Genkit on
   `@genkit-ai/compat-oai` is the case in point (see *Genkit*).
+- **Pass both as a `Set`, never an array.** An array makes `instrument()`
+  throw `TypeError: normalizedConfig.blockInstruments.has is not a function`
+  and the app does not start; `tsx` does not type-check, so nothing flags it
+  first.
 
 Run with `tsx bootstrap.ts` (or node with a TS loader). Alternative without a
 bootstrap file: hooks import at the very top of the entry point, instrumented
@@ -195,7 +209,7 @@ Useful `instrument()` options: `traceContent: false`, `additionalTags: […]`,
 
 ## What auto-instruments
 
-`ObservabilityInstruments` (from the package's types, v3.1.0): OPENAI,
+`ObservabilityInstruments` (from the package's types, v3.1.3): OPENAI,
 ANTHROPIC, COHERE, BEDROCK, **AZURE_OPENAI**, VERTEXAI, SAGEMAKER, OLLAMA,
 GROQ, MISTRAL, TOGETHER, REPLICATE, ALEPHALPHA, GOOGLE_GENERATIVEAI,
 TRANSFORMERS, WATSONX, LANGCHAIN, LLAMA_INDEX, CREW, HAYSTACK, OPENAI_AGENTS,
@@ -256,12 +270,15 @@ built from the SDK's own OpenTelemetry 2.x exporter, whose serializer reads
 `instrumentationLibrary` — so every export throws `TypeError: Cannot read
 properties of undefined (reading 'name')` inside
 `@opentelemetry/otlp-transformer` and is dropped.
-The app's exporter is unaffected, and the error shows **only** with
-`debug: true`. Upgrade the app's `@opentelemetry/*` to 2.x if that is on the
-table; otherwise say so plainly and offer the trade — `instrument()` first
-keeps Progress fed (global-tracer spans, the provider SDK's included) at the
-cost of the split above. Never report an OpenTelemetry-1.x app as wired on
-the strength of the attach warning.
+The app's exporter is unaffected. Nothing is logged without `debug: true`,
+and with it the SDK prints only the sanitized `[Observability] failed to
+export traces.` — the `TypeError` itself is not shown, so an
+`@opentelemetry/*` 1.x major plus that line is the diagnosis; do not wait for
+the `TypeError` text. Upgrade the app's `@opentelemetry/*` to 2.x if that is
+on the table; otherwise say so plainly and offer the trade —
+`instrument()` first keeps Progress fed (global-tracer spans, the provider
+SDK's included) at the cost of the split above. Never report an
+OpenTelemetry-1.x app as wired on the strength of the attach warning.
 
 Whether `appName` survives the attach is not measured; confirm the service
 name in verify.
@@ -399,7 +416,10 @@ substring, never on a model name.
 LangChain under this SDK reports **full chain hierarchy** in a single trace
 (`workflow RunnableSequence` → prompt/parser workflows + `chat <model>` with
 provider, tokens, and cost) — report that depth; flat LLM-only spans instead
-mean the callback wiring didn't attach (rule 2 above).
+mean the callback wiring didn't attach (rule 2 above). Over OpenAI, each
+`chat <model>` also arrives once more as a root span in its own trace — the
+3.x double count under *Do not add `instruments`*; report it, don't count it
+as extra calls.
 
 ## Common failure modes
 
@@ -419,4 +439,7 @@ mean the callback wiring didn't attach (rule 2 above).
    `@langchain/core`*.
 6. **App owns a TracerProvider on OpenTelemetry 1.x, Progress empty** — the
    attach-export failure under *The app already sets up OpenTelemetry*;
-   visible only under `debug: true`.
+   visible only under `debug: true`, as `failed to export traces.`
+7. **LangChain over OpenAI, LLM calls and cost doubled, extra one-span
+   `chat <model>` traces** — the 3.x SDK double count under *Do not add
+   `instruments`*; not a wiring fault.
