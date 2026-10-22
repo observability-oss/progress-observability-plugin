@@ -181,14 +181,15 @@ current TracerProvider is not allowed` warning, and the app's exporter
 receives nothing for the rest of the process.
 
 **TypeScript has the same shape now, and no fixture yet.** Measured 6 Sep on
-3.1.0: app `provider.register()` then `instrument()` gives both exporters
-every span on OpenTelemetry 2.x; `instrument()` first splits the telemetry
-(global-tracer spans to Progress only, `provider.getTracer()` spans to the app
-only). On OpenTelemetry 1.x the recommended order attaches and then every
-Progress export throws inside `otlp-transformer` — reported, see step 3. A
-`ts/existing-otel` fixture and CI job (two-sided like the Python one, plus a
-1.x variant) is the follow-up once that fix ships; until then the skill text
-carries the guidance and nothing exercises it.
+3.1.0 and again 22 Oct on 3.2.0: app `provider.register()` then
+`instrument()` gives both exporters every span on OpenTelemetry 2.x;
+`instrument()` first splits the telemetry (global-tracer spans to Progress
+only, `provider.getTracer()` spans to the app only). On OpenTelemetry 1.x the
+recommended order attaches and then reaches Progress only when npm hoisted a
+1.x-era `@opentelemetry/exporter-trace-otlp-http` — see step 3, open item
+(2). A `ts/existing-otel` fixture and CI job (two-sided like the Python one,
+plus a 1.x variant) is the follow-up once that fix ships; until then the
+skill text carries the guidance and nothing exercises it.
 
 **The wrong order is invisible platform-side.** Progress spans arrive either
 way; it is the app's own telemetry that dies. Score this fixture on the init's
@@ -409,8 +410,8 @@ against") **and** the `metadata.verified-against` block in `SKILL.md`'s
 frontmatter — they must agree with each other as well as with the registries.
 Report newer releases as drift needing re-verification. `progress-observability`
 pins `traceloop-sdk` exactly, so no upstream fix reaches users without a new
-Progress release. As of 6 Sep the three lines read 1.5.0 / 3.1.0 / 1.4.0; the
-fixture pins (`expected/*/package.json` `^3.1.0`, `expected/*/*.csproj`
+Progress release. As of 22 Oct the three lines read 1.5.3 / 3.2.0 / 1.4.0;
+the fixture pins (`expected/*/package.json` `^3.2.0`, `expected/*/*.csproj`
 `1.4.0`) moved with them, so a green fixture run is what verifies the .NET
 number — it was bumped without a local build.
 
@@ -441,22 +442,37 @@ Fixed, confirm they stay fixed: `progress-observability` < 1.5.0 was
 unimportable on a clean install (`traceloop-sdk` imported `httpx` without
 declaring it) — 1.5.0 declares `httpx>=0.23.0`, verified 6 Sep, workaround
 lines removed from `expected/` and the skill. Node < 3.0 needed `instruments`
-(above).
+(above). Node < 3.2.0 recorded every LangChain-over-OpenAI model call twice
+(a parentless twin `chat <model>` trace per call); Node < 3.1.3 shipped
+Genkit `generate` with no kind, no model and provider `Unknown` (a phantom
+`llm_call` per turn), and Node < 3.2.0 stamped `@task` spans inside Genkit
+tools with provider `Unknown` — all gone on 3.2.0, measured 22 Oct against a
+local sink, and the twin paragraph is out of `references/typescript.md`. On
+each 3.x bump re-run both checks: `ts/langchain` must yield one trace per
+run with no root `chat <model>` span, and a Genkit flow calling a tool must
+yield no span with provider `Unknown`.
 
 Open, reported: (1) `ModelFixProcessor._apply_attribute_fixes` throws on every
 google-genai span, logging an empty message because the handler formats `{e}`
-with no exception type — not re-checked on 1.5.0. (2) **Node 3.1.0, app owns
+with no exception type — not re-checked on 1.5.0. (2) **Node 3.x, app owns
 a TracerProvider on OpenTelemetry 1.x** (`@opentelemetry/sdk-trace-node`
 1.30.1 measured, and Genkit's bundled `NodeSDK`): with the app's provider
-registered first — the recommended order — the SDK attaches its OTLP
-processor, then every export throws `TypeError: Cannot read properties of
-undefined (reading 'name')` in `@opentelemetry/otlp-transformer`, because the
-processor is built from the SDK's own 2.x exporter and reads
-`span.instrumentationScope`, which a 1.x span calls `instrumentationLibrary`.
-The app's exporter is fine, Progress receives nothing, and the only evidence
-is under `debug: true`. Reported 6 Sep. The 1.x check lives in the reference;
-re-run it on each 3.x bump — when it passes, drop the 1.x paragraph from
-`references/typescript.md` and add the `ts/existing-otel` fixture. (3)
+registered first — the recommended order — the SDK attaches a processor
+built from whatever `@opentelemetry/exporter-trace-otlp-http` resolves from
+its own location, a package it does not declare. Re-measured 22 Oct on
+3.2.0: when the app declares that exporter (0.57.2) and npm hoists it, every
+span reaches Progress under the app's `service.name`; when the app uses the
+proto exporter instead, the 0.203 copy from the SDK's 2.x dependencies wins,
+every export throws `TypeError: Cannot read properties of undefined
+(reading 'name')` in `@opentelemetry/otlp-transformer` (it reads
+`span.instrumentationScope`, which a 1.x span calls
+`instrumentationLibrary`), the app's exporter is fine, Progress receives
+nothing, and the only evidence is under `debug: true`. Reported 6 Sep; still
+open on 3.2.0 — the fix is for the SDK to declare the exporter it
+`require`s, or to pick one by the provider's OpenTelemetry major. The 1.x
+check lives in the reference; re-run it on each 3.x bump with the app on the
+proto exporter (the failing layout) — when it passes, drop the 1.x paragraph
+from `references/typescript.md` and add the `ts/existing-otel` fixture. (3)
 **Collector: workflow root spans misclassified as `llm_call`** — a span
 tagged `traceloop.span.kind=workflow` with `gen_ai.provider.name` and no
 model was stored as `llm_call` against model `unknown`, so every agentic
