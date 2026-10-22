@@ -9,7 +9,7 @@ metadata:
   source: observability-oss/observability-skills
   verified-against:
     pypi: progress-observability@1.5.3
-    npm: "@progress/observability@3.1.3"
+    npm: "@progress/observability@3.2.0"
     nuget: Progress.Observability.Instrumentation@1.4.0
 ---
 
@@ -67,8 +67,9 @@ Scan the repo and report what you found, then the diff you intend to make,
   `instrument()`: on OpenTelemetry 2.x both the app's exporter and Progress
   receive every span. Init first and the telemetry splits — global-tracer
   spans reach Progress only, `provider.getTracer()` spans reach the app only.
-  **On OpenTelemetry 1.x the recommended order attaches and then silently
-  exports nothing to Progress** (a serializer mismatch, visible only with
+  **On OpenTelemetry 1.x the recommended order attaches and then exports
+  nothing to Progress unless npm happened to hoist a 1.x-era
+  `@opentelemetry/exporter-trace-otlp-http`** (visible only with
   `debug: true`), so check the app's `@opentelemetry/*` major before
   declaring success. Grep for `NodeTracerProvider` / `NodeSDK` /
   `.register(`. Details and the Genkit case in `references/typescript.md`.

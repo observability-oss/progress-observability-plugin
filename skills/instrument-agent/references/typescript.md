@@ -1,6 +1,6 @@
 # TypeScript / JavaScript — `@progress/observability`
 
-Verified against `@progress/observability` 3.1.3 on npm (wraps
+Verified against `@progress/observability` 3.2.0 on npm (wraps
 `@traceloop/node-server-sdk` 0.27.0; OpenTelemetry 2.x underneath). Prefer the
 published package over this file where they disagree.
 
@@ -92,15 +92,13 @@ Adding `@langchain/core` to `dependencies` when it is missing is a required
 edit, and in a monorepo the process must start from the directory that holds
 that `package.json`.
 
-**LangChain over OpenAI records each model call twice in 3.x — keep the
-wiring above and say so in the handoff.** `@langchain/openai` drives the
-`openai` package, which detection finds and instruments alongside the
-LangChain patch, and that provider span has no parent: every `chat <model>`
-inside `RunnableSequence` gets a twin that is the root of its own trace, so
-calls, tokens and cost read double on the platform. This is an SDK defect,
-not a wiring fault. `blockInstruments` with `OPENAI` removes the twin but
-also hides every direct `openai` call the app makes — offer it in the
-handoff only for an app that has none, and leave the choice to the user.
+**LangChain over OpenAI records each model call once from 3.2.0 — on an
+older 3.x pin, move the pin rather than block `OPENAI`.** Through 3.1.3
+`@langchain/openai` driving the `openai` package produced a twin of every
+`chat <model>` as the root of its own trace, so calls, tokens and cost read
+double on the platform. 3.2.0 records one `chat <model>` per call, inside
+`RunnableSequence` (measured). `blockInstruments` with `OPENAI` hides the
+twin on 3.1.x but also every direct `openai` call the app makes.
 
 `instruments` and `blockInstruments` remain:
 
@@ -111,9 +109,10 @@ handoff only for an app that has none, and leave the choice to the user.
   records each call twice. Block the provider, keep the framework — Genkit on
   `@genkit-ai/compat-oai` is the case in point (see *Genkit*).
 - **Pass both as a `Set`, never an array.** An array makes `instrument()`
-  throw `TypeError: normalizedConfig.blockInstruments.has is not a function`
-  and the app does not start; `tsx` does not type-check, so nothing flags it
-  first.
+  throw `TypeError: instruments must be a Set of ObservabilityInstruments
+  (for example, new Set([ObservabilityInstruments.OPENAI]))` (or
+  `blockInstruments must be …`) and the app does not start; `tsx` does not
+  type-check, so nothing flags it first.
 
 Run with `tsx bootstrap.ts` (or node with a TS loader). Alternative without a
 bootstrap file: hooks import at the very top of the entry point, instrumented
@@ -209,7 +208,7 @@ Useful `instrument()` options: `traceContent: false`, `additionalTags: […]`,
 
 ## What auto-instruments
 
-`ObservabilityInstruments` (from the package's types, v3.1.3): OPENAI,
+`ObservabilityInstruments` (from the package's types, v3.2.0): OPENAI,
 ANTHROPIC, COHERE, BEDROCK, **AZURE_OPENAI**, VERTEXAI, SAGEMAKER, OLLAMA,
 GROQ, MISTRAL, TOGETHER, REPLICATE, ALEPHALPHA, GOOGLE_GENERATIVEAI,
 TRANSFORMERS, WATSONX, LANGCHAIN, LLAMA_INDEX, CREW, HAYSTACK, OPENAI_AGENTS,
@@ -263,36 +262,52 @@ tracer diverge and the telemetry splits. Move the init; do not work around
 the split.
 
 **Check the app's `@opentelemetry/*` major before declaring success: on 1.x
-the recommended order silently sends nothing to Progress.** The attach
-succeeds and the warning above prints, but the processor the SDK pushes is
-built from the SDK's own OpenTelemetry 2.x exporter, whose serializer reads
-`span.instrumentationScope` — a 1.x span only has
-`instrumentationLibrary` — so every export throws `TypeError: Cannot read
-properties of undefined (reading 'name')` inside
-`@opentelemetry/otlp-transformer` and is dropped.
-The app's exporter is unaffected. Nothing is logged without `debug: true`,
-and with it the SDK prints only the sanitized `[Observability] failed to
-export traces.` — the `TypeError` itself is not shown, so an
-`@opentelemetry/*` 1.x major plus that line is the diagnosis; do not wait for
-the `TypeError` text. Upgrade the app's `@opentelemetry/*` to 2.x if that is
-on the table; otherwise say so plainly and offer the trade —
+the recommended order attaches and then reaches Progress only if the install
+happens to resolve a matching exporter.** The processor the SDK pushes is
+built from `@opentelemetry/exporter-trace-otlp-http` resolved from the SDK's
+own location, a package the SDK does not declare, so npm's layout decides
+which build it gets. A 0.5x build (the app declares that exporter itself and
+npm hoists it) serializes 1.x spans, and Progress receives every span
+(measured, 0.57.2 under `@opentelemetry/sdk-trace-node` 1.30.1). A 0.2xx
+build (the app does not declare that exporter, so the copy pulled in by the
+SDK's 2.x dependencies wins) reads `span.instrumentationScope`, which a 1.x
+span calls `instrumentationLibrary`, so every export throws `TypeError:
+Cannot read properties of undefined (reading 'name')` inside
+`@opentelemetry/otlp-transformer` and is dropped. The app's exporter is
+unaffected either way. Nothing is logged without `debug: true`, and with it
+the SDK prints only the sanitized `[Observability] failed to export
+traces.` — the `TypeError` itself is not shown. Diagnose from `npm ls
+@opentelemetry/exporter-trace-otlp-http`: a 1.x app whose top-level copy is
+0.2xx is the failing layout. Upgrade the app's `@opentelemetry/*` to 2.x if
+that is on the table; otherwise say so plainly and offer the trade —
 `instrument()` first keeps Progress fed (global-tracer spans, the provider
 SDK's included) at the cost of the split above. Never report an
 OpenTelemetry-1.x app as wired on the strength of the attach warning.
 
-Whether `appName` survives the attach is not measured; confirm the service
-name in verify.
+`appName` does not survive the attach: spans carry the app's resource and
+land under its `service.name` (measured). Confirm the service name in
+verify; to change it, set `service.name` on the app's resource.
 
 ## Genkit (3.1.0+)
 
 Genkit emits its own OpenTelemetry spans (`genkit:type`,
 `genkit:metadata:subtype` = `flow` / `tool` / `model`), and 3.1.0 adds a
 `GenkitSpanProcessor` that maps them onto what the platform reads: a flow
-becomes kind `workflow`, a tool kind `tool`, and a model span gains
-`gen_ai.request.model` / `gen_ai.response.model`, `gen_ai.provider.name`
-(from the `plugin/model` name), `gen_ai.usage.*` tokens and the input/output
-messages. No enum member, no flag — always on. Span names stay Genkit's
-(`supportFlow`, `lookupOrder`), not the `workflow <name>` form traceloop uses.
+becomes kind `workflow`, a tool kind `tool`, `generate` kind `agent` with
+`gen_ai.request.model` and `gen_ai.provider.name` copied from its model span
+(a `generate` nested in another — the turn after a tool call — is kind
+`workflow`), and a model span gains `gen_ai.request.model` /
+`gen_ai.response.model`, `gen_ai.provider.name` (from the `plugin/model`
+name), `gen_ai.usage.*` tokens and the input/output messages. No enum
+member, no flag — always on. Span names stay Genkit's (`supportFlow`,
+`lookupOrder`), not the `workflow <name>` form traceloop uses.
+
+**Install 3.2.0 or newer for a Genkit app; do not work around an older
+pin.** Below 3.1.3 `generate` arrives with no kind, no model and provider
+`Unknown`, and lands on the platform as an `llm_call` against model
+`unknown` — one phantom LLM call per turn. Below 3.2.0 a `@task` span
+inside a Genkit tool reports provider `Unknown` as well, and 3.0.x leaves
+the model span without model or tokens.
 
 **Call `instrument()` before the first flow runs.** Genkit starts its own
 `NodeSDK` lazily, on the first span, and that SDK is OpenTelemetry 1.x — so a
@@ -300,8 +315,9 @@ flow that runs first puts you in the 1.x attach case above and Progress
 receives nothing. Init first and Genkit's later registration is refused
 (silently — Genkit swallows it), its spans go through the global tracer into
 our provider, and everything arrives: a flow calling a tool and a model
-yields `supportFlow` (workflow), `lookupOrder` (tool), `generate`, and the
-model span with provider, model and token counts (genkit 1.41, measured). In
+yields `supportFlow` (workflow), `lookupOrder` (tool), `generate` (agent),
+and the model span with provider, model and token counts (genkit 1.41,
+measured). In
 this order the Genkit dev UI (`genkit start`) receives no traces — say so if
 the user relies on it.
 
@@ -416,10 +432,7 @@ substring, never on a model name.
 LangChain under this SDK reports **full chain hierarchy** in a single trace
 (`workflow RunnableSequence` → prompt/parser workflows + `chat <model>` with
 provider, tokens, and cost) — report that depth; flat LLM-only spans instead
-mean the callback wiring didn't attach (rule 2 above). Over OpenAI, each
-`chat <model>` also arrives once more as a root span in its own trace — the
-3.x double count under *Do not add `instruments`*; report it, don't count it
-as extra calls.
+mean the callback wiring didn't attach (rule 2 above).
 
 ## Common failure modes
 
@@ -439,7 +452,8 @@ as extra calls.
    `@langchain/core`*.
 6. **App owns a TracerProvider on OpenTelemetry 1.x, Progress empty** — the
    attach-export failure under *The app already sets up OpenTelemetry*;
-   visible only under `debug: true`, as `failed to export traces.`
+   visible only under `debug: true`, as `failed to export traces.`, and in
+   `npm ls @opentelemetry/exporter-trace-otlp-http` as a 0.2xx copy.
 7. **LangChain over OpenAI, LLM calls and cost doubled, extra one-span
-   `chat <model>` traces** — the 3.x SDK double count under *Do not add
-   `instruments`*; not a wiring fault.
+   `chat <model>` traces** — `@progress/observability` below 3.2.0; move
+   the pin.
